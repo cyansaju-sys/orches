@@ -187,3 +187,40 @@ def commit(root, message):
     return False, str(e)
   text = (out.stdout if out.returncode == 0 else out.stderr or out.stdout).strip()
   return out.returncode == 0, text
+
+
+def sync_info(root):
+  """(rama, commits por subir, tiene upstream, hay remoto) de la rama actual."""
+  name = branch(root)
+  if not name:
+    return None, 0, False, False
+  upstream = _git(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+  remotes = _git(root, "remote")
+  ahead = 0
+  if upstream:
+    count = _git(root, "rev-list", "--count", "@{u}..HEAD")
+    ahead = int(count.strip()) if count and count.strip().isdigit() else 0
+  return name, ahead, bool(upstream), bool(remotes and remotes.strip())
+
+
+def push(root):
+  """git push de la rama actual (publica la rama si aún no tiene upstream). Devuelve (ok, mensaje).
+
+  Nunca se queda esperando una contraseña: sin terminal, las credenciales se piden por los
+  medios de git (llavero, agente SSH) o falla con un mensaje.
+  """
+  name, _, has_upstream, has_remote = sync_info(root)
+  if not name:
+    return False, "No hay rama"
+  if not has_remote:
+    return False, "Este repositorio no tiene remoto: agrega uno con git remote add"
+  env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+  env.setdefault("GIT_SSH_COMMAND", "ssh -o BatchMode=yes")
+  args = ["push"] if has_upstream else ["push", "-u", "origin", name]
+  try:
+    out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=120,
+                         stdin=subprocess.DEVNULL, env=env, creationflags=_FLAGS)
+  except (OSError, subprocess.SubprocessError) as e:
+    return False, str(e)
+  text = (out.stderr or out.stdout).strip()   # git escribe el progreso de push en stderr
+  return out.returncode == 0, text
