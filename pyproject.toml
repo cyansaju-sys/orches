@@ -1,17 +1,50 @@
 [project]
 name = "orches"
 version = "0.1.0"
-description = "Add your description here"
+description = ""
 readme = "README.md"
+requires-python = ">=3.10"
 authors = [
-    { name = "Cristian Yancis", email = "cyansaju@gmail.com" }
+    { name = "Flet developer", email = "you@example.com" }
 ]
-requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "flet>=1.0.3",
+    "pyte>=0.8.2",
+    "pywinpty>=3.0.5 ; sys_platform == 'win32'",
+]
 
-[project.scripts]
-orches = "orches:main"
+[dependency-groups]
+dev = [
+    "flet-cli>=1.0.3",
+    "flet-desktop>=1.0.3",
+    "flet-web>=1.0.3",
+    # Integration testing with `flet test` / pytest. The `test` extra brings in
+    # pytest, pytest-asyncio and the screenshot-comparison dependencies.
+    "flet[test]>=1.0.3",
+    "poethepoet>=0.48.0",
+]
 
-[build-system]
-requires = ["uv_build>=0.12.9,<0.13.0"]
-build-backend = "uv_build"
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.flet]
+desktop_flavor = "light"    # Change to "full" to use flet-audio and flet-video
+org = "com.mycompany"
+product = "orches"
+company = "Flet"
+copyright = "Copyright (C) 2023-2026 by Flet"
+
+# src/assets/icon.png is the icon for every platform. Keep it transparent and
+# filling the whole canvas: web, Windows and Linux show it as-is, and Flet
+# shrinks it to the margin iOS, macOS and Android each mask away. This colour
+# is what sits behind it where transparency cannot survive - the iOS icon, the
+# macOS tile and the Android background layer. Defaults to white.
+# icon_background = "#ffffff"
+
+[tool.flet.app]
+path = "src"
+
+[tool.poe.tasks]
+dev="flet run -r src/main.py"
