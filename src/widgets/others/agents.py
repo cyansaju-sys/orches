@@ -1,7 +1,7 @@
 from flet import Container, Icons, Icon, Row, Column, Text, Padding, SnackBar
 from utils import settings
 from utils.agents import detect_agents
-from utils.theme import ACCENT
+from utils.theme import ACCENT, ACCENT_BG
 from widgets.others.clickable import Clickable
 
 MUTED = "#6B7088"
@@ -34,7 +34,7 @@ def AgentsView(page, on_open):
           ],
         ),
         lambda e, agent=agent: launch(agent),
-        hover_bg="#1C1836",
+        hover_bg=ACCENT_BG,
         tooltip=f"Ejecutar en el proyecto · {agent['path']}",
         padding=Padding(left=8, right=8, top=6, bottom=6),
         border_radius=6,

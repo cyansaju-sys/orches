@@ -4,7 +4,7 @@ from widgets.others.agents import AgentsView
 from widgets.others.files import FilesView
 from widgets.others.clickable import IconAction
 from utils.resize import resize_handle
-from utils.theme import ACCENT, border_all, border_right
+from utils.theme import ACCENT, ACCENT_BG, border_all, border_right
 
 options = [
   {"icon": Icons.FOLDER, "view": "files"},
@@ -44,7 +44,7 @@ def TabBar(page, on_agent):
               IconAction(
                 option["icon"],
                 lambda e, view=option["view"]: select(view),
-                size=24, color=ACCENT, hover_bg="#1C1836", width=40, height=40, radius=20,
+                size=24, color=ACCENT, hover_bg=ACCENT_BG, width=40, height=40, radius=20,
               )
               for option in options
             ],

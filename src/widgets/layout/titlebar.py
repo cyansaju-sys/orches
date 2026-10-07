@@ -2,14 +2,14 @@ from flet import (
   Text, Icon, Icons, Container, Row, Padding, MainAxisAlignment,
   CrossAxisAlignment, WindowDragArea,
 )
-from utils.theme import ACCENT
+from utils.theme import ACCENT, ACCENT_BG
 from widgets.others.clickable import IconAction, Clickable
 
 HEIGHT = 34
 IDLE_COLOR = "#6B7088"
 
 
-def _button(icon, on_click, hover_bg="#1C1836", hover_color=ACCENT):
+def _button(icon, on_click, hover_bg=ACCENT_BG, hover_color=ACCENT):
   return IconAction(
     icon, on_click, size=16, color=IDLE_COLOR,
     hover_color=hover_color, hover_bg=hover_bg, width=32, height=26,
@@ -52,7 +52,7 @@ def TitleBar(page, on_terminal=None, title="IA orches"):
                   ],
                 ),
                 lambda e: on_terminal() if on_terminal else None,
-                hover_bg="#1C1836",
+                hover_bg=ACCENT_BG,
                 tooltip="Abrir o cerrar la terminal",
                 padding=Padding(left=8, right=8, top=4, bottom=4),
                 border_radius=6,

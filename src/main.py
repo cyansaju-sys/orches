@@ -1,5 +1,5 @@
 import flet as ft
-from flet import Colors, Text, FontWeight, Container, Row
+from flet import Container, Row
 from widgets.layout.tabar import TabBar
 from widgets.layout.workspace import Workspace
 from widgets.layout.titlebar import TitleBar
@@ -28,8 +28,9 @@ def main(page: ft.Page):
         ],
         spacing=0,
       ),
-    )
+    ),
   )
+  page.overlay.append(workspace.input_widget)
 
 
 if __name__ == "__main__":

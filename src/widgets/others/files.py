@@ -1,25 +1,26 @@
+import asyncio
 from pathlib import Path
 from flet import (
   Container, Text, Image, Icon, Icons, Row, Column, Padding, ScrollMode,
-  TextOverflow, ButtonStyle, TextButton,
+  TextOverflow, ButtonStyle, TextButton, FontWeight,
 )
 from widgets.others.clickable import Clickable
 from utils import settings
 from utils.file_icons import icon_for
 from utils.files import list_dir
-from utils.git import ignored_paths
+from utils.git import ignored_paths, status_map
 from widgets.others.folder_picker import open_folder_picker
-from utils.theme import ACCENT
+from utils.theme import ACCENT, ACCENT_BG, GIT_COLORS
 
 IGNORED = {".git"}
 DIM_OPACITY = 0.4  # archivos que git ignora
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
-HOVER = "#1C1836"
+HOVER = ACCENT_BG
 
 
 def FilesView(page):
-  state = {"root": None, "expanded": set()}
+  state = {"root": None, "expanded": set(), "status": {}}
   tree = Column(spacing=0, scroll=ScrollMode.AUTO, expand=True)
   title = Text("Ningún proyecto", size=11, color=MUTED, no_wrap=True, overflow=TextOverflow.ELLIPSIS)
 
@@ -30,15 +31,28 @@ def FilesView(page):
       state["expanded"].add(path)
     render()
 
+  def git_code(path):
+    """Estado de git del archivo o carpeta (M, A, U, R, D, C) o None."""
+    try:
+      return state["status"].get(path.relative_to(state["root"]).as_posix())
+    except ValueError:
+      return None
+
   def item(path, depth, ignored=False):
     is_dir = path.is_dir()
     icon = icon_for(path, is_dir, path in state["expanded"])
+    code = git_code(path)
+    color = GIT_COLORS.get(code, TEXT)
+    badge = []
+    if code:  # carpetas: un punto; archivos: la letra del estado
+      badge = [Text("●" if is_dir else code, size=9 if is_dir else 11, color=color, weight=FontWeight.W_600)]
     return Clickable(
       Row(
         spacing=6,
         controls=[
           Image(src=icon, width=16, height=16),
-          Text(path.name, size=12, color=TEXT, no_wrap=True, overflow=TextOverflow.ELLIPSIS, expand=True),
+          Text(path.name, size=12, color=color, no_wrap=True, overflow=TextOverflow.ELLIPSIS, expand=True),
+          *badge,
         ],
       ),
       (lambda e, p=path: toggle(p)) if is_dir else (lambda e: None),
@@ -63,12 +77,29 @@ def FilesView(page):
     if root is None:
       controls.append(Text("Abre un proyecto para ver su contenido", size=11, color=MUTED))
     else:
+      state["status"] = status_map(root)
       build(root, 0, controls)
       if not controls:
         controls.append(Text("Carpeta vacía", size=11, color=MUTED))
     tree.controls = controls
     if update:
       tree.update()
+
+  async def watch_git():
+    """Cada pocos segundos revisa git y repinta el árbol si cambió algo."""
+    while True:
+      await asyncio.sleep(3)
+      root = state["root"]
+      if root is None:
+        continue
+      status = await asyncio.to_thread(status_map, root)
+      if status != state["status"]:
+        try:
+          render()
+        except RuntimeError:
+          pass  # la vista no está en pantalla (otra pestaña activa)
+
+  page.run_task(watch_git)
 
   open_button = Clickable(
     Row(
