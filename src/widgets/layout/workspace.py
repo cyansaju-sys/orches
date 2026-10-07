@@ -14,6 +14,7 @@ from utils.resize import resize_handle_height
 from utils.theme import ACCENT, ACCENT_BG, ACCENT_DIM, BORDER_COLOR, border_all
 from widgets.others.agent_picker import AgentPicker
 from widgets.others.clickable import IconAction, Clickable
+from widgets.others.modal import modal_open, set_typing, typing_open
 from widgets.others.terminal import TerminalView, FONT, FONT_FILE
 
 SHELL_HEIGHT = 260
@@ -115,6 +116,7 @@ def Workspace(page):
     page.update()
 
   def select(pane):
+    set_typing(False)   # clic en una terminal: el teclado vuelve a ser suyo
     refocus()
     if state["active"] is not pane:
       state["active"] = pane
@@ -123,6 +125,7 @@ def Workspace(page):
   def make_pane(title, icon, view, on_close, expand=None):
     label = Text(title, size=12, no_wrap=True, expand=True)
     pane = {"view": view, "label": label}
+    view.on_focus = lambda: select(pane)
     pane["header"] = Container(
       padding=Padding(left=10, right=2, top=4, bottom=4),
       content=Row(
@@ -137,7 +140,6 @@ def Workspace(page):
     )
     pane["box"] = Container(
       expand=expand,
-      on_click=lambda e, p=pane: select(p),
       content=Column(
         expand=True,
         spacing=0,
@@ -155,10 +157,10 @@ def Workspace(page):
       state["active"] = panes[min(idx, len(panes) - 1)] if panes else shell["pane"]
     refresh()
 
-  def open_agent(agent, project):
-    view = TerminalView(page, agent["command"], project)
+  def open_agent(agent, project, args=(), title=None):
+    view = TerminalView(page, agent["command"], project, args=args)
     # expand=1: todos los agentes reparten el ancho por igual
-    pane = make_pane(f"{agent['name']} · {Path(project).name}", Icons.SMART_TOY, view, close_agent, expand=1)
+    pane = make_pane(title or f"{agent['name']} · {Path(project).name}", Icons.SMART_TOY, view, close_agent, expand=1)
     panes.append(pane)
     state["active"] = pane
     refresh()
@@ -229,6 +231,8 @@ def Workspace(page):
     return state["field_focus"] and len(e.key) == 1 and not (e.ctrl and not e.alt)
 
   async def on_key(e):
+    if modal_open() or typing_open():   # diálogo o campo de texto abierto: las teclas son suyas
+      return
     if state["picker"]:        # con la paleta abierta, las teclas no van a la terminal
       state["picker"].handle_key(e)
       return
@@ -255,6 +259,8 @@ def Workspace(page):
 
   def on_key_repeat(e):
     """Tecla mantenida pulsada: se reenvía a la terminal activa (p. ej. borrar con Retroceso)."""
+    if modal_open() or typing_open():
+      return
     shift, ctrl, alt = state["mods"]
     key = SimpleNamespace(key=e.key, shift=shift, ctrl=ctrl, alt=alt)
     if goes_through_field(key) and not state["picker"]:

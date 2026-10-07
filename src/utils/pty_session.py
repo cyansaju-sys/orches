@@ -61,8 +61,9 @@ def default_shell():
 class PtySession:
   """Proceso conectado a un pseudo-terminal (pty en Linux/macOS, ConPTY en Windows)."""
 
-  def __init__(self, command, cwd, rows=24, cols=80):
+  def __init__(self, command, cwd, rows=24, cols=80, args=()):
     self.command = command
+    self.args = list(args)
     self.cwd = str(cwd)
     self.rows = rows
     self.cols = cols
@@ -75,7 +76,7 @@ class PtySession:
     """Lanza el comando. `on_data(bytes)` se llama desde un hilo lector."""
     exe = shutil.which(self.command) or self.command
     if IS_WINDOWS:
-      argv = ["cmd", "/c", exe] if exe.lower().endswith((".cmd", ".bat")) else [exe]
+      argv = ["cmd", "/c", exe, *self.args] if exe.lower().endswith((".cmd", ".bat")) else [exe, *self.args]
       self._proc = PtyProcess.spawn(argv, cwd=self.cwd, env=child_env(), dimensions=(self.rows, self.cols))
       reader = self._read_windows
     else:
@@ -86,7 +87,7 @@ class PtySession:
       if pid == 0:
         try:
           os.chdir(self.cwd)
-          os.execvpe(exe, [exe], env)
+          os.execvpe(exe, [exe, *self.args], env)
         finally:
           os._exit(127)
       self._pid, self._fd = pid, fd

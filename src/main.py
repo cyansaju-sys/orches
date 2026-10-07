@@ -7,7 +7,7 @@ from widgets.layout.titlebar import TitleBar
 def main(page: ft.Page):
   page.title = "IA orches"
   page.bgcolor = "#07080C"
-  page.padding = 0
+  page.padding = 2
   page.spacing = 0
   page.window.title_bar_hidden = True
   page.window.title_bar_buttons_hidden = True

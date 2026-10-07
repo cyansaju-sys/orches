@@ -54,25 +54,22 @@ def _code(xy):
   return None
 
 
-def status_map(root):
-  """{ruta relativa a `root` (con /): código} de los archivos cambiados, y de sus carpetas.
-
-  Vacío si `root` no está en un repositorio o no hay git.
-  """
+def changed_files(root):
+  """[(ruta relativa a `root` con /, código)] de los archivos cambiados; vacío si no es un repo."""
   if not shutil.which("git"):
-    return {}
+    return []
   top = _git(root, "rev-parse", "--show-toplevel")
   if top is None:
-    return {}
+    return []
   out = _git(root, "status", "--porcelain=v1", "-z", "-uall")
   if not out:
-    return {}
-  from pathlib import Path, PurePosixPath
+    return []
+  from pathlib import Path
   top = Path(top.strip()).resolve()
   prefix = Path(root).resolve().relative_to(top).as_posix()
   prefix = "" if prefix == "." else prefix + "/"
 
-  result = {}
+  result = []
   fields = out.split("\0")
   i = 0
   while i < len(fields):
@@ -84,9 +81,23 @@ def status_map(root):
     if "R" in xy or "C" in xy[:1]:
       i += 1  # los renombrados traen también la ruta de origen
     code = _code(xy)
-    if not code or not path.startswith(prefix):
-      continue
-    rel = PurePosixPath(path[len(prefix):])
+    if code and path.startswith(prefix):
+      result.append((path[len(prefix):], code))
+  return result
+
+
+def branch(root):
+  """Nombre de la rama actual (o None)."""
+  name = _git(root, "rev-parse", "--abbrev-ref", "HEAD") if shutil.which("git") else None
+  return name.strip() if name else None
+
+
+def status_map(root):
+  """{ruta relativa a `root` (con /): código} de los archivos cambiados y de sus carpetas."""
+  from pathlib import PurePosixPath
+  result = {}
+  for path, code in changed_files(root):
+    rel = PurePosixPath(path)
     result[str(rel)] = code
     for parent in rel.parents:        # carpetas que contienen cambios
       if str(parent) == ".":
@@ -95,3 +106,84 @@ def status_map(root):
       if _PRIORITY[code] > _PRIORITY.get(result.get(key), 0):
         result[key] = code
   return result
+
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Entry:
+  path: str                # relativa a la carpeta del proyecto, con /
+  staged: str = ""         # estado en el índice (preparado para commit): M, A, D, R...
+  unstaged: str = ""       # estado en el árbol de trabajo: M, D, U (sin seguimiento)
+  conflict: bool = False
+
+
+def status_entries(root):
+  """Estado detallado por archivo, separando lo preparado (add) de lo que no."""
+  if not shutil.which("git"):
+    return []
+  top = _git(root, "rev-parse", "--show-toplevel")
+  out = _git(root, "status", "--porcelain=v1", "-z", "-uall") if top is not None else None
+  if not out:
+    return []
+  from pathlib import Path
+  prefix = Path(root).resolve().relative_to(Path(top.strip()).resolve()).as_posix()
+  prefix = "" if prefix == "." else prefix + "/"
+
+  result = []
+  fields = out.split("\0")
+  i = 0
+  while i < len(fields):
+    entry = fields[i]
+    i += 1
+    if len(entry) < 4:
+      continue
+    xy, path = entry[:2], entry[3:]
+    if "R" in xy or "C" in xy[:1]:
+      i += 1
+    if not path.startswith(prefix):
+      continue
+    path = path[len(prefix):]
+    if xy == "??":
+      result.append(Entry(path, unstaged="U"))
+    elif "U" in xy or xy in ("AA", "DD"):
+      result.append(Entry(path, conflict=True))
+    else:
+      staged = xy[0] if xy[0] in "MADRCT" else ""
+      unstaged = xy[1] if xy[1] in "MDT" else ""
+      result.append(Entry(path, staged="M" if staged == "T" else staged, unstaged="M" if unstaged == "T" else unstaged))
+  return result
+
+
+def _run(root, *args):
+  out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True,
+                       timeout=30, creationflags=_FLAGS)
+  return out.returncode == 0, (out.stderr or out.stdout).strip()
+
+
+def stage(root, paths):
+  """git add de esos archivos (también registra los borrados). Devuelve (ok, mensaje)."""
+  try:
+    return _run(root, "add", "--", *paths)
+  except (OSError, subprocess.SubprocessError) as e:
+    return False, str(e)
+
+
+def unstage(root, paths):
+  """Saca archivos del índice sin tocar su contenido (git reset). Devuelve (ok, mensaje)."""
+  try:
+    return _run(root, "reset", "-q", "--", *paths)
+  except (OSError, subprocess.SubprocessError) as e:
+    return False, str(e)
+
+
+def commit(root, message):
+  """git commit de lo que está preparado. Devuelve (ok, mensaje de git)."""
+  try:
+    out = subprocess.run(["git", "-C", str(root), "commit", "-m", message], capture_output=True,
+                         text=True, timeout=120, creationflags=_FLAGS)   # los hooks pueden tardar
+  except (OSError, subprocess.SubprocessError) as e:
+    return False, str(e)
+  text = (out.stdout if out.returncode == 0 else out.stderr or out.stdout).strip()
+  return out.returncode == 0, text

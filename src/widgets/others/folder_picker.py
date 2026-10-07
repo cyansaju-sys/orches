@@ -4,6 +4,7 @@ from flet import (
   ScrollMode, TextOverflow, Padding, ButtonStyle,
 )
 from utils.files import list_dir, list_roots
+from widgets.others.modal import show_modal
 from utils.theme import ACCENT
 
 MUTED = "#6B7088"
@@ -54,7 +55,7 @@ def open_folder_picker(page, on_select, start=None):
       go(parent)
 
   def choose(e):
-    page.pop_dialog()
+    close()
     on_select(state["path"])
 
   shortcuts = Row(
@@ -73,7 +74,8 @@ def open_folder_picker(page, on_select, start=None):
 
   refresh()
   state["shown"] = True
-  page.show_dialog(
+  close = show_modal(
+    page,
     AlertDialog(
       title=Text("Abrir proyecto"),
       content=Container(
@@ -89,7 +91,7 @@ def open_folder_picker(page, on_select, start=None):
         ),
       ),
       actions=[
-        TextButton("Cancelar", on_click=lambda e: page.pop_dialog()),
+        TextButton("Cancelar", on_click=lambda e: close()),
         TextButton("Seleccionar esta carpeta", on_click=choose),
       ],
     )

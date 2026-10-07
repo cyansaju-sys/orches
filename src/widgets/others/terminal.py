@@ -7,7 +7,7 @@ from collections import deque
 import pyte
 from flet import (
   Container, Column, Text, TextSpan, TextStyle, TextDecoration, FontWeight,
-  ClipBehavior, CrossAxisAlignment, GestureDetector, Stack,
+  ClipBehavior, CrossAxisAlignment, GestureDetector, Stack, MouseCursor,
 )
 from utils.pty_session import PtySession
 from utils.theme import ACCENT, ACCENT_DIM
@@ -24,6 +24,7 @@ HISTORY = 5000   # líneas de historial
 WHEEL_LINES = 3  # líneas por paso de la rueda
 BLINK = 0.53  # segundos entre parpadeos del cursor
 CURSOR_BG = ACCENT
+CURSOR_GLYPH = "▎"   # barra vertical a la izquierda de la celda, como el cursor "I"
 CURSOR_IDLE_BG = ACCENT_DIM  # cursor del panel sin foco
 
 DEFAULT_FG = "#E6E8EF"
@@ -117,6 +118,30 @@ class ScrollScreen(pyte.Screen):
       self.scrollback.append([line[x] for x in range(self.columns)])
     super().index()
 
+  # pyte no implementa SU/SD (CSI n S / CSI n T): las TUI modernas las usan para desplazar la
+  # región de scroll, y sin ellas el contenido queda mezclado y no se puede hacer scroll.
+  def scroll_up(self, count=None, *_, **__):
+    top, bottom = self.margins or (0, self.lines - 1)
+    for _i in range(count or 1):
+      for y in range(top, bottom):
+        self.buffer[y] = self.buffer[y + 1]
+      self.buffer.pop(bottom, None)
+    self.dirty.update(range(self.lines))
+
+  def scroll_down(self, count=None, *_, **__):
+    top, bottom = self.margins or (0, self.lines - 1)
+    for _i in range(count or 1):
+      for y in range(bottom, top, -1):
+        self.buffer[y] = self.buffer[y - 1]
+      self.buffer.pop(top, None)
+    self.dirty.update(range(self.lines))
+
+
+class TermStream(pyte.ByteStream):
+  """Flujo de pyte con SU/SD añadidos."""
+  csi = {**pyte.ByteStream.csi, "S": "scroll_up", "T": "scroll_down"}
+  events = pyte.ByteStream.events | {"scroll_up", "scroll_down"}
+
 
 BLANK = pyte.screens.Char(" ")
 
@@ -124,7 +149,7 @@ BLANK = pyte.screens.Char(" ")
 class TerminalView:
   """Terminal embebida: pty + emulación con pyte, dibujada con controles de Flet."""
 
-  def __init__(self, page, command, cwd, on_exit=None):
+  def __init__(self, page, command, cwd, on_exit=None, args=()):
     self.page = page
     self.on_exit = on_exit
     self.rows, self.cols = 24, 80
@@ -132,8 +157,9 @@ class TerminalView:
     self.offset = 0          # líneas desplazadas hacia atrás (0 = en vivo)
     self._full = False       # repintar todas las filas (tras desplazarse)
     self._height = 0
-    self.stream = pyte.ByteStream(self.screen)
-    self.session = PtySession(command, cwd, self.rows, self.cols)
+    self._drag = 0.0
+    self.stream = TermStream(self.screen)
+    self.session = PtySession(command, cwd, self.rows, self.cols, args=args)
     # respuestas a consultas del programa (posición del cursor, atributos del terminal...)
     self.screen.write_process_input = self.session.write
     self._cursor_row = 0
@@ -157,9 +183,14 @@ class TerminalView:
     self.thumb = Container(
       width=4, right=2, top=0, height=30, border_radius=2, bgcolor=ACCENT_DIM, visible=False,
     )
+    self.on_focus = None     # el panel lo asigna: se llama al hacer clic en la terminal
     self.control = GestureDetector(
       expand=True,
+      mouse_cursor=MouseCursor.TEXT,     # cursor de texto (I), no la mano
       on_scroll=self._on_wheel,
+      on_vertical_drag_start=self._on_drag_start,
+      on_vertical_drag_update=self._on_drag,
+      on_tap_down=lambda e: self.on_focus() if self.on_focus else None,
       content=Stack(expand=True, controls=[self.container, self.thumb]),
     )
     self._build_lines()
@@ -259,7 +290,7 @@ class TerminalView:
           color = None                    # fase apagada del parpadeo
         if color:
           if blank:
-            glyph, fg, bg = "█", color, None   # el fondo de un espacio no siempre se pinta
+            glyph, fg, bg = CURSOR_GLYPH, color, None   # cursor en barra (I); el fondo de un espacio no siempre se pinta
           else:
             fg, bg = "#0D0F16", color
       k = (fg, bg, ch.bold, ch.italics, ch.underscore)
@@ -319,23 +350,40 @@ class TerminalView:
 
   # --- rueda del mouse -------------------------------------------------------
   def _on_wheel(self, e):
+    """Rueda del mouse."""
     dy = e.scroll_delta.y
-    if not dy:
-      return
-    up = dy < 0
+    if dy:
+      self._scroll(WHEEL_LINES if dy < 0 else -WHEEL_LINES, e.local_position.x, e.local_position.y)
+
+  def _on_drag_start(self, e):
+    self._drag = 0.0
+
+  def _on_drag(self, e):
+    """Deslizar con el touchpad (dos dedos) o arrastrar: Flutter lo entrega como arrastre vertical,
+    no como rueda. Bajar el dedo muestra lo anterior, como en cualquier lista."""
+    self._drag += e.primary_delta
+    lines = int(self._drag / CELL_H)
+    if lines:
+      self._drag -= lines * CELL_H
+      self._scroll(lines, e.local_position.x, e.local_position.y)
+
+  def _scroll(self, lines, x, y):
+    """Desplaza `lines` líneas (positivo = hacia atrás/arriba)."""
+    if os.environ.get("ORCHES_KEYLOG"):
+      print(f"scroll lines={lines} mouse_reporting={self._mouse_reporting()}", flush=True)
     if self._mouse_reporting():
       # la app (Claude Code, OpenCode...) pide eventos de mouse: se le envía la rueda
-      col = min(self.cols, max(1, int((e.local_position.x - PAD) / CELL_W) + 1))
-      row = min(self.rows, max(1, int((e.local_position.y - PAD) / CELL_H) + 1))
-      button = 64 if up else 65
-      if (1006 << 5) in self.screen.mode:
-        self.session.write(f"\x1b[<{button};{col};{row}M")
-      else:
-        self.session.write("\x1b[M" + chr(32 + button) + chr(32 + col) + chr(32 + row))
+      col = min(self.cols, max(1, int((x - PAD) / CELL_W) + 1))
+      row = min(self.rows, max(1, int((y - PAD) / CELL_H) + 1))
+      button = 64 if lines > 0 else 65
+      for _ in range(min(abs(lines), 10)):
+        if (1006 << 5) in self.screen.mode:
+          self.session.write(f"\x1b[<{button};{col};{row}M")
+        else:
+          self.session.write("\x1b[M" + chr(32 + button) + chr(32 + col) + chr(32 + row))
       return
     top = len(self.screen.scrollback)
-    new = self.offset + (WHEEL_LINES if up else -WHEEL_LINES)
-    new = max(0, min(top, new))
+    new = max(0, min(top, self.offset + lines))
     if new != self.offset:
       self.offset = new
       self._full = True
