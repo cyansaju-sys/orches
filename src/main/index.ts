@@ -6,7 +6,7 @@ import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData }
 import * as git from './git'
 import * as pty from './pty'
 import { getSetting, setSetting } from './settings'
-import type { PtyOptions } from '../shared/types'
+import type { GitOp, PtyOptions } from '../shared/types'
 import { runCapture } from './capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
@@ -63,6 +63,8 @@ function registerIpc(): void {
   ipcMain.handle('git:checkout', (_e, root: string, name: string, remote: boolean) => git.checkout(root, name, remote))
   ipcMain.handle('git:createBranch', (_e, root: string, name: string) => git.createBranch(root, name))
   ipcMain.handle('git:show', (_e, root: string, rev: 'HEAD' | 'index', path: string) => git.show(root, rev, path))
+  ipcMain.handle('git:op', (_e, root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean) => git.commitOp(root, op, hash, arg, isMerge))
+  ipcMain.handle('git:log', (_e, root: string, limit: number) => git.log(root, limit))
   ipcMain.handle('git:pull', (_e, root: string) => git.pull(root))
   ipcMain.handle('git:fetch', (_e, root: string) => git.fetch(root))
   ipcMain.handle('git:suggestCommit', (e, root: string) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name)))

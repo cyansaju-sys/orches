@@ -68,6 +68,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('16-actualizar-reiniciando', 400)
     await run(`${store}.set({ update: { status: 'idle' }, tab: 'files' })`)
   }
+  if (process.env.ORCHES_CAPTURE_GRAPH) {             // el grafo de git del proyecto abierto
+    await run(`${store}.openGraph()`)
+    await snap('18-grafo', 1500)
+    await run(`${store}.set({ modal: null })`)
+  }
   if (process.env.ORCHES_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
     await run(`${store}.set({ modal: null, tab: 'ai' })`)
     await snap('12-consumo', 2500)

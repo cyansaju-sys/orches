@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { dirname, basename } from 'node:path'
-import type { GitBranch, GitMarks, GitStatus } from '../shared/types'
+import type { GitBranch, GitCommit, GitMarks, GitOp, GitStatus } from '../shared/types'
 import { extendedPath } from './shellpath'
 
 interface Result { ok: boolean; out: string }
@@ -88,6 +88,52 @@ export async function changesForMessage(root: string): Promise<{ diff: string; r
   const staged = await run(root, ['diff', '--cached', '--no-color'])
   const log = await run(root, ['log', '-8', '--format=%s'])
   return { diff: staged.ok ? staged.out : '', recent: log.ok ? log.out : '' }
+}
+
+const HASH = /^[0-9a-f]{7,40}$/
+const REF_NAME = /^(?!-)[A-Za-z0-9._/-]+$/
+
+/** Argumentos de git para una operación sobre un commit; null si el hash o el nombre no son válidos. */
+export function opArgs(op: GitOp, hash: string, arg = '', isMerge = false): string[] | null {
+  if (!HASH.test(hash)) return null
+  const needsName = op === 'tag' || op === 'branch'
+  if (needsName && (!REF_NAME.test(arg) || arg.endsWith('/') || arg.includes('..'))) return null
+  const parent = isMerge ? ['-m', '1'] : []                    // en un merge hay que decir con qué padre se compara
+  switch (op) {
+    case 'tag': return ['tag', arg, hash]
+    case 'branch': return ['branch', arg, hash]
+    case 'checkout': return ['checkout', hash]
+    case 'cherry-pick': return ['cherry-pick', ...parent, hash]
+    case 'revert': return ['revert', '--no-edit', ...parent, hash]
+    case 'merge': return ['merge', '--no-edit', hash]
+    case 'rebase': return ['rebase', hash]
+    case 'reset-soft': return ['reset', '--soft', hash]
+    case 'reset-mixed': return ['reset', '--mixed', hash]
+    case 'reset-hard': return ['reset', '--hard', hash]
+  }
+}
+
+/** Ejecuta una operación sobre un commit. Devuelve el error de git, o '' si salió bien. */
+export async function commitOp(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string> {
+  const args = opArgs(op, hash, arg, isMerge)
+  if (!args) return 'Nombre o commit no válido'
+  const res = await run(root, args, undefined, 60000)
+  if (res.ok) return ''
+  if (['cherry-pick', 'revert', 'merge', 'rebase'].includes(op) && /conflict/i.test(res.out)) {
+    await run(root, [op === 'merge' ? 'merge' : op, '--abort'])               // no se deja el repositorio a medias
+    return `Hay conflictos: se canceló la operación sin tocar nada.\n${flat(res)}`
+  }
+  return flat(res)
+}
+
+/** Historial de todas las ramas, de lo más nuevo a lo más viejo, con sus padres (para dibujar el grafo). */
+export async function log(root: string, limit: number): Promise<GitCommit[]> {
+  const res = await run(root, ['log', '--all', '--date-order', `-n${Math.max(1, Math.min(limit, 2000))}`, '--format=%H%x1f%P%x1f%an%x1f%at%x1f%D%x1f%s'])
+  if (!res.ok) return []
+  return res.out.split('\n').filter(Boolean).map((line) => {
+    const [hash, parents, author, time, refs, ...subject] = line.split('\x1f')
+    return { hash, parents: parents ? parents.split(' ') : [], author, time: Number(time) * 1000, refs: refs ? refs.split(', ').filter(Boolean) : [], subject: subject.join('\x1f') }
+  })
 }
 
 /** Trae lo nuevo del remoto sin tocar nada local (así se sabe cuántos commits faltan). Devuelve el error, o '' si salió bien. */

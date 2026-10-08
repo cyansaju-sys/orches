@@ -79,7 +79,7 @@ export function Modal({ onClose, children, width = 520, title }: { onClose: () =
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ width }}
-        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0f121a]/80 backdrop-blur-xl shadow-[0_24px_70px_-12px_rgba(0,0,0,0.85)] ring-1 ring-accent/10"
+        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0f121a]/50 backdrop-blur-xl shadow-[0_24px_70px_-12px_rgba(0,0,0,0.85)] ring-1 ring-accent/10"
       >
         {title && (
           <div className="flex items-center justify-between border-b border-line px-4 py-3">

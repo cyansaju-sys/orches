@@ -11,7 +11,7 @@ const MARGIN = 8
  * Menú desplegable anclado a un botón (`anchor` = su rectángulo en pantalla): se abre debajo, alineado a su borde derecho, y
  * pasa arriba si abajo no cabe. Se cierra con Esc, al pulsar fuera o al elegir algo. ↑↓ y Enter funcionan.
  */
-export function Menu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void }) {
+export function Menu({ anchor, items, onClose, width = WIDTH }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void; width?: number }) {
   const box = useRef<HTMLDivElement>(null)
   const shown = items.filter((i) => !i.hidden)
   const [index, setIndex] = useState(0)
@@ -23,7 +23,7 @@ export function Menu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuI
     const below = anchor.bottom + GAP + h <= window.innerHeight - MARGIN
     const wanted = below ? anchor.bottom + GAP : anchor.top - GAP - h
     const top = Math.max(MARGIN, Math.min(wanted, window.innerHeight - h - MARGIN))      // siempre dentro de la ventana
-    const left = Math.min(Math.max(MARGIN, anchor.right - WIDTH), window.innerWidth - WIDTH - MARGIN)
+    const left = Math.min(Math.max(MARGIN, anchor.right - width), window.innerWidth - width - MARGIN)
     setPos({ top, left })
   }, [anchor, shown.length])
 
@@ -42,7 +42,7 @@ export function Menu({ anchor, items, onClose }: { anchor: DOMRect; items: MenuI
     <div className="fixed inset-0 z-50" onMouseDown={onClose} onContextMenu={(e) => { e.preventDefault(); onClose() }}>
       <div
         ref={box} role="menu" onMouseDown={(e) => e.stopPropagation()}
-        style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width: WIDTH }}
+        style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
         className="absolute animate-pop-in rounded-xl border border-white/[0.08] bg-[#0f121a] p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]"
       >
         {shown.map((item, i) => (

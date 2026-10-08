@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
+import { MdAccountTree, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useStore } from '@/store'
 import { Chip, IconButton } from './ui'
 
@@ -42,6 +42,7 @@ export function TitleBar() {
   const set = useStore((s) => s.set)
   const setEdit = useStore((s) => s.setEdit)
   const toggleShell = useStore((s) => s.toggleShell)
+  const openGraph = useStore((s) => s.openGraph)
 
   useEffect(() => window.api.window.onMaximized((maximized) => set({ maximized })), [set])
 
@@ -64,6 +65,7 @@ export function TitleBar() {
           onClick={() => setEdit(!editEnabled)}
           title="Edición de archivos: activa = editables; bloqueada = solo lectura (Ctrl+Shift+L)"
         />
+        {git?.isRepo && <Chip icon={<MdAccountTree size={14} />} label="Commits" onClick={() => openGraph()} title="Commits de todas las ramas, en forma de grafo" />}
       </div>
       <div className="flex items-center gap-0.5">
         <UpdateButton />

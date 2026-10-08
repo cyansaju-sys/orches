@@ -43,6 +43,7 @@ interface State {
   openDoc: (path: string) => Promise<void>
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
+  openGraph: () => void
   renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen
   dropDocs: (path: string) => void                    // se borró: se cierran sus pestañas
   updateDocText: (path: string, text: string) => void
@@ -92,6 +93,11 @@ export const useStore = create<State>((set, get) => ({
     } catch (e) {
       get().toast(`No se pudo abrir ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
     }
+  },
+  openGraph: () => {
+    const path = 'graph:git'
+    const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
+    set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
   openDiff: async (file, staged) => {
     const root = get().project
