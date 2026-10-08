@@ -1,4 +1,5 @@
-"""Resaltado de sintaxis para JavaScript, JSX, TypeScript y TSX. Solo comportamiento: no tiene ícono ni pestaña."""
+"""Sintaxis JavaScript, JSX, TypeScript y TSX, y sugerencias de módulos en los import. Solo comportamiento: sin ícono ni pestaña."""
+from .node_imports import provide
 
 JS_KEYWORDS = """
 async await break case catch class const continue debugger default delete do else export extends finally for from
@@ -30,3 +31,4 @@ def activate(api):
                    title="TypeScript", **common)
   api.add_language("ext_tsx", [".tsx"], keywords=TS_KEYWORDS, types=TS_TYPES, rules=jsx,
                    title="TypeScript / TSX", **common)
+  api.add_completions(["ext_js", "ext_ts", "ext_tsx"], provide)     # módulos de Node y del package.json dentro de import

@@ -56,13 +56,26 @@ def Sidebar(page, on_agent, on_document=None):
     if on_document:
       on_document(path.name, icon_for(path), lambda: FileViewer(page, path), key=f"file:{path}", path=path)   # su ícono de Material Icon Theme
 
+  # globo en la pestaña de extensiones cuando el catálogo trae versiones nuevas
+  ext_count = Text("", size=9, weight=FontWeight.W_700, color="#07080C")
+  ext_badge = Container(content=ext_count, bgcolor="#E2C08D", border_radius=8, height=16, right=0, top=0,
+                        padding=Padding(left=5, right=5), alignment=Alignment.CENTER, visible=False)
+
+  def on_ext_updates(n):
+    ext_count.value = str(n)
+    ext_badge.visible = n > 0
+    try:
+      ext_badge.update()
+    except RuntimeError:
+      pass
+
   views = {
     "files": FilesView(page, open_file),
     "agents": AgentsView(page, on_agent),
     "git": GitView(page, on_git_count),
     "mcp": McpView(page),
     "ai": UsageView(page, resume),
-    "extensions": ExtensionsView(page),
+    "extensions": ExtensionsView(page, lambda n: on_ext_updates(n)),
   }
 
   # --- extensiones: cada una puede traer una pestaña propia (ícono del .zip) ---------------------------------
@@ -75,6 +88,7 @@ def Sidebar(page, on_agent, on_document=None):
     if ext.shortcut:
       ext_tabs.setdefault(ext.shortcut, f"ext:{ext.id}")
 
+  page.run_task(views["extensions"].check)
   body = Container(content=views["files"], padding=Padding(left=4, top=6), expand=True)
 
   def select(view):
@@ -98,6 +112,8 @@ def Sidebar(page, on_agent, on_document=None):
     )
     if option["view"] == "git":
       return Stack(width=40, height=40, controls=[button, git_badge])
+    if option["view"] == "extensions":
+      return Stack(width=40, height=40, controls=[button, ext_badge])
     return button
 
   def extension_button(entry):

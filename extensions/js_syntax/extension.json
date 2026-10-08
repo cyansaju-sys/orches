@@ -1,7 +1,7 @@
 {
   "id": "js_syntax",
   "name": "Sintaxis JS / TS",
-  "version": "1.0.0",
-  "description": "Resaltado para .js .jsx .ts .tsx: etiquetas JSX, funciones, decoradores y tipos",
+  "version": "1.1.0",
+  "description": "Resaltado para .js .jsx .ts .tsx: etiquetas JSX, funciones, decoradores y tipos; y sugiere módulos de Node y del package.json dentro de un import",
   "main": "main.py"
 }

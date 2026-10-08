@@ -1,6 +1,7 @@
 import asyncio
 import os
 import tempfile
+import time
 from dataclasses import dataclass
 from types import SimpleNamespace
 from pathlib import Path
@@ -259,8 +260,8 @@ def FileViewer(page, path):
       pass
 
   # --- sugerencias de autocompletado ------------------------------------------------------------------------
-  KIND_ICONS = {"keyword": Icons.KEY, "type": Icons.DATA_OBJECT, "word": Icons.TEXT_FIELDS}
-  KIND_NAMES = {"keyword": "palabra clave", "type": "tipo", "word": "en este archivo"}
+  KIND_ICONS = {"keyword": Icons.KEY, "type": Icons.DATA_OBJECT, "word": Icons.TEXT_FIELDS, "module": Icons.INVENTORY_2}
+  KIND_NAMES = {"keyword": "palabra clave", "type": "tipo", "word": "en este archivo", "module": "módulo"}
 
   def render_popup():
     popup = editor["popup"]
@@ -273,10 +274,10 @@ def FileViewer(page, path):
         Row(spacing=8, vertical_alignment=CrossAxisAlignment.CENTER, controls=[
           Icon(KIND_ICONS[s.kind], size=14, color=ACCENT if active else MUTED),
           Text(s.label, size=12, color=TEXT, font_family=FONT, expand=True, no_wrap=True),
-          Text(KIND_NAMES[s.kind], size=10, color=MUTED)]),
+          Text(s.detail or KIND_NAMES[s.kind], size=10, color=MUTED)]),
         lambda e, i=i: accept(i), hover_bg=ACCENT_BG, bgcolor=ACCENT_BG if active else None,
         padding=Padding(left=8, right=8, top=4, bottom=4), border_radius=6))
-    hint = Text("↑↓ elegir · Tab aceptar · Esc cerrar", size=9, color=MUTED)
+    hint = Text("↑↓ elegir · Enter o Tab aceptar · Esc cerrar", size=9, color=MUTED)
     popup.content = Column(spacing=0, tight=True, controls=[*rows, Container(padding=Padding(left=8, top=4), content=hint)])
     popup.visible = bool(rows)
     field = editor["field"]
@@ -302,13 +303,29 @@ def FileViewer(page, path):
       return
     text, cursor = state["text"], state["selection"][1]
     lang = LANGS[language]
-    found = completion.suggestions(text, cursor, lang.keywords, lang.types, force=force, case_insensitive=lang.ignore_case)
-    state.update(sugg=found, sel=0, start=completion.prefix_at(text, cursor)[0])
+    found = []
+    for entry in extensions.REGISTRY.completions_for(language):     # p. ej. los módulos de Node dentro de un import
+      try:
+        found = entry.provide(text, cursor, path)
+      except Exception:
+        found = []
+      if found:
+        break
+    if found:
+      state.update(sugg=found, sel=0, start=found[0].start)
+    else:
+      found = completion.suggestions(text, cursor, lang.keywords, lang.types, force=force, case_insensitive=lang.ignore_case)
+      state.update(sugg=found, sel=0, start=completion.prefix_at(text, cursor)[0])
     render_popup()
 
   def on_selection(e):
     state["selection"] = (e.selection.start, e.selection.end)
     if state["sugg"]:       # si el cursor salió de la palabra que se completaba, el cuadro ya no aplica
+      if state["sugg"][0].start >= 0:      # sugerencia de una extensión (p. ej. dentro de comillas)
+        typed = state["text"][state["start"]:e.selection.end]
+        if e.selection.end < state["start"] or any(c in typed for c in "'\"`\n"):
+          hide_suggestions()
+        return
       start, word = completion.prefix_at(state["text"], e.selection.end)
       if start != state["start"] or not word:
         hide_suggestions()
@@ -321,18 +338,24 @@ def FileViewer(page, path):
     new, cursor = completion.apply(state["text"], state["selection"][1], state["sugg"][index])
     state["text"], state["selection"] = new, (cursor, cursor)
     field.value = new
-    field.selection = TextSelection(base_offset=cursor, extent_offset=cursor)
     field.update()
     state["sugg"] = []
     render_popup()
     changed()
+    page.run_task(place_cursor, cursor)
 
-    async def back():            # el Tab (o el clic) pudo mover el foco: se devuelve al editor
-      try:
-        await editor["field"].focus()
-      except Exception:
-        pass
-    page.run_task(back)
+  async def place_cursor(position):
+    """Al cambiar el valor el cuadro de texto manda el cursor al final: se vuelve a colocar y se devuelve el foco."""
+    await asyncio.sleep(0.05)
+    field = editor["field"]
+    if not field:
+      return
+    try:
+      field.selection = TextSelection(base_offset=position, extent_offset=position)
+      field.update()
+      await field.focus()
+    except Exception:
+      pass
 
   def handle_suggest_key(e):
     """Teclas con el cuadro abierto. True si la tecla se usó (no debe llegar al editor)."""
@@ -341,7 +364,8 @@ def FileViewer(page, path):
     if e.key in ("Arrow Down", "Arrow Up"):
       state["sel"] = (state["sel"] + (1 if e.key == "Arrow Down" else -1)) % len(state["sugg"])
       render_popup()
-    elif e.key == "Tab" and not e.shift:
+    elif (e.key == "Tab" or e.key == "Enter") and not e.shift:
+      state["enter_at"] = time.monotonic()
       accept()
     elif e.key == "Escape":
       hide_suggestions()
@@ -362,8 +386,24 @@ def FileViewer(page, path):
     if not state["dirty"]:
       set_dirty(True)
 
+  def inserted_newline(old, new):
+    """¿`new` es `old` con un salto de línea de más? (el Enter que aceptó una sugerencia también llega al cuadro de texto)"""
+    if len(new) != len(old) + 1:
+      return False
+    return any(new[i] == "\n" and new[:i] + new[i + 1:] == old for i in range(len(new)))
+
   def on_edit(e):
-    state["text"] = e.control.value or ""
+    value = e.control.value or ""
+    if inserted_newline(state["text"], value) and (state["sugg"] or time.monotonic() - state.get("enter_at", 0) < 0.5):
+      e.control.value = state["text"]      # ese Enter era para elegir la sugerencia, no para escribir una línea nueva
+      e.control.update()
+      if state["sugg"]:
+        state["enter_at"] = time.monotonic()
+        accept()
+      else:
+        page.run_task(place_cursor, state["selection"][1])
+      return
+    state["text"] = value
     page.run_task(update_suggestions)
     changed()
 

@@ -18,6 +18,7 @@ API que recibe `activate(api)`:
   api.add_editor_toolbar(suffixes, build)      franja sobre los archivos con esas extensiones;
                                                build(page, doc) -> control, con doc.path y doc.get_text()
   api.open_document(title, icon, make, key=None, crumbs=None, path=None)   abre una pestaña del editor
+  api.add_completions(languages, provide)      sugerencias propias (p. ej. módulos dentro de un import)
   api.add_language(name, suffixes, keywords="", types="", line_comments=(), block=(), quotes="'\"",
                    rules=(), colors=None, title=None)       resaltado de sintaxis para esos tipos de archivo
                                                (rules: [(tipo, regex)]; colors: {tipo: "#RRGGBB"} de los tipos nuevos)
@@ -26,6 +27,9 @@ import importlib.util
 import json
 import shutil
 import sys
+import tempfile
+import urllib.error
+import urllib.request
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,6 +38,8 @@ from orches.core import settings
 
 BUNDLED = Path(__file__).resolve().parents[2] / "assets" / "extensions"
 MANIFEST = "extension.json"
+CATALOG_URL = "https://api.github.com/repos/cyansaju-sys/orches/contents/dist/extensions?ref=master"
+MAX_DOWNLOAD = 20_000_000     # tamaño máximo de un .zip descargado del catálogo
 MAX_UNPACKED = 50_000_000     # un .zip que descomprima más que esto se rechaza
 
 
@@ -72,11 +78,22 @@ class Toolbar:
 
 
 @dataclass
+class Completions:
+  extension: Extension
+  languages: tuple
+  provide: object
+
+
+@dataclass
 class Registry:
   extensions: list = field(default_factory=list)
   sidebar_views: list = field(default_factory=list)
   toolbars: list = field(default_factory=list)
+  completions: list = field(default_factory=list)
   errors: list = field(default_factory=list)      # [(id, mensaje)] de las que no pudieron cargarse
+
+  def completions_for(self, language):
+    return [c for c in self.completions if language in c.languages]
 
   def toolbars_for(self, path):
     suffix = Path(path).suffix.lower()
@@ -130,12 +147,59 @@ def install_zip(zip_path):
   return read_manifest(target)
 
 
+def _get(url, limit):
+  request = urllib.request.Request(url, headers={"User-Agent": "orches", "Accept": "application/vnd.github+json"})
+  try:
+    with urllib.request.urlopen(request, timeout=15) as response:
+      data = response.read(limit + 1)
+  except (urllib.error.URLError, OSError, ValueError) as e:
+    raise ExtensionError(f"No se pudo conectar con el catálogo: {getattr(e, 'reason', e)}")
+  if len(data) > limit:
+    raise ExtensionError("La descarga es demasiado grande")
+  return data
+
+
+def fetch_catalog():
+  """Extensiones disponibles en el repositorio (carpeta dist/extensions): [{"name", "id", "url", "size"}]."""
+  try:
+    items = json.loads(_get(CATALOG_URL, 1_000_000).decode("utf-8"))
+  except ValueError:
+    raise ExtensionError("Respuesta inesperada del catálogo")
+  return [{"name": i["name"], "id": Path(i["name"]).stem, "url": i["download_url"], "size": i.get("size", 0),
+           "sha": i.get("sha", "")}
+          for i in items if isinstance(i, dict) and i.get("type") == "file" and i.get("name", "").endswith(".zip")
+          and i.get("download_url", "").startswith("https://")]
+
+
+def install_from_catalog(item):
+  """Descarga un .zip del catálogo y lo instala (pasa por las mismas comprobaciones que uno local)."""
+  data = _get(item["url"], MAX_DOWNLOAD)
+  with tempfile.TemporaryDirectory() as tmp:
+    path = Path(tmp) / item["name"]
+    path.write_bytes(data)
+    ext = install_zip(path)
+  shas = settings.get("extension_shas", {})
+  shas[ext.id] = item.get("sha", "")      # con esto se sabe después si el .zip del repositorio cambió
+  settings.set("extension_shas", shas)
+  return ext
+
+
+def outdated(catalog):
+  """Ids instalados cuyo .zip del catálogo es distinto del que se instaló (o se instaló de otra forma)."""
+  shas = settings.get("extension_shas", {})
+  ids = {p.name for p in root().iterdir() if p.is_dir()} if root().is_dir() else set()
+  return [i["id"] for i in catalog if i["id"] in ids and i.get("sha") and shas.get(i["id"]) != i["sha"]]
+
+
 def uninstall(ext_id):
   """Borra una extensión; si venía con la app no se vuelve a instalar sola."""
   shutil.rmtree(root() / ext_id, ignore_errors=True)
   removed = set(settings.get("extensions_removed", []))
   removed.add(ext_id)
   settings.set("extensions_removed", sorted(removed))
+  shas = settings.get("extension_shas", {})
+  if shas.pop(ext_id, None) is not None:
+    settings.set("extension_shas", shas)
 
 
 def install_bundled():
@@ -182,6 +246,11 @@ class Api:
                        quotes, ignore_case, tuple(rules))
     syntax.register_language(name, lang, suffixes, colors, title)
 
+  def add_completions(self, languages, provide):
+    """Sugerencias propias para esos lenguajes (nombres de `add_language`). `provide(text, cursor, path)` devuelve
+    una lista de `orches.core.completion.Suggestion`, o [] si no aplica donde está el cursor."""
+    REGISTRY.completions.append(Completions(self.extension, tuple(languages), provide))
+
   def open_document(self, title, icon, make, key=None, crumbs=None, path=None):
     if self._host.get("open_document"):
       self._host["open_document"](title, icon, make, key=key, crumbs=crumbs, path=path)
@@ -208,6 +277,7 @@ def load_all(page, host):
   REGISTRY.extensions.clear()
   REGISTRY.sidebar_views.clear()
   REGISTRY.toolbars.clear()
+  REGISTRY.completions.clear()
   REGISTRY.errors.clear()
   install_bundled()
   folders = sorted(p for p in root().iterdir() if p.is_dir() and not p.name.startswith(".")) if root().is_dir() else []

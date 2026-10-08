@@ -94,3 +94,49 @@ def test_js_syntax_extension_highlights(config):
   kinds = {t: k for t, k in highlight("const App = () => <Foo/>; go(i<n)", "ext_tsx")[0]}
   assert kinds["<Foo/>"] == "tag" and kinds["go"] == "function" and kinds["App"] == "type"
   assert "<n" not in kinds or kinds.get("<n") != "tag"
+
+
+def test_catalog_lists_only_https_zips_and_installs(config, monkeypatch):
+  listing = json.dumps([
+    {"name": "a.zip", "type": "file", "download_url": "https://x/a.zip", "size": 10},
+    {"name": "b.zip", "type": "file", "download_url": "http://x/b.zip"},
+    {"name": "c.txt", "type": "file", "download_url": "https://x/c.txt"},
+    {"name": "d", "type": "dir"}]).encode()
+  zip_path = make_zip(config / "a.zip")
+  monkeypatch.setattr(extensions, "_get", lambda url, limit: listing if "api.github" in url else zip_path.read_bytes())
+  items = extensions.fetch_catalog()
+  assert [i["id"] for i in items] == ["a"]
+  assert extensions.install_from_catalog(items[0]).id == "demo"
+
+
+def test_node_import_suggestions(tmp_path):
+  import sys
+  from pathlib import Path
+  sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extensions"))
+  from js_syntax.node_imports import provide
+  (tmp_path / "package.json").write_text('{"dependencies": {"node-forge": "1"}, "devDependencies": {"vitest": "1"}}')
+  file = tmp_path / "src" / "a.js"
+  file.parent.mkdir()
+  text = "import forge from 'node-"
+  labels = [s.label for s in provide(text, len(text), file)]
+  assert labels == ["node-forge"]                    # no mezcla 'node:' ni 'node-' de los módulos de Node
+  text = "const fs = require('f"
+  found = provide(text, len(text), file)
+  assert [s.label for s in found][:2] == ["fs", "fs/promises"] and found[0].start == len(text) - 1
+  assert provide("import x from './a", 18, file) == []           # rutas relativas: nada
+  assert provide("const a = 'fs'", 13, file) == []               # una cadena cualquiera: nada
+  text = "import { readFile } from 'node:fs/p"
+  assert [s.label for s in provide(text, len(text), file)] == ["node:fs/promises"]
+  assert any(s.label == "vitest" for s in provide("import '", 8, file))
+
+
+def test_outdated_compares_catalog_hash(config, monkeypatch):
+  zip_path = make_zip(config / "demo.zip")
+  catalog = [{"name": "demo.zip", "id": "demo", "url": "https://x/demo.zip", "size": 1, "sha": "aaa"}]
+  monkeypatch.setattr(extensions, "_get", lambda url, limit: zip_path.read_bytes())
+  assert extensions.outdated(catalog) == []                       # no está instalada
+  extensions.install_from_catalog(catalog[0])
+  assert extensions.outdated(catalog) == []                       # misma versión que el repositorio
+  assert extensions.outdated([{**catalog[0], "sha": "bbb"}]) == ["demo"]   # el repositorio cambió
+  extensions.uninstall("demo")
+  assert extensions.outdated(catalog) == []

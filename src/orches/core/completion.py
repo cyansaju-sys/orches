@@ -16,7 +16,9 @@ MIN_LENGTH = 3          # palabras más cortas no se ofrecen (ruido)
 @dataclass(frozen=True)
 class Suggestion:
   label: str
-  kind: str            # "keyword" | "type" | "word"
+  kind: str            # "keyword" | "type" | "word" | "module"
+  start: int = -1      # dónde empieza el texto que reemplaza (-1: la palabra bajo el cursor); lo fijan las extensiones
+  detail: str = ""     # etiqueta a la derecha (si no, se muestra el nombre del tipo)
 
 
 def prefix_at(text, cursor):
@@ -87,6 +89,6 @@ def suggestions(text, cursor, keywords=(), types=(), limit=8, force=False, case_
 
 def apply(text, cursor, suggestion):
   """(texto nuevo, cursor nuevo) tras aceptar `suggestion` en lugar de la palabra que se escribía."""
-  start, _ = prefix_at(text, cursor)
+  start = suggestion.start if suggestion.start >= 0 else prefix_at(text, cursor)[0]
   new = text[:start] + suggestion.label + text[cursor:]
   return new, start + len(suggestion.label)
