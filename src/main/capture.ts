@@ -3,7 +3,7 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, type BrowserWindow } from 'electron'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -18,6 +18,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     console.log('capturada', name)
   }
   const store = 'window.__orches.getState()'
+  const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
   win.setContentSize(1360, 860)
   await sleep(1500)
   await run(`${store}.setProject(${JSON.stringify(project)})`)
@@ -27,11 +28,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
   }
-  await run(`${store}.openDoc(${JSON.stringify(join(project, 'src/main/git.ts'))})`)
+  await open('src/main/git.ts')
   await snap('01-archivos-y-editor', 1800)
-  await run(`${store}.openDoc(${JSON.stringify(join(project, 'docs/demo/Contador.tsx'))})`)
+  await open('docs/demo/Contador.tsx')
   await snap('02-sintaxis-tsx')
-  await run(`${store}.openDoc(${JSON.stringify(join(project, 'docs/demo/ejemplo.sql'))})`)
+  await open('docs/demo/ejemplo.sql')
   await snap('03-sql')
   await run(`${store}.set({ tab: 'git' })`)
   await snap('04-git', 1200)
@@ -45,6 +46,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await snap('07-atajos')
   await run(`${store}.set({ modal: null }); ${store}.toast('Commit hecho', 'ok'); ${store}.toast('No se pudo iniciar «claude»: comando no encontrado', 'error')`)
   await snap('08-avisos', 400)
+  await run(`${store}.set({ toasts: [] })`)
   if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar los sub-agentes, con procesos falsos (`cat`)
     await run(`${store}.set({ docs: [], activeDoc: null, tab: 'agents' })`)
     await run(`${store}.addPane({ id: 'a1', kind: 'agent', name: 'Claude Code', title: 'Claude Code · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)} })`)
@@ -56,6 +58,22 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar: el prompt de tu shell no debe ir a la documentación
     await run(`${store}.set({ modal: null }); ${store}.toggleShell()`)
     await snap('terminal-verificacion', 2500)
+  }
+  if (process.env.ORCHES_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
+    await run(`${store}.set({ modal: null, tab: 'ai' })`)
+    await snap('12-consumo', 2500)
+    await run(`(() => { const b = document.querySelectorAll('[title="Más acciones"]')[0]; b?.scrollIntoView({ block: 'center' }); b?.click() })()`)
+    await snap('13-consumo-menu', 500)
+  }
+  if (process.env.ORCHES_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
+    await run(`${store}.set({ modal: null, tab: 'mcp' })`)
+    await snap('09-mcp', 1500)
+    await run(`document.querySelector('[title="Ver detalles"]')?.click()`)
+    await snap('10-mcp-detalles', 600)
+    await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+    await sleep(300)
+    await run(`document.querySelector('[title^="Añadir un servidor"]')?.click()`)
+    await snap('11-mcp-anadir', 600)
   }
   app.quit()
 }

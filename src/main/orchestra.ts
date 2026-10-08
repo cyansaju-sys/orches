@@ -138,6 +138,7 @@ export class Orchestra {
   /** JSON-RPC: devuelve null para las notificaciones (sin respuesta). */
   async handle(message: RpcMessage, caller: string): Promise<object | null> {
     const { method, params = {}, id } = message
+    if (process.env.ORCHES_MCP_LOG) console.log(`MCP ${caller} ${method}${method === 'tools/call' ? ' ' + String(params.name) : ''}`)   // depuración: qué piden los agentes
     if (id === undefined || id === null) return null
     try {
       let result: unknown

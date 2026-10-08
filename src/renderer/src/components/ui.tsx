@@ -87,7 +87,7 @@ export function Modal({ onClose, children, width = 520, title }: { onClose: () =
             <IconButton onClick={onClose} title="Cerrar"><MdClose size={16} /></IconButton>
           </div>
         )}
-        {children}
+        {title ? <div className="pt-4">{children}</div> : children}
       </div>
     </div>
   )

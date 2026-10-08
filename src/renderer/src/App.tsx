@@ -91,31 +91,27 @@ export function App() {
   const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520)
   const dragEditor = useDrag(() => useStore.getState().editorWidth, (v) => s.set({ editorWidth: v }), 320, 1600)
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
-  // arriba van el editor y los agentes; si solo hay terminal, ella ocupa todo
-  const showTop = s.docs.length > 0 || s.panes.length > 0 || !s.shell
   if (!ready) return <div className="h-full bg-bg" />
 
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div className="flex min-h-0 flex-1 p-0.5">
+      <div className="flex min-h-0 flex-1 p-1.5">
         {s.sidebarOpen && (<><Sidebar /><Resizer onDrag={dragSidebar} /></>)}
         <div className="flex min-w-0 flex-1 flex-col">
-          {showTop && (
-            <div className="flex min-h-0 flex-1">
-              {s.docs.length > 0 && (
-                <>
-                  <div style={{ flexBasis: s.editorWidth }} className="flex min-w-[260px] shrink flex-col"><EditorArea /></div>
-                  <Resizer onDrag={dragEditor} />
-                </>
-              )}
-              <AgentsArea />
-            </div>
-          )}
+          <div className="flex min-h-0 flex-1">
+            {s.docs.length > 0 && (
+              <>
+                <div style={{ flexBasis: s.editorWidth }} className="flex min-w-[260px] shrink flex-col"><EditorArea /></div>
+                <Resizer onDrag={dragEditor} />
+              </>
+            )}
+            <AgentsArea />
+          </div>
           {s.shell && (
             <>
-              {showTop && <Resizer direction="y" onDrag={dragShell} />}
-              <TerminalSection fill={!showTop} />
+              <Resizer direction="y" onDrag={dragShell} />
+              <TerminalSection />
             </>
           )}
         </div>

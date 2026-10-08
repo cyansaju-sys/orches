@@ -43,7 +43,7 @@ interface State {
   updateDocText: (path: string, text: string) => void
   markSaved: (path: string, text: string, mtimeMs: number) => void
   replaceDoc: (path: string, data: FileData) => void
-  openAgent: (agent: { name: string; command: string }, args?: string[]) => Promise<void>
+  openAgent: (agent: { name: string; command: string }, args?: string[], opts?: { cwd?: string; title?: string }) => Promise<void>
   addPane: (pane: Pane) => void
   toggleShell: () => Promise<void>
   closePane: (id: string) => void
@@ -98,11 +98,11 @@ export const useStore = create<State>((set, get) => ({
   markSaved: (path, text, mtimeMs) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, savedText: text, mtimeMs } : d)) })),
   replaceDoc: (path, data) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, ...data, savedText: data.text } : d)) })),
 
-  openAgent: async (agent, args = []) => {
-    const cwd = get().project
+  openAgent: async (agent, args = [], opts = {}) => {
+    const cwd = opts.cwd || get().project
     if (!cwd) { get().toast('Abre un proyecto primero (pestaña Archivos)', 'error'); return }
     const id = await window.api.orchestra.newId()          // los ids los reparte la app: así no chocan con los de los sub-agentes
-    const title = `${agent.name} · ${basename(cwd)}`
+    const title = opts.title ?? `${agent.name} · ${basename(cwd)}`
     set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args, cwd }], activePane: id, focus: 'pane', modal: null }))
   },
   /** Un agente pidió abrir otro (reparto de tareas): se añade su panel y la terminal inicia el proceso con la tarea. */

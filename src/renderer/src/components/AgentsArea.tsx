@@ -51,12 +51,12 @@ export function AgentsArea() {
   )
 }
 
-/** La terminal es una sección aparte (con su propio borde): ocupa todo el ancho de abajo, o todo el espacio si no hay nada más abierto. */
-export function TerminalSection({ fill }: { fill: boolean }) {
+/** La terminal es una sección aparte (con su propio borde), debajo del editor y los agentes, a todo el ancho. */
+export function TerminalSection() {
   const shell = useStore((s) => s.shell)!
   const height = useStore((s) => s.shellHeight)
   return (
-    <div style={fill ? undefined : { height }} className={clsx('min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', fill ? 'flex-1' : 'shrink-0')}>
+    <div style={{ height }} className="min-h-[140px] shrink-0 overflow-hidden rounded-lg border border-line bg-surface">
       <PaneBox pane={shell} />
     </div>
   )

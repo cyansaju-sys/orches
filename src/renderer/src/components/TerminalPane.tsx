@@ -41,8 +41,12 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
 
   useEffect(() => {
     wire()
-    void document.fonts.load('13px "DejaVu Sans Mono"')
-    void document.fonts.load('13px "Symbols Nerd Font Mono"')
+    let disposed = false
+    let cleanup = (): void => undefined
+    // las fuentes se cargan ANTES de medir: si no, al llegar cambia el tamaño de la celda, cambian las columnas y zsh redibuja el prompt
+    void (async () => {
+    await Promise.all([document.fonts.load('13px "DejaVu Sans Mono"'), document.fonts.load('13px "Symbols Nerd Font Mono"')]).catch(() => undefined)
+    if (disposed || !host.current) return
     const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, theme, allowProposedApi: true })
     const fit = new FitAddon()
     t.loadAddon(fit)
@@ -78,7 +82,9 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     const data = t.onData((d) => window.api.pty.write(pane.id, d))
     const observer = new ResizeObserver(() => { try { sendSize() } catch { /* aún sin tamaño */ } })
     observer.observe(host.current!)
-    return () => { cancelled = true; clearTimeout(timer); data.dispose(); observer.disconnect(); terms.delete(pane.id); t.dispose(); term.current = null }
+    cleanup = () => { cancelled = true; clearTimeout(timer); data.dispose(); observer.disconnect(); terms.delete(pane.id); t.dispose(); term.current = null }
+    })()
+    return () => { disposed = true; cleanup() }
   }, [pane.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { if (active) term.current?.focus() }, [active])

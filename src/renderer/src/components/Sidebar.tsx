@@ -4,6 +4,8 @@ import { useStore, type SidebarTab } from '@/store'
 import { AgentsView } from '@/views/AgentsView'
 import { FilesView } from '@/views/FilesView'
 import { GitView } from '@/views/GitView'
+import { McpView } from '@/views/McpView'
+import { UsageView } from '@/views/UsageView'
 import { Placeholder } from '@/views/Placeholder'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; title: string; key: string }> = [
@@ -44,8 +46,8 @@ export function Sidebar() {
         {tab === 'files' && <FilesView />}
         {tab === 'agents' && <AgentsView />}
         {tab === 'git' && <GitView />}
-        {tab === 'mcp' && <Placeholder title="Servidores MCP" text="Lee, añade y quita los servidores MCP de cada agente." />}
-        {tab === 'ai' && <Placeholder title="Consumo e historial de IA" text="Tokens, límites de Claude e historial de sesiones." />}
+        {tab === 'mcp' && <McpView />}
+        {tab === 'ai' && <UsageView />}
         {tab === 'extensions' && <Placeholder title="Extensiones" text="Extensiones en TypeScript: pestañas, botones, resaltado y sugerencias." />}
       </div>
     </div>

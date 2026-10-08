@@ -22,6 +22,14 @@ const api: Api = {
     createBranch: (r, n) => ipcRenderer.invoke('git:createBranch', r, n), marks: (f) => ipcRenderer.invoke('git:marks', f)
   },
   agents: { detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell') },
+  usage: {
+    collect: (p, f) => ipcRenderer.invoke('usage:collect', p, f), rename: (s, n) => ipcRenderer.invoke('usage:rename', s, n),
+    remove: (s) => ipcRenderer.invoke('usage:remove', s), names: () => ipcRenderer.invoke('usage:names')
+  },
+  mcp: {
+    list: (p) => ipcRenderer.invoke('mcp:list', p), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
+    remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p)
+  },
   orchestra: {
     newId: () => ipcRenderer.invoke('orchestra:newId'),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),

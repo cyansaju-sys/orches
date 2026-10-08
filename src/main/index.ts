@@ -7,6 +7,8 @@ import * as pty from './pty'
 import { getSetting, setSetting } from './settings'
 import type { PtyOptions } from '../shared/types'
 import { runCapture } from './capture'
+import * as mcp from './mcp'
+import { collectUsage, deleteSession, renameSession, sessionNames } from './usage'
 import { runSelfTest } from './selftest'
 import { newId, startHub, stopHub } from './hub'
 
@@ -52,6 +54,13 @@ function registerIpc(): void {
   ipcMain.handle('git:createBranch', (_e, root: string, name: string) => git.createBranch(root, name))
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
 
+  ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))
+  ipcMain.handle('mcp:add', (_e, agent, spec, scope, project) => mcp.addServer(agent, spec, scope, project))
+  ipcMain.handle('mcp:remove', (_e, server, project) => mcp.removeServer(server, project))
+  ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.ORCHES_NO_LIMITS_FETCH))   // ORCHES_NO_LIMITS_FETCH: pruebas sin red
+  ipcMain.handle('usage:rename', (_e, session, name: string) => renameSession(session, name))
+  ipcMain.handle('usage:remove', (_e, session) => deleteSession(session))
+  ipcMain.handle('usage:names', () => sessionNames())
   ipcMain.handle('orchestra:newId', () => newId())
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())

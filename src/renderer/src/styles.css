@@ -49,8 +49,12 @@ body {
   margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 13px;
   overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none;
 }
-button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-input, textarea { font: inherit; color: inherit; user-select: text; }
+/* en la capa base: las utilidades de Tailwind (bg-*, text-*) deben poder ganarles; fuera de ella las anulaban */
+@layer base {
+  button { cursor: pointer; }
+  button:disabled { cursor: default; }
+  input, textarea { user-select: text; }
+}
 .selectable, .cm-editor, .xterm { user-select: text; }
 .drag { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }

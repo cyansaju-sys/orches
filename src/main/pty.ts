@@ -17,7 +17,8 @@ export interface Meta { id: string; kind: 'agent' | 'shell'; name: string; comma
 interface Session { term: IPty; killed: boolean; meta: Meta; screen: Headless; lastOutput: number }
 
 /** Cómo arrancar un agente con el reparto de tareas conectado; lo registra el módulo del servidor MCP. */
-export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
+export type { Launch } from './launch'
+import type { Launch } from './launch'
 type LaunchHook = (opts: PtyOptions) => Launch
 let launchHook: LaunchHook | null = null
 export const setLaunchHook = (hook: LaunchHook): void => { launchHook = hook }

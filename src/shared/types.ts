@@ -29,6 +29,36 @@ export interface PtyOptions {
 export interface OpenPane { id: string; name: string; command: string; cwd: string; prompt: string; parentId: string }
 export interface PtyExit { id: string; code: number | null; error?: string }
 
+export type McpScope = 'global' | 'project' | 'shared'
+export type McpAgent = 'claude' | 'opencode'
+/** Servidor MCP ya configurado en un agente. */
+export interface McpServer {
+  name: string; agent: McpAgent; scope: McpScope; kind: 'remote' | 'local'; target: string
+  config: Record<string, unknown>      // entrada original de la configuración
+  source: string                       // archivo donde está guardada
+}
+/** Lo que se necesita para añadir un servidor. */
+export interface McpSpec {
+  name: string; kind: 'remote' | 'local'
+  url?: string; headers?: Record<string, string>
+  command?: string; args?: string[]; env?: Record<string, string>
+}
+export interface McpResult { ok: boolean; message: string }
+
+/** Una sesión del historial de un agente. */
+export interface SessionInfo {
+  command: 'claude' | 'opencode'; agent: string; id: string; title: string; project: string; cwd: string
+  tokens: number; start: number; end: number      // fechas en milisegundos
+}
+export interface LimitInfo { label: string; percent: number; resetsAt: number }
+export interface AgentUsage {
+  name: string; command: string
+  window: { start: number; end: number; tokens: number } | null      // ventana de 5 h en curso
+  today: number; week: number; total: number
+  note: string; limits: LimitInfo[]; limitsError: string; limitsAge: number
+}
+export interface UsageData { agents: AgentUsage[]; history: SessionInfo[] }
+
 export type Settings = Record<string, unknown>
 
 export interface Api {
@@ -53,6 +83,17 @@ export interface Api {
     marks(file: string): Promise<GitMarks>
   }
   agents: { detect(): Promise<AgentInfo[]>; shell(): Promise<string> }
+  usage: {
+    collect(project: string | null, fetchLimits: boolean): Promise<UsageData>
+    rename(session: SessionInfo, name: string): Promise<void>
+    remove(session: SessionInfo): Promise<McpResult>
+    names(): Promise<Record<string, string>>
+  }
+  mcp: {
+    list(project: string | null): Promise<McpServer[]>
+    add(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult>
+    remove(server: McpServer, project: string | null): Promise<McpResult>
+  }
   orchestra: {
     newId(): Promise<string>
     onOpenPane(cb: (pane: OpenPane) => void): () => void

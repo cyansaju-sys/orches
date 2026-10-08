@@ -1,18 +1,15 @@
 /** Une el servidor MCP con los agentes abiertos: lista, reparte tareas, abre paneles y lee pantallas. */
 import type { BrowserWindow } from 'electron'
 import type { OpenPane } from '../shared/types'
+import { execFileSync } from 'node:child_process'
 import { detectAgents } from './agents'
+import { buildLaunch, parseMajor, PROMPT_ARGS } from './launch'
 import { currentModel, tier } from './models'
 import { Orchestra, type AgentOutput, type Host } from './orchestra'
 import * as pty from './pty'
 import { getSetting } from './settings'
 
 const BUSY_SECONDS = 4       // sin salida durante este tiempo = el agente ya no está trabajando
-// herramientas del servidor «orches» que Claude Code puede usar sin pedir permiso cada vez
-const ORCHES_TOOLS = ['mcp__orches__list_agents', 'mcp__orches__delegate_task', 'mcp__orches__wait_agent', 'mcp__orches__read_agent_output']
-// cómo arrancar cada agente con una tarea inicial (el resto la recibe escrita cuando ya está listo)
-const PROMPT_ARGS: Record<string, (text: string) => string[]> = { claude: (t) => [t], opencode: (t) => ['--prompt', t] }
-
 let orchestra: Orchestra | null = null
 let counter = 1
 let getWindow: () => BrowserWindow | null = () => null
@@ -99,21 +96,23 @@ export async function startHub(window: () => BrowserWindow | null): Promise<void
   if (getSetting('orchestration') === false) return
   try { orchestra = await new Orchestra(host).start() } catch { return }       // sin servidor local la app funciona igual
   pty.setLaunchHook((opts): pty.Launch => {
-    const server = orchestra!
-    const entry = server.configFor(opts.id)
+    const entry = orchestra!.configFor(opts.id)
     const prompt = opts.prompt?.trim()
-    const given = opts.args ?? []
-    const first = prompt && PROMPT_ARGS[opts.command] ? PROMPT_ARGS[opts.command](prompt) : []   // la tarea va primero: --mcp-config acepta varios valores y se la comería
+    const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2)
+    // los agentes que no aceptan la tarea como argumento la reciben escrita cuando su interfaz está lista
     const after = prompt && !PROMPT_ARGS[opts.command] ? () => deliverLater(opts.id, prompt) : undefined
-    if (opts.command === 'claude') {
-      return { args: [...first, ...given, '--mcp-config', JSON.stringify({ mcpServers: { orches: entry } }), '--allowedTools', ...ORCHES_TOOLS], env: {}, after }
-    }
-    if (opts.command === 'opencode') {
-      const config = { mcp: { servers: { orches: { type: 'remote', url: entry.url, headers: entry.headers } } } }
-      return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) }, after }
-    }
-    return { args: given, env: {}, after }
+    return { ...launch, after }
   })
+}
+
+let majorCache: number | null = null
+/** Versión principal de OpenCode instalada (cambia cómo se le conecta el MCP). */
+function opencodeMajor(): number {
+  if (majorCache === null) {
+    const exe = detectAgents().find((a) => a.command === 'opencode')?.path
+    try { majorCache = exe ? parseMajor(execFileSync(exe, ['--version'], { encoding: 'utf8', timeout: 4000 })) : 2 } catch { majorCache = 2 }
+  }
+  return majorCache
 }
 
 export const stopHub = (): void => orchestra?.stop()
