@@ -3,16 +3,16 @@
 # el comando `orches` y la entrada del menú de aplicaciones.
 #
 #   curl -fsSL https://raw.githubusercontent.com/cyansaju-sys/orches/master/install.sh | bash
-#   ./install.sh                  instala (o actualiza) la versión indicada en ORCHES_REF
-#   ./install.sh --ref master     instala la última versión de una rama o un tag concreto (v0.1.0)
+#   ./install.sh                  instala o actualiza a la última versión publicada (el mismo comando sirve para ambas)
+#   ./install.sh --ref master     instala una rama o un tag concreto (v0.1.0)
 #   ./install.sh --uninstall      lo quita (tus ajustes en ~/.config/orches se conservan)
 #   ./install.sh --yes            no pregunta antes de instalar uv
 #
-# Variables: ORCHES_REPO (repositorio), ORCHES_REF (tag o rama), ORCHES_HOME (dónde se instala).
+# Variables: ORCHES_REPO (repositorio), ORCHES_REF (tag o rama; por defecto el último tag), ORCHES_HOME (dónde se instala).
 set -euo pipefail
 
 REPO="${ORCHES_REPO:-https://github.com/cyansaju-sys/orches.git}"
-REF="${ORCHES_REF:-v0.1.0}"
+REF="${ORCHES_REF:-}"          # vacío = el último tag publicado (v*)
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 DIR="${ORCHES_HOME:-$DATA/orches}"
 BIN="$HOME/.local/bin"
@@ -28,7 +28,7 @@ while [ $# -gt 0 ]; do
     --uninstall) UNINSTALL=1 ;;
     --yes|-y) ASSUME_YES=1 ;;
     --ref) shift; [ $# -gt 0 ] || fail "--ref necesita un valor"; REF="$1" ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) fail "opción desconocida: $1 (usa --help)" ;;
   esac
   shift
@@ -54,6 +54,11 @@ if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
   command -v uv >/dev/null 2>&1 || fail "uv se instaló pero no está en el PATH: abre otra terminal y repite"
+fi
+
+if [ -z "$REF" ]; then
+  REF="$(git ls-remote --tags --refs --sort=-v:refname "$REPO" 'v*' 2>/dev/null | head -n 1 | sed 's|.*refs/tags/||')"
+  [ -n "$REF" ] || { say "No hay versiones publicadas: se usa la rama master."; REF=master; }
 fi
 
 mkdir -p "$DIR" "$BIN" "$(dirname "$DESKTOP")"
