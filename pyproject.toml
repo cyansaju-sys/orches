@@ -1,6 +1,6 @@
 [project]
 name = "orches"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -47,6 +47,10 @@ copyright = "Copyright (C) 2023-2026 by Flet"
 
 [tool.flet.app]
 path = "src"
+
+# La plantilla de Flet 1.0.3 fija jni 1.0.0, pero jni_flutter (más nuevo) exige jni ^1.1.0 y la compilación falla.
+[tool.flet.flutter.pubspec.dependency_overrides]
+jni = "^1.1.0"
 
 [tool.poe.tasks]
 dev="flet run"

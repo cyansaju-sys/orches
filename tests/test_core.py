@@ -1,6 +1,7 @@
 """Pruebas de la lógica sin interfaz: modelos, git, consumo, orquestación y emulación de terminal."""
 import json
 import subprocess
+import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -372,7 +373,7 @@ def test_spawn_errors_and_exit_messages(tmp_path):
   with pytest.raises(SpawnError, match="No se encontró"):
     PtySession("comando-que-no-existe-xyz", tmp_path).start(lambda d: None, lambda c: None)
   with pytest.raises(SpawnError, match="no existe"):
-    PtySession("sh", tmp_path / "nada").start(lambda d: None, lambda c: None)
+    PtySession(sys.executable, tmp_path / "nada").start(lambda d: None, lambda c: None)   # existe, pero la carpeta no
   assert exit_message("claude", 0) == ("«claude» terminó", "info")
   assert exit_message("x", 127)[1] == "error" and "no encontrado" in exit_message("x", 127)[0]
   assert exit_message("x", 2) == ("«x» terminó con código 2", "error")

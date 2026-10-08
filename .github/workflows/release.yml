@@ -53,6 +53,8 @@ jobs:
         run: uv sync
 
       - name: Compilar el binario
+        env:
+          CFLAGS: -Wno-incompatible-pointer-types      # el código C del plugin jni no compila con un clang nuevo sin esto
         run: uv run flet build linux --yes --product Orches --artifact Orches --no-rich-output
 
       - name: Empaquetar
