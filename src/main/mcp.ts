@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path'
 import type { McpAgent, McpResult, McpScope, McpServer, McpSpec } from '../shared/types'
 import { extendedPath } from './shellpath'
 
-export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode' }
+export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex' }
 export const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 
 type Entry = Record<string, unknown>
@@ -26,8 +26,38 @@ export function describe(entry: Entry): { kind: 'remote' | 'local'; target: stri
   let command: string | undefined
   if (Array.isArray(entry.command)) command = entry.command.map(String).join(' ')
   else if (entry.command) command = [String(entry.command), ...((entry.args as unknown[]) ?? []).map(String)].join(' ')
-  if (entry.url || ['http', 'sse', 'remote'].includes(String(entry.type))) return { kind: 'remote', target: String(entry.url ?? '') }
+  if (entry.url || entry.httpUrl || ['http', 'sse', 'remote'].includes(String(entry.type))) return { kind: 'remote', target: String(entry.url ?? entry.httpUrl ?? '') }
   return { kind: 'local', target: command ?? '' }
+}
+
+export const geminiGlobalConfig = (): string => join(homedir(), '.gemini', 'settings.json')
+export const codexConfig = (): string => join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'config.toml')
+
+/** Servidores de `[mcp_servers.<nombre>]` en el config.toml de Codex (solo lo que hace falta: command, args, url, env). */
+export function codexEntries(file: string): Array<[string, Entry]> {
+  let text = ''
+  try { text = readFileSync(file, 'utf8') } catch { return [] }
+  const out = new Map<string, Entry>()
+  let current: Entry | null = null
+  const value = (raw: string): unknown => {
+    const v = raw.trim()
+    if (v.startsWith('[')) return [...v.matchAll(/"((?:[^"\\]|\\.)*)"|'([^']*)'/g)].map((m) => m[1] ?? m[2])
+    const q = /^"((?:[^"\\]|\\.)*)"|^'([^']*)'/.exec(v)
+    return q ? (q[1] ?? q[2]) : v
+  }
+  for (const line of text.split(/\r?\n/)) {
+    const head = /^\s*\[\s*mcp_servers\.("([^"]+)"|[^.\]\s]+)(\.[A-Za-z_]+)?\s*\]\s*$/.exec(line)
+    if (head) {
+      const name = head[2] ?? head[1]
+      if (!out.has(name)) out.set(name, {})
+      current = head[3] ? ((out.get(name)!.env ??= {}) as Entry) : out.get(name)!
+      continue
+    }
+    if (/^\s*\[/.test(line)) { current = null; continue }
+    const kv = /^\s*([A-Za-z0-9_-]+)\s*=\s*(.+?)\s*$/.exec(line)
+    if (kv && current) current[kv[1]] = value(kv[2])
+  }
+  return [...out.entries()]
 }
 
 export const opencodeGlobalConfig = (): string => join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'opencode', 'opencode.json')
@@ -80,6 +110,14 @@ export function listServers(project: string | null): McpServer[] {
   const files: Array<[McpScope, string]> = [['global', opencodeGlobalConfig()]]
   if (project) files.push(['project', join(project, 'opencode.json')])
   for (const [scope, file] of files) for (const [name, entry] of opencodeEntries(file)) add(name, 'opencode', scope, entry, file)
+
+  for (const [name, entry] of Object.entries(isObject(readJson(geminiGlobalConfig()).mcpServers) ? (readJson(geminiGlobalConfig()).mcpServers as Entry) : {})) add(name, 'gemini', 'global', isObject(entry) ? entry : {}, geminiGlobalConfig())
+  if (project) {
+    const file = join(project, '.gemini', 'settings.json')
+    const found = readJson(file).mcpServers
+    for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, 'gemini', 'project', isObject(entry) ? entry : {}, file)
+  }
+  for (const [name, entry] of codexEntries(codexConfig())) add(name, 'codex', 'global', entry, codexConfig())
   return servers
 }
 
@@ -109,6 +147,24 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
     }
     return argv
   }
+  if (agent === 'gemini') {
+    const argv = ['gemini', 'mcp', 'add', '-s', scope === 'global' ? 'user' : 'project']
+    if (remote) {
+      argv.push('-t', 'http')
+      for (const [k, v] of headers) argv.push('-H', `${k}: ${v}`)
+      argv.push(spec.name, spec.url!)
+    } else {
+      for (const [k, v] of env) argv.push('-e', `${k}=${v}`)
+      argv.push(spec.name, spec.command!, ...args)
+    }
+    return argv
+  }
+  if (agent === 'codex') {
+    const argv = ['codex', 'mcp', 'add', spec.name]
+    if (remote) return [...argv, '--url', spec.url!]
+    for (const [k, v] of env) argv.push('--env', `${k}=${v}`)
+    return [...argv, '--', spec.command!, ...args]
+  }
   const argv = ['opencode', 'mcp', 'add']
   if (scope === 'global') argv.push('--global')
   if (remote) {
@@ -136,6 +192,8 @@ export async function addServer(agent: McpAgent, spec: McpSpec, scope: McpScope,
   const error = validate(spec)
   if (error) return { ok: false, message: error }
   if (!(agent in SUPPORTED)) return { ok: false, message: `No sé añadir MCP a ${agent}` }
+  if (agent === 'codex' && scope !== 'global') return { ok: false, message: 'Codex solo guarda sus MCP de forma global' }
+  if (agent === 'codex' && spec.kind === 'remote' && Object.keys(spec.headers ?? {}).length) return { ok: false, message: 'Codex no permite cabeceras al añadir un MCP remoto desde su CLI' }
   if (scope !== 'global' && !project) return { ok: false, message: 'Abre un proyecto para añadirlo solo a él' }
   return run(buildAddArgv(agent, spec, scope), project)
 }
@@ -157,6 +215,8 @@ export async function removeServer(server: McpServer, project: string | null): P
     const cliScope = { global: 'user', project: 'local', shared: 'project' }[server.scope]
     return run(['claude', 'mcp', 'remove', server.name, '-s', cliScope], project)
   }
+  if (server.agent === 'gemini') return run(['gemini', 'mcp', 'remove', '-s', server.scope === 'global' ? 'user' : 'project', server.name], project)
+  if (server.agent === 'codex') return run(['codex', 'mcp', 'remove', server.name], project)
   // OpenCode no trae `mcp remove`: se edita su archivo
   const file = server.scope === 'global' ? opencodeGlobalConfig() : join(project ?? '', 'opencode.json')
   try {

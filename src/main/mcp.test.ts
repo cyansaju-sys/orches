@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { buildAddArgv, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from './mcp'
+import { buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from './mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'orches-mcp-'))
 
@@ -76,5 +76,29 @@ suite('proyecto abierto por un enlace simbólico', () => {
       const found = listServers(viaLink).filter((s) => s.agent === 'claude')
       expect(found.map((s) => `${s.name}:${s.scope}`)).toEqual(['db:project'])
     } finally { process.env.HOME = previous }
+  })
+})
+
+suite('Gemini CLI y Codex', () => {
+  const local = { name: 'loc', kind: 'local' as const, command: 'npx', args: ['-y', 'srv'], env: { A: '1' } }
+  const remote = { name: 'api', kind: 'remote' as const, url: 'https://x/mcp', headers: { Authorization: 'Bearer t' } }
+  it('arma el comando de gemini', () => {
+    expect(buildAddArgv('gemini', local, 'global')).toEqual(['gemini', 'mcp', 'add', '-s', 'user', '-e', 'A=1', 'loc', 'npx', '-y', 'srv'])
+    expect(buildAddArgv('gemini', remote, 'project')).toEqual(['gemini', 'mcp', 'add', '-s', 'project', '-t', 'http', '-H', 'Authorization: Bearer t', 'api', 'https://x/mcp'])
+  })
+  it('arma el comando de codex', () => {
+    expect(buildAddArgv('codex', local, 'global')).toEqual(['codex', 'mcp', 'add', 'loc', '--env', 'A=1', '--', 'npx', '-y', 'srv'])
+    expect(buildAddArgv('codex', remote, 'global')).toEqual(['codex', 'mcp', 'add', 'api', '--url', 'https://x/mcp'])
+  })
+  it('lee los servidores del config.toml de codex', () => {
+    const file = join(dir(), 'config.toml')
+    writeFileSync(file, 'model = "x"\n[mcp_servers.fs]\ncommand = "npx"\nargs = ["-y", "@a/b"]\n[mcp_servers.fs.env]\nK = "v"\n[mcp_servers."web"]\nurl = "https://w/mcp"\n[other]\ncommand = "no"\n')
+    expect(codexEntries(file)).toEqual([
+      ['fs', { command: 'npx', args: ['-y', '@a/b'], env: { K: 'v' } }],
+      ['web', { url: 'https://w/mcp' }]
+    ])
+  })
+  it('describe httpUrl de gemini como remoto', () => {
+    expect(describe({ httpUrl: 'https://g/mcp' })).toEqual({ kind: 'remote', target: 'https://g/mcp' })
   })
 })
