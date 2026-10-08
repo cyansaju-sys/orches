@@ -4,7 +4,7 @@ import { Orchestra, TOOLS, type Host } from './orchestra'
 const calls: unknown[][] = []
 const host: Host = {
   listAgents: (caller) => ({ you_are: caller, open_agents: [] }),
-  delegate: async (caller, target, task, fresh) => { calls.push([caller, target, task, fresh]); return target === 'malo' ? { ok: false, info: 'no existe' } : { ok: true, info: { agent_id: target } } },
+  delegate: async (caller, target, task, fresh, opts) => { calls.push(opts?.difficulty ? [caller, target, task, fresh, opts] : [caller, target, task, fresh]); return target === 'malo' ? { ok: false, info: 'no existe' } : { ok: true, info: { agent_id: target } } },
   output: (id) => (id === 'a2' ? { agent_id: 'a2', busy: false, idle_seconds: 9, text: 'listo' } : null)
 }
 let server: Orchestra | null = null
@@ -53,6 +53,17 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(bad.result.isError).toBe(true)
     const missing = await (await post(rpc('tools/call', { name: 'delegate_task', arguments: { agent: 'a2' } }))).json()
     expect(missing.result.isError).toBe(true)
+  })
+
+  it('delegate_task con difficulty deja que la app elija; sin agente ni dificultad falla', async () => {
+    const { post } = await start()
+    const auto = await (await post(rpc('tools/call', { name: 'delegate_task', arguments: { task: 'x', difficulty: 'hard' } }))).json()
+    expect(auto.result.isError).toBe(false)
+    expect(calls[0]).toEqual(['a1', 'auto', 'x', false, { difficulty: 'hard', force: false }])
+    const wrong = await (await post(rpc('tools/call', { name: 'delegate_task', arguments: { task: 'x', difficulty: 'imposible' } }))).json()
+    expect(wrong.result.isError).toBe(true)
+    const none = await (await post(rpc('tools/call', { name: 'delegate_task', arguments: { task: 'x' } }))).json()
+    expect(none.result.isError).toBe(true)
   })
 
   it('read_agent_output y wait_agent', async () => {

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdClose } from 'react-icons/md'
+import { MdAccountTree, MdClose } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
 import { iconFor } from '@/lib/icons'
@@ -8,6 +8,8 @@ import { languageName } from '@/lib/languages'
 import { crumbs, relative, toPosix } from '@/lib/paths'
 import { isDirty, useStore, type Doc } from '@/store'
 import { CodeEditor } from './CodeEditor'
+import { DiffView } from './DiffView'
+import { GitGraph } from './GitGraph'
 
 export async function saveDoc(doc: Doc): Promise<void> {
   const { toast, markSaved } = useStore.getState()
@@ -33,7 +35,7 @@ export function EditorArea() {
   const [marks, setMarks] = useState<GitMarks>({})
   const doc = docs.find((d) => d.path === activePath) ?? null
 
-  const loadMarks = useCallback(async () => { if (doc) setMarks(await window.api.git.marks(doc.path)) }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
+  const loadMarks = useCallback(async () => { if (doc?.kind === 'text') setMarks(await window.api.git.marks(doc.path)) }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setMarks({}); void loadMarks() }, [doc?.path, git?.files.length, doc?.savedText])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // si otra herramienta cambia el archivo y aquí no hay cambios sin guardar, se recarga solo
@@ -53,7 +55,7 @@ export function EditorArea() {
     closeDoc(d.path)
   }
   const statusOf = (d: Doc): string => {
-    const rel = project ? toPosix(relative(project, d.path)) : ''
+    const rel = project ? toPosix(relative(project, d.diffOf ?? d.path)) : ''
     return git?.files.find((f) => toPosix(f.path) === rel)?.code ?? ''
   }
 
@@ -65,7 +67,7 @@ export function EditorArea() {
           const code = statusOf(d)
           return (
             <div
-              key={d.path}
+              key={d.path} ref={active ? (el) => el?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) : undefined}
               onClick={() => set({ activeDoc: d.path, focus: 'editor' })}
               onAuxClick={(e) => { if (e.button === 1) close(d) }}
               className={clsx(
@@ -73,7 +75,7 @@ export function EditorArea() {
                 active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
               )}
             >
-              <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />
+              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
               {isDirty(d) && <span title="Cambios sin guardar" className="text-[10px] text-warn">●</span>}
@@ -84,17 +86,17 @@ export function EditorArea() {
           )
         })}
       </div>
-      {doc && (
+      {doc && doc.kind !== 'graph' && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
-            {crumbs(project, doc.path).map((c, i, all) => (
+            {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
               <span key={i} className="flex items-center gap-1">
                 <span className={clsx('truncate', i === all.length - 1 && 'font-medium text-text')}>{c}</span>
                 {i < all.length - 1 && <span className="text-line">›</span>}
               </span>
             ))}
           </div>
-          <span className="shrink-0 pl-3 text-[10px] text-muted">{languageName(doc.title)}</span>
+          <span className="shrink-0 pl-3 text-[10px] text-muted">{doc.kind === 'diff' ? 'Comparación' : languageName(doc.title)}</span>
         </div>
       )}
       {doc && (doc.readOnly || !editEnabled) && doc.kind === 'text' && (
@@ -109,6 +111,8 @@ export function EditorArea() {
           focusToken={focus === 'editor' ? 1 : 0}
         />
       )}
+      {doc?.kind === 'graph' && <GitGraph />}
+      {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
       {doc?.kind === 'image' && <div className="grid flex-1 place-items-center overflow-auto p-4"><img src={doc.dataUrl} alt={doc.title} className="max-h-full max-w-full object-contain" /></div>}
       {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">Archivo binario: no se puede mostrar como texto</div>}
     </div>

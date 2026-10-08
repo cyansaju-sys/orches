@@ -6,15 +6,13 @@ import { FilesView } from '@/views/FilesView'
 import { GitView } from '@/views/GitView'
 import { McpView } from '@/views/McpView'
 import { UsageView } from '@/views/UsageView'
-import { ComingSoon } from '@/views/Placeholder'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; title: string; key: string }> = [
   { id: 'files', icon: 'files', title: 'Archivos', key: 'E' },
   { id: 'agents', icon: 'agents', title: 'Agentes', key: 'A' },
   { id: 'git', icon: 'git', title: 'Git', key: 'G' },
   { id: 'mcp', icon: 'mcp', title: 'Servidores MCP', key: 'X' },
-  { id: 'ai', icon: 'ai', title: 'Consumo e historial de IA', key: 'U' },
-  { id: 'extensions', icon: 'extensions', title: 'Extensiones', key: 'Z' }
+  { id: 'ai', icon: 'ai', title: 'Consumo e historial de IA', key: 'U' }
 ]
 
 export function Sidebar() {
@@ -48,7 +46,6 @@ export function Sidebar() {
         {tab === 'git' && <GitView />}
         {tab === 'mcp' && <McpView />}
         {tab === 'ai' && <UsageView />}
-        {tab === 'extensions' && <ComingSoon />}
       </div>
     </div>
   )

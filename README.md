@@ -61,7 +61,7 @@ proyecto, donde puedes retomar, renombrar o borrar una sesión.
 
 ![Selector de ramas](docs/img/ramas.png)
 
-**Próximamente.** Extensiones, el grafo de git y la base de datos Oracle (eran extensiones en la versión anterior).
+**Próximamente.** El grafo de git y la base de datos Oracle (eran extensiones en la versión anterior).
 
 ## Atajos
 
@@ -76,7 +76,7 @@ proyecto, donde puedes retomar, renombrar o borrar una sesión.
 | `Ctrl+Shift+W` | Cerrar el panel activo |
 | `Ctrl+AvPág` / `Ctrl+RePág` | Panel siguiente / anterior |
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
-| `Ctrl+Shift+E` · `A` · `G` · `X` · `U` · `Z` | Archivos · Agentes · Git · MCP · Consumo · Extensiones |
+| `Ctrl+Shift+E` · `A` · `G` · `X` · `U` | Archivos · Agentes · Git · MCP · Consumo |
 
 ## Desarrollo
 

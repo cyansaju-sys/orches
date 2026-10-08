@@ -1,11 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents'
-import { listDir, mtime, readFileData, writeFileData } from './files'
+import { suggestCommit } from './commitMessage'
+import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
 import * as git from './git'
 import * as pty from './pty'
 import { getSetting, setSetting } from './settings'
-import type { PtyOptions } from '../shared/types'
+import type { GitOp, PtyOptions } from '../shared/types'
 import { runCapture } from './capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
@@ -45,6 +46,11 @@ function registerIpc(): void {
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
   ipcMain.handle('fs:read', (_e, path: string) => readFileData(path))
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
+  ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
+  ipcMain.handle('fs:rename', (_e, path: string, name: string) => renameEntry(path, name))
+  ipcMain.handle('fs:trash', async (_e, path: string) => {         // a la papelera: se puede recuperar
+    try { await shell.trashItem(path); return { ok: true, message: 'Movido a la papelera' } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
+  })
   ipcMain.handle('fs:mtime', (_e, path: string) => mtime(path))
 
   ipcMain.handle('git:status', (_e, root: string) => git.status(root))
@@ -56,6 +62,12 @@ function registerIpc(): void {
   ipcMain.handle('git:branches', (_e, root: string) => git.branches(root))
   ipcMain.handle('git:checkout', (_e, root: string, name: string, remote: boolean) => git.checkout(root, name, remote))
   ipcMain.handle('git:createBranch', (_e, root: string, name: string) => git.createBranch(root, name))
+  ipcMain.handle('git:show', (_e, root: string, rev: 'HEAD' | 'index', path: string) => git.show(root, rev, path))
+  ipcMain.handle('git:op', (_e, root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean) => git.commitOp(root, op, hash, arg, isMerge))
+  ipcMain.handle('git:log', (_e, root: string, limit: number) => git.log(root, limit))
+  ipcMain.handle('git:pull', (_e, root: string) => git.pull(root))
+  ipcMain.handle('git:fetch', (_e, root: string) => git.fetch(root))
+  ipcMain.handle('git:suggestCommit', (e, root: string) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name)))
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
 
   ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))

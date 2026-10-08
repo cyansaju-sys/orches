@@ -2,12 +2,13 @@ import { create } from 'zustand'
 import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
 
-export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'extensions'
+export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai'
 export type ToastKind = 'ok' | 'error' | 'info'
 export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches'
 export type Focus = 'tree' | 'editor' | 'pane'
 
-export interface Doc extends FileData { path: string; title: string; savedText: string }
+/** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
+export interface Doc extends FileData { path: string; title: string; savedText: string; original?: string; diffOf?: string; diffLabel?: string }
 export interface Pane {
   id: string; kind: 'agent' | 'shell'; title: string; command: string; args: string[]; cwd: string
   name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
@@ -41,6 +42,10 @@ interface State {
   dismissToast: (id: number) => void
   openDoc: (path: string) => Promise<void>
   closeDoc: (path: string) => void
+  openDiff: (file: string, staged: boolean) => Promise<void>
+  openGraph: () => void
+  renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen
+  dropDocs: (path: string) => void                    // se borró: se cierran sus pestañas
   updateDocText: (path: string, text: string) => void
   markSaved: (path: string, text: string, mtimeMs: number) => void
   replaceDoc: (path: string, data: FileData) => void
@@ -89,11 +94,43 @@ export const useStore = create<State>((set, get) => ({
       get().toast(`No se pudo abrir ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
     }
   },
+  openGraph: () => {
+    const path = 'graph:git'
+    const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
+    set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+  },
+  openDiff: async (file, staged) => {
+    const root = get().project
+    if (!root) return
+    const rel = file.slice(root.length).replace(/^[\\/]+/, '').replace(/\\/g, '/')
+    try {
+      // preparados: HEAD → lo preparado. Sin preparar: lo preparado (o HEAD) → el archivo en disco.
+      const head = await window.api.git.show(root, 'HEAD', rel)
+      const index = await window.api.git.show(root, 'index', rel)
+      const before = staged ? (head ?? '') : (index ?? head ?? '')
+      const after = staged ? (index ?? '') : await window.api.fs.read(file).then((d) => d.text, () => '')
+      const path = `diff:${staged ? 'staged' : 'work'}:${file}`
+      const doc: Doc = { kind: 'diff', text: after, savedText: after, original: before, crlf: false, truncated: false, readOnly: true, mtimeMs: 0,
+        path, title: `${basename(file)} (cambios)`, diffOf: file, diffLabel: staged ? 'Preparado ↔ HEAD' : index !== null ? 'Archivo ↔ preparado' : 'Archivo ↔ HEAD' }
+      set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs.map((d) => (d.path === path ? doc : d)) : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+    } catch (e) {
+      get().toast(`No se pudo comparar ${basename(file)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+    }
+  },
   closeDoc: (path) => set((s) => {
     const i = s.docs.findIndex((d) => d.path === path)
     const docs = s.docs.filter((d) => d.path !== path)
     const activeDoc = s.activeDoc === path ? (docs[Math.min(i, docs.length - 1)]?.path ?? null) : s.activeDoc
     return { docs, activeDoc }
+  }),
+  renameDocs: (from, to) => set((s) => {
+    const move = (p: string): string => (p === from ? to : p.startsWith(from + '/') || p.startsWith(from + '\\') ? to + p.slice(from.length) : p)
+    return { docs: s.docs.map((d) => { const path = move(d.path); return path === d.path ? d : { ...d, path, title: path.split(/[\\/]/).pop() ?? d.title } }), activeDoc: s.activeDoc ? move(s.activeDoc) : null }
+  }),
+  dropDocs: (path) => set((s) => {
+    const inside = (p: string): boolean => p === path || p.startsWith(path + '/') || p.startsWith(path + '\\')
+    const docs = s.docs.filter((d) => !inside(d.path))
+    return { docs, activeDoc: s.activeDoc && inside(s.activeDoc) ? (docs[docs.length - 1]?.path ?? null) : s.activeDoc }
   }),
   updateDocText: (path, text) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, text } : d)) })),
   markSaved: (path, text, mtimeMs) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, savedText: text, mtimeMs } : d)) })),

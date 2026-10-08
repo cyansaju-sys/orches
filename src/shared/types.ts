@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph'
   text: string
   crlf: boolean
   truncated: boolean
@@ -46,6 +46,8 @@ export interface McpSpec {
   url?: string; headers?: Record<string, string>
   command?: string; args?: string[]; env?: Record<string, string>
 }
+export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | 'merge' | 'rebase' | 'reset-soft' | 'reset-mixed' | 'reset-hard'
+export interface GitCommit { hash: string; parents: string[]; author: string; time: number; refs: string[]; subject: string }
 export interface McpResult { ok: boolean; message: string }
 
 /** Una sesión del historial de un agente. */
@@ -81,6 +83,9 @@ export interface Api {
     read(path: string): Promise<FileData>
     write(path: string, text: string, crlf: boolean): Promise<number>
     mtime(path: string): Promise<number>
+    create(dir: string, name: string, isDir: boolean): Promise<McpResult>
+    rename(path: string, name: string): Promise<McpResult>
+    trash(path: string): Promise<McpResult>
   }
   git: {
     status(root: string): Promise<GitStatus>
@@ -93,6 +98,13 @@ export interface Api {
     checkout(root: string, name: string, remote: boolean): Promise<string>
     createBranch(root: string, name: string): Promise<string>
     marks(file: string): Promise<GitMarks>
+    op(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string>
+    log(root: string, limit: number): Promise<GitCommit[]>
+    pull(root: string): Promise<string>
+    fetch(root: string): Promise<string>
+    suggestCommit(root: string): Promise<McpResult & { agent?: string }>
+    onCommitAgent(cb: (name: string) => void): () => void
+    show(root: string, rev: 'HEAD' | 'index', path: string): Promise<string | null>
   }
   agents: {
     detect(): Promise<AgentInfo[]>

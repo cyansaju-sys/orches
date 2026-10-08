@@ -2,6 +2,8 @@ import type { McpScope, McpServer } from '@shared/types'
 
 export const SCOPE_LABELS: Record<McpScope, string> = { global: 'Todos los proyectos', project: 'Este proyecto', shared: 'Compartido (.mcp.json)' }
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity' }
+/** Agentes que solo guardan sus MCP de forma global (no tienen archivo por proyecto). */
+export const GLOBAL_ONLY: string[] = ['codex', 'agy']
 const SECRET = /key|token|secret|auth|pass|pwd|credential/i      // valores que se ocultan
 
 /** «Clave: valor» o «CLAVE=valor» por línea -> objeto. */
