@@ -33,7 +33,7 @@ export interface OpenPane { id: string; name: string; command: string; args?: st
 export interface PtyExit { id: string; code: number | null; error?: string }
 
 export type McpScope = 'global' | 'project' | 'shared'
-export type McpAgent = 'claude' | 'opencode' | 'gemini' | 'codex'
+export type McpAgent = 'claude' | 'opencode' | 'gemini' | 'codex' | 'agy'
 /** Servidor MCP ya configurado en un agente. */
 export interface McpServer {
   name: string; agent: McpAgent; scope: McpScope; kind: 'remote' | 'local'; target: string

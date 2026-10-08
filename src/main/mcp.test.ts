@@ -102,3 +102,13 @@ suite('Gemini CLI y Codex', () => {
     expect(describe({ httpUrl: 'https://g/mcp' })).toEqual({ kind: 'remote', target: 'https://g/mcp' })
   })
 })
+
+suite('Antigravity (agy)', () => {
+  it('arma el comando con las opciones antes del nombre', () => {
+    expect(buildAddArgv('agy', { name: 'loc', kind: 'local', command: 'npx', args: ['-y', 'srv'], env: { A: '1' } }, 'global')).toEqual(['agy', 'mcp', 'add', '--env', 'A=1', 'loc', '--', 'npx', '-y', 'srv'])
+    expect(buildAddArgv('agy', { name: 'api', kind: 'remote', url: 'https://x/mcp', headers: { Authorization: 'Bearer t' } }, 'global')).toEqual(['agy', 'mcp', 'add', '--header', 'Authorization: Bearer t', 'api', 'https://x/mcp'])
+  })
+  it('serverUrl cuenta como remoto', () => {
+    expect(describe({ serverUrl: 'https://s/mcp' })).toEqual({ kind: 'remote', target: 'https://s/mcp' })
+  })
+})
