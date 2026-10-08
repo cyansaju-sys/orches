@@ -19,7 +19,7 @@ from orches.ui.components.code_view import (
 )
 from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.components.permissions import edit_enabled, subscribe
-from orches.ui.syntax import COLORS, LANGS, TITLES, highlight, language_for, spans
+from orches.ui.syntax import COLORS, LANGS, highlight, language_for, spans
 from orches.ui.terminal.view import FONT
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
 

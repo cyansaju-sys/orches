@@ -114,4 +114,6 @@ Desde `activate(api)` puede:
 
 La base de datos Oracle (explorador + botón ▶ en los `.sql`) es ahora la extensión `extensions/oracle_db/`.
 `python tools/build_extensions.py` la empaqueta en `src/assets/extensions/oracle_db.zip`, que la app instala sola.
-Para quitarla: `extensions.uninstall("oracle_db")` (no se reinstala).
+`extensions/js_syntax/` es un ejemplo sin ícono ni pestaña, solo comportamiento: resalta `.js .jsx .ts .tsx`
+(`api.add_language(...)`). Su `.zip` no va con la app: queda en `dist/extensions/js_syntax.zip` y se añade desde la pestaña Extensiones.
+Para quitar Oracle: `extensions.uninstall("oracle_db")` (no se reinstala).

@@ -78,3 +78,19 @@ def test_oracle_extension_bundle_loads(config):
   extensions.install_zip(bundle)
   ext = extensions.read_manifest(extensions.root() / "oracle_db")
   assert ext.icon and ext.icon.is_file() and ext.shortcut == "D"
+
+
+def test_js_syntax_extension_highlights(config):
+  from pathlib import Path
+  from orches.ui.syntax import highlight, language_for
+  src = Path(__file__).resolve().parents[1] / "extensions" / "js_syntax"
+  zip_path = config / "js.zip"
+  with zipfile.ZipFile(zip_path, "w") as z:
+    for f in src.iterdir():
+      z.write(f, f.name)
+  extensions.install_zip(zip_path)
+  assert not extensions.load_all(None, {}).errors
+  assert language_for("App.tsx") == "ext_tsx" and language_for("a.ts") == "ext_ts"
+  kinds = {t: k for t, k in highlight("const App = () => <Foo/>; go(i<n)", "ext_tsx")[0]}
+  assert kinds["<Foo/>"] == "tag" and kinds["go"] == "function" and kinds["App"] == "type"
+  assert "<n" not in kinds or kinds.get("<n") != "tag"
