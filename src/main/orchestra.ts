@@ -17,7 +17,8 @@ Puedes repartir trabajo con estas herramientas:
 - delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre (en su propio panel) con la tarea. \
 Puedes pedir un agente del mismo tipo que tú.
 - wait_agent / read_agent_output: espera y lee lo que respondió.
-Reparte según la dificultad: tareas fáciles o mecánicas (renombrar, texto, boilerplate, tests simples, búsquedas) a agentes \
+Para repartir llama a delegate_task con "difficulty" (easy, medium o hard) y deja que la app asigne: revisa la lista de agentes, comprueba su \
+capacidad y su límite de uso y elige el adecuado. Criterio: tareas fáciles o mecánicas (renombrar, texto, boilerplate, tests simples, búsquedas) a agentes \
 de nivel basic o standard; lo difícil (arquitectura, bugs sutiles, cambios que tocan muchas partes) hazlo tú o pásalo a uno \
 advanced. Cada tarea debe ser autosuficiente: indica archivos, objetivo y criterio de terminado. Evita que dos agentes editen \
 los mismos archivos a la vez. Revisa siempre el resultado antes de darlo por bueno.`
@@ -32,15 +33,18 @@ export const TOOLS = [
     name: 'delegate_task',
     description: 'Envía una tarea a otro agente. `agent` es el id de un agente abierto (p. ej. "a2") o el nombre de un agente ' +
       'instalado (p. ej. "opencode" o "claude"): si no hay uno libre, la app abre uno nuevo en su propio panel con la tarea ya ' +
-      'cargada. Elige según la dificultad: fácil → nivel basic/standard, difícil → advanced.',
+      'cargada. Pasa `difficulty` para que la app revise la lista de agentes, compruebe su capacidad y su límite de uso y asigne el ' +
+      'más adecuado (con agent "auto" o sin `agent`); si el agente que pides no tiene capacidad suficiente, te lo rechaza y propone otro.',
     inputSchema: {
       type: 'object',
       properties: {
-        agent: { type: 'string', description: 'Id de un agente abierto o nombre de uno instalado.' },
+        agent: { type: 'string', description: 'Id de un agente abierto, nombre de uno instalado o "auto" (con difficulty) para que la app elija.' },
+        difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'], description: 'Dificultad de la tarea: easy (mecánica), medium o hard (arquitectura, bugs sutiles).' },
+        force: { type: 'boolean', description: 'Mantener el agente pedido aunque no tenga capacidad suficiente.' },
         task: { type: 'string', description: 'Instrucción completa y autosuficiente.' },
         new_instance: { type: 'boolean', description: 'Abrir uno nuevo aunque ya haya uno libre.' }
       },
-      required: ['agent', 'task']
+      required: ['task']
     }
   },
   {
@@ -72,8 +76,8 @@ export interface AgentOutput { agent_id: string; busy: boolean; idle_seconds: nu
 
 /** Lo que la app ofrece al servidor. */
 export interface Host {
-  listAgents(caller: string): unknown
-  delegate(caller: string, target: string, task: string, newInstance: boolean): Promise<{ ok: boolean; info: unknown }>
+  listAgents(caller: string): unknown | Promise<unknown>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean }): Promise<{ ok: boolean; info: unknown }>
   output(agentId: string, lines: number): AgentOutput | null
 }
 
@@ -158,11 +162,13 @@ export class Orchestra {
   }
 
   private async call(name: string, args: Record<string, unknown>, caller: string): Promise<object> {
-    if (name === 'list_agents') return text(this.host.listAgents(caller))
+    if (name === 'list_agents') return text(await this.host.listAgents(caller))
     if (name === 'delegate_task') {
       const task = String(args.task ?? '').trim()
-      if (!args.agent || !task) return text('Faltan `agent` y `task`.', true)
-      const { ok, info } = await this.host.delegate(caller, String(args.agent), task, Boolean(args.new_instance))
+      const difficulty = args.difficulty === undefined ? undefined : String(args.difficulty)
+      if (!task || (!args.agent && !difficulty)) return text('Faltan `task` y `agent` (o `difficulty` para que la app elija).', true)
+      if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) return text('`difficulty` debe ser easy, medium o hard.', true)
+      const { ok, info } = await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force) })
       return text(info, !ok)
     }
     if (name === 'read_agent_output') {

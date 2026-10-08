@@ -66,8 +66,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('15-actualizar-descargando', 400)
     await run(`${store}.set({ update: { status: 'restarting', version: '0.2.1' } })`)
     await snap('16-actualizar-reiniciando', 400)
-    await run(`${store}.set({ update: { status: 'idle' }, tab: 'extensions' })`)
-    await snap('17-extensiones', 400)
+    await run(`${store}.set({ update: { status: 'idle' }, tab: 'files' })`)
   }
   if (process.env.ORCHES_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
     await run(`${store}.set({ modal: null, tab: 'ai' })`)

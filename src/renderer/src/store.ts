@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
 
-export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'extensions'
+export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai'
 export type ToastKind = 'ok' | 'error' | 'info'
 export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches'
 export type Focus = 'tree' | 'editor' | 'pane'
