@@ -59,6 +59,16 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ modal: null }); ${store}.toggleShell()`)
     await snap('terminal-verificacion', 2500)
   }
+  if (process.env.ORCHES_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
+    await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
+    await snap('14-actualizar-disponible', 500)
+    await run(`${store}.set({ update: { status: 'downloading', version: '0.2.1', percent: 42 } })`)
+    await snap('15-actualizar-descargando', 400)
+    await run(`${store}.set({ update: { status: 'restarting', version: '0.2.1' } })`)
+    await snap('16-actualizar-reiniciando', 400)
+    await run(`${store}.set({ update: { status: 'idle' }, tab: 'extensions' })`)
+    await snap('17-extensiones', 400)
+  }
   if (process.env.ORCHES_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
     await run(`${store}.set({ modal: null, tab: 'ai' })`)
     await snap('12-consumo', 2500)

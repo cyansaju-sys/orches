@@ -1,0 +1,45 @@
+# Al subir un tag v* (p. ej. v0.2.0): comprueba tipos y pruebas, empaqueta el AppImage de Linux y crea la release de GitHub con
+#   - Orches-<versión>-x86_64.AppImage   (la app; se actualiza sola desde las releases)
+#   - latest-linux.yml                   (lo que lee el actualizador de la app para saber que hay una versión nueva)
+#   - install.sh                         (instalador de una línea para Linux)
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write      # crear la release y subir los archivos
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04          # una glibc antigua: el AppImage corre también en distribuciones más viejas
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: La versión del tag debe ser la de package.json
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "El tag es $GITHUB_REF_NAME pero package.json dice $expected: el actualizador compararía mal."; exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Empaquetar el AppImage
+        run: npm run dist
+
+      - name: Crear la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "release/Orches-${GITHUB_REF_NAME#v}-x86_64.AppImage" release/latest-linux.yml install.sh \
+            --title "Orches $GITHUB_REF_NAME" --generate-notes

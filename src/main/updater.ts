@@ -66,7 +66,10 @@ export function setupUpdater(window: () => BrowserWindow | null): void {
     autoUpdater.setFeedURL({ provider: 'generic', url: process.env.ORCHES_UPDATE_URL })
     autoUpdater.forceDevUpdateConfig = true
   }
-  autoUpdater.on('update-available', (info) => set({ status: 'available', version: info.version, canInstall: true, url: releaseUrl(info.version) }))
+  autoUpdater.on('update-available', (info) => {
+    set({ status: 'available', version: info.version, canInstall: true, url: releaseUrl(info.version) })
+    if (process.env.ORCHES_UPDATE_AUTOINSTALL) void installUpdate()          // solo para pruebas: pulsa «Actualizar» por ti
+  })
   autoUpdater.on('update-not-available', () => set({ status: 'idle' }))
   autoUpdater.on('download-progress', (p) => { if (state.status === 'downloading') set({ ...state, percent: Math.round(p.percent) }) })
   autoUpdater.on('update-downloaded', (info) => {
