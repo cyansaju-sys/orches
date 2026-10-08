@@ -1,9 +1,9 @@
 from flet import Border, BorderSide
 
 BORDER_COLOR = "#2A2F3D"
-ACCENT = "#22D3EE"      # color de acento (cian)
+ACCENT = "#A78BFA"      # color de acento (morado)
 ACCENT_BG = "#2E2447"   # fondo morado: hover y selección en toda la interfaz
-ACCENT_DIM = "#2B5663"  # acento apagado
+ACCENT_DIM = "#4B3F72"  # acento apagado
 
 
 def border_all(width=1, color=BORDER_COLOR):
