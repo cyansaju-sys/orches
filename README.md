@@ -9,18 +9,23 @@ demás según su modelo. Se amplía con [extensiones](docs/EXTENSIONES.md).
 
 ## Instalar
 
-**Linux** — instala sin permisos de administrador (necesita `git`; instala `uv` si falta, preguntando antes):
+**Linux** — un comando, sin permisos de administrador:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cyansaju-sys/orches/master/install.sh | bash
 ```
 
-Crea el comando `orches` (en `~/.local/bin`) y la entrada del menú de aplicaciones. Es el mismo script para actualizar
-(`./install.sh --ref v0.2.0`) y para quitarlo (`./install.sh --uninstall`; tus ajustes en `~/.config/orches` se conservan).
+Si la release trae el **binario** (Linux x86_64) lo instala tal cual: no hace falta Python, `uv` ni `git`. Si no, instala
+desde el código con `uv` (descarga Python y las dependencias; instala `uv` si falta, preguntando antes). En ambos casos
+crea el comando `orches` (en `~/.local/bin`) y la entrada del menú de aplicaciones.
+
+El mismo comando **actualiza** a la última versión publicada. Opciones: `./install.sh --ref v0.1.1` (una versión
+concreta), `--source` (forzar la instalación desde el código) y `--uninstall` (lo quita; tus ajustes en
+`~/.config/orches` se conservan).
 
 **Windows** — descarga `Orches-vX.Y.Z-windows.zip` de la [página de releases](https://github.com/cyansaju-sys/orches/releases),
-descomprímelo y ejecuta `Orches.exe`. Lo compila GitHub Actions al subir un tag `v*`
-([release.yml](.github/workflows/release.yml)); no se puede compilar desde Linux.
+descomprímelo y ejecuta `Orches.exe` (sin instalar Python). Los ejecutables los compila GitHub Actions al subir un tag `v*`
+([release.yml](.github/workflows/release.yml)); el de Windows no se puede compilar desde Linux.
 
 **macOS** — por ahora, desde el código (abajo).
 

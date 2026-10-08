@@ -1,5 +1,8 @@
-# Al subir un tag v* (p. ej. v0.1.0): corre las pruebas, compila el .exe de Windows y crea la release de GitHub
-# con el .zip del ejecutable y el instalador de Linux (install.sh).
+# Al subir un tag v* (p. ej. v0.1.1): corre las pruebas, compila los ejecutables y crea la release de GitHub con
+#   - Orches-<tag>-windows.zip       (Orches.exe, sin necesidad de Python)
+#   - Orches-<tag>-linux-x86_64.tar.gz  (binario sin necesidad de Python ni uv; install.sh lo usa si está)
+#   - install.sh                     (instalador de Linux)
+# Si el binario de Linux falla al compilar, la release sale igual y install.sh instala desde el código con uv.
 name: Release
 
 on:
@@ -7,14 +10,13 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write      # crear la release y subir los archivos
+  contents: read
 
 jobs:
   windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: astral-sh/setup-uv@v5
 
       - name: Dependencias y pruebas
@@ -28,13 +30,57 @@ jobs:
 
       - name: Empaquetar
         shell: pwsh
+        run: Compress-Archive -Path build/windows/* -DestinationPath "Orches-${{ github.ref_name }}-windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Orches-windows
+          path: Orches-${{ github.ref_name }}-windows.zip
+
+  linux:
+    runs-on: ubuntu-22.04          # una glibc antigua: el binario corre también en distribuciones más viejas
+    continue-on-error: true        # si falla, la release sale sin él y el instalador usa el código con uv
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Dependencias de compilación de Flutter
         run: |
-          Compress-Archive -Path build/windows/* -DestinationPath "Orches-${{ github.ref_name }}-windows.zip"
+          sudo apt-get update
+          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Dependencias
+        run: uv sync
+
+      - name: Compilar el binario
+        run: uv run flet build linux --yes --product Orches --artifact Orches --no-rich-output
+
+      - name: Empaquetar
+        run: |
+          tar -C build/linux -czf "Orches-${{ github.ref_name }}-linux-x86_64.tar.gz" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Orches-linux
+          path: Orches-${{ github.ref_name }}-linux-x86_64.tar.gz
+
+  release:
+    needs: [windows, linux]
+    if: ${{ !cancelled() && needs.windows.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # crear la release y subir los archivos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Orches-*
+          merge-multiple: true
 
       - name: Crear la release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" "Orches-${{ github.ref_name }}-windows.zip" install.sh `
+          gh release create "${{ github.ref_name }}" Orches-*.zip Orches-*.tar.gz install.sh \
             --title "Orches ${{ github.ref_name }}" --generate-notes

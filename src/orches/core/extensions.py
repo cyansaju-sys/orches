@@ -27,6 +27,7 @@ API que recibe `activate(api)`:
 """
 import importlib.util
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -216,7 +217,11 @@ def uninstall(ext_id):
 def install_bundled():
   """Instala (o actualiza) las extensiones que vienen con la app, salvo las que el usuario quitó."""
   removed = set(settings.get("extensions_removed", []))
-  for zip_path in sorted(BUNDLED.glob("*.zip")) if BUNDLED.is_dir() else []:
+  folders = [BUNDLED]
+  if os.environ.get("FLET_ASSETS_DIR"):         # en la app empaquetada los assets no están junto al código
+    folders.append(Path(os.environ["FLET_ASSETS_DIR"]) / "extensions")
+  archives = sorted(z for folder in folders if folder.is_dir() for z in folder.glob("*.zip"))
+  for zip_path in archives:
     try:
       with zipfile.ZipFile(zip_path) as archive:
         manifest = json.loads(archive.read(MANIFEST).decode("utf-8"))
