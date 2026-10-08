@@ -5,7 +5,7 @@ from pathlib import Path
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, TextField, TextButton, Padding, Checkbox,
   RoundedRectangleBorder, ScrollMode, TextOverflow, FontWeight, MainAxisAlignment,
-  CrossAxisAlignment, SnackBar, Clipboard,
+  CrossAxisAlignment, Clipboard,
 )
 from orches.core import settings
 from orches.core.agents import detect_agents
@@ -16,6 +16,7 @@ from orches.core.mcp import (
 from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.modal import show_modal
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -45,7 +46,7 @@ def McpView(page):
   state = {"key": None}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def project():
     value = settings.get("project")

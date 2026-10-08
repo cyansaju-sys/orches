@@ -1,7 +1,7 @@
 {
   "id": "oracle_db",
   "name": "Oracle",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Explorador de Oracle (objetos, código, tablas) y botón ▶ para ejecutar o compilar archivos .sql",
   "icon": "icon.svg",
   "main": "main.py",

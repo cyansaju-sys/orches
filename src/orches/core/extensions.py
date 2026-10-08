@@ -15,6 +15,7 @@ API que recibe `activate(api)`:
 
   api.page, api.id, api.dir                    ventana, id y carpeta de la extensión
   api.add_sidebar_view(build, title=None)      pestaña en la barra lateral; build(page) -> control
+  api.toast(message, kind=None)                aviso breve abajo a la derecha
   api.add_titlebar_button(label, on_click, tooltip=None)   botón en la barra de título (con el ícono de la extensión)
   api.add_editor_toolbar(suffixes, build)      franja sobre los archivos con esas extensiones;
                                                build(page, doc) -> control, con doc.path y doc.get_text()
@@ -255,6 +256,11 @@ class Api:
     lang = syntax.Lang(frozenset(keywords.split()), frozenset(types.split()), tuple(line_comments), tuple(block),
                        quotes, ignore_case, tuple(rules))
     syntax.register_language(name, lang, suffixes, colors, title)
+
+  def toast(self, message, kind=None):
+    """Aviso breve abajo a la derecha. `kind`: "ok", "error" o "info" (por defecto se deduce del texto)."""
+    from orches.ui.components.toast import toast
+    toast(self.page, message, kind)
 
   def add_titlebar_button(self, label, on_click, tooltip=None):
     """Botón en la barra de título, junto a «Terminal», con el ícono de la extensión; `on_click()` sin argumentos."""

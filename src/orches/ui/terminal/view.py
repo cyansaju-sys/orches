@@ -10,7 +10,8 @@ from flet import (
   Container, Column, Text, TextSpan, TextStyle, TextDecoration, FontWeight,
   ClipBehavior, CrossAxisAlignment, GestureDetector, Stack, MouseCursor,
 )
-from orches.core.pty_session import PtySession
+from orches.core.pty_session import PtySession, SpawnError, exit_message
+from orches.ui.components.toast import toast
 from orches.ui.theme import ACCENT, ACCENT_DIM
 
 FONT = "TermMono"  # DejaVu Sans Mono incluida en assets: métricas iguales en todos los sistemas
@@ -218,7 +219,10 @@ class TerminalView:
       self._build_lines()
       self._started = True
       self.session.rows, self.session.cols = rows, cols
-      self.session.start(self._on_data, self._exited)
+      try:
+        self.session.start(self._on_data, self._exited)
+      except SpawnError as e:
+        self._notify(str(e), "error")
       self._render(update=True)
       self.page.run_task(self._loop)
     elif (rows, cols) != (self.rows, self.cols):
@@ -239,10 +243,20 @@ class TerminalView:
         self._full = True
       self._dirty = True
 
-  def _exited(self):
-    self._on_data(b"\r\n\x1b[90m[proceso terminado]\x1b[0m")
+  def _exited(self, code=None):
+    if not self.session.killed:           # si lo cerró la app (panel cerrado) no hay nada que avisar
+      self._notify(*exit_message(os.path.basename(self.session.command), code))
     if self.on_exit:
       self.on_exit(self)
+
+  def _notify(self, text, kind):
+    """Aviso (toast) desde cualquier hilo: el proceso termina en el hilo lector, no en el de la interfaz."""
+    async def show():
+      toast(self.page, text, kind)
+    try:
+      self.page.run_task(show)
+    except Exception:
+      pass
 
   async def _loop(self):
     """Redibuja ~30 veces por segundo, desde el bucle de eventos de Flet."""

@@ -1,8 +1,9 @@
-from flet import Container, Icons, Icon, Row, Column, Text, Padding, SnackBar
+from flet import Container, Icons, Icon, Row, Column, Text, Padding
 from orches.core import settings
 from orches.core.agents import detect_agents
 from orches.ui.theme import ACCENT, ACCENT_BG
 from orches.ui.components.clickable import Clickable
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -14,7 +15,7 @@ def AgentsView(page, on_open):
   def launch(agent):
     project = settings.get("project")
     if not project:
-      page.show_dialog(SnackBar(Text("Abre un proyecto primero (pestaña Archivos)")))
+      show_toast(page, "Abre un proyecto primero (pestaña Archivos)")
       return
     on_open(agent, project)
 

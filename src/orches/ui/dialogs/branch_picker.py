@@ -3,12 +3,13 @@ import time
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, TextField, TextButton, Padding,
   RoundedRectangleBorder, ScrollMode, TextOverflow, FontWeight, MainAxisAlignment,
-  CrossAxisAlignment, SnackBar, TextStyle,
+  CrossAxisAlignment, TextStyle,
 )
 from orches.core.git import branches, checkout, create_branch
 from orches.ui.components.clickable import Clickable
 from orches.ui.components.modal import show_modal
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -31,7 +32,7 @@ def BranchPicker(page, project, on_changed):
   state = {"branches": [], "query": "", "choosing_base": False, "close": None}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   search = TextField(
     hint_text="Seleccionar una rama o etiqueta para extraer del repositorio", dense=True, text_size=12,

@@ -58,6 +58,21 @@ def default_shell():
   return os.environ.get("SHELL") or shutil.which("bash") or "sh"
 
 
+class SpawnError(Exception):
+  """El proceso no se pudo iniciar: el mensaje es legible para mostrarlo al usuario."""
+
+
+def exit_message(name, code):
+  """(texto, tipo de aviso) para cuando un proceso termina; tipo: "info" o "error"."""
+  if code == 0:
+    return f"«{name}» terminó", "info"
+  if code == 127:
+    return f"No se pudo iniciar «{name}»: comando no encontrado", "error"
+  if code is not None and code < 0:
+    return f"«{name}» se cerró por una señal ({-code})", "error"
+  return f"«{name}» terminó con código {code}" if code is not None else f"«{name}» terminó", "error"
+
+
 class PtySession:
   """Proceso conectado a un pseudo-terminal (pty en Linux/macOS, ConPTY en Windows)."""
 
@@ -72,19 +87,36 @@ class PtySession:
     self._pid = None
     self._fd = None
     self._proc = None
+    self.killed = False       # lo cerró la app (no es un fallo del proceso)
 
   def start(self, on_data, on_exit):
-    """Lanza el comando. `on_data(bytes)` se llama desde un hilo lector."""
-    exe = shutil.which(self.command) or self.command
+    """Lanza el comando. `on_data(bytes)` se llama desde un hilo lector; `on_exit(código)` al terminar.
+
+    Lanza `SpawnError` (con un mensaje legible) si el comando o la carpeta no existen o no se pudo abrir.
+    """
+    exe = shutil.which(self.command)
+    if exe is None:
+      if os.sep in self.command or (os.altsep and os.altsep in self.command):
+        exe = self.command if os.path.isfile(self.command) else None
+      if exe is None:
+        raise SpawnError(f"No se encontró «{self.command}»: instálalo o revisa que esté en el PATH")
+    if not os.path.isdir(self.cwd):
+      raise SpawnError(f"La carpeta «{self.cwd}» no existe")
     if IS_WINDOWS:
       argv = ["cmd", "/c", exe, *self.args] if exe.lower().endswith((".cmd", ".bat")) else [exe, *self.args]
-      self._proc = PtyProcess.spawn(argv, cwd=self.cwd, env={**child_env(), **self.extra_env}, dimensions=(self.rows, self.cols))
+      try:
+        self._proc = PtyProcess.spawn(argv, cwd=self.cwd, env={**child_env(), **self.extra_env}, dimensions=(self.rows, self.cols))
+      except Exception as e:
+        raise SpawnError(f"No se pudo iniciar «{self.command}»: {e}")
       reader = self._read_windows
     else:
       env = {**child_env(), **self.extra_env}
-      with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        pid, fd = pty.fork()
+      try:
+        with warnings.catch_warnings():
+          warnings.simplefilter("ignore", DeprecationWarning)
+          pid, fd = pty.fork()
+      except OSError as e:
+        raise SpawnError(f"No se pudo crear el terminal: {e}")
       if pid == 0:
         try:
           os.chdir(self.cwd)
@@ -107,11 +139,12 @@ class PtySession:
         break
       on_data(data)
     self.alive = False
+    code = None
     try:
-      os.waitpid(self._pid, 0)
-    except OSError:
+      code = os.waitstatus_to_exitcode(os.waitpid(self._pid, 0)[1])
+    except (OSError, ChildProcessError):
       pass
-    on_exit()
+    on_exit(code)
 
   def _read_windows(self, on_data, on_exit):
     while True:
@@ -122,7 +155,7 @@ class PtySession:
       if data:
         on_data(data.encode("utf-8", "replace"))
     self.alive = False
-    on_exit()
+    on_exit(getattr(self._proc, "exitstatus", None))
 
   def write(self, text):
     if not self.alive:
@@ -150,6 +183,7 @@ class PtySession:
     if not self.alive:
       return
     self.alive = False
+    self.killed = True
     try:
       if IS_WINDOWS:
         self._proc.terminate(force=True)

@@ -1,13 +1,14 @@
 import asyncio
 from pathlib import Path
 from flet import (
-  Container, Column, Row, Text, Icon, Icons, Image, Padding, ScrollMode, FontWeight, SnackBar, TextOverflow, ProgressRing,
+  Container, Column, Row, Text, Icon, Icons, Image, Padding, ScrollMode, FontWeight, TextOverflow, ProgressRing,
   CrossAxisAlignment, MainAxisAlignment,
 )
 from orches.core import extensions, settings
 from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.dialogs.file_picker import open_file_picker
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -21,7 +22,7 @@ def ExtensionsView(page, on_updates=None):
   listing = Column(spacing=6, scroll=ScrollMode.AUTO, expand=True)
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def installed():
     root = extensions.root()

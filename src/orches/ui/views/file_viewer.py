@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from pathlib import Path
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, Image, Markdown, MarkdownExtensionSet, Padding, FontWeight,
-  CrossAxisAlignment, MainAxisAlignment, ProgressRing, SnackBar, ScrollMode, BoxFit, TextField, TextButton,
+  CrossAxisAlignment, MainAxisAlignment, ProgressRing, ScrollMode, BoxFit, TextField, TextButton,
   TextStyle, TextSelection, RoundedRectangleBorder, NoInputBorder, Stack, GestureDetector, MouseCursor, Colors,
   TextSpan,
 )
@@ -23,6 +23,7 @@ from orches.ui.components.permissions import edit_enabled, subscribe
 from orches.ui.syntax import COLORS, LANGS, highlight, language_for, spans
 from orches.ui.terminal.view import FONT
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -129,7 +130,7 @@ def FileViewer(page, path):
   editor = {"field": None, "stack": None, "popup": None, "overlay": None, "gutter": None, "wide": None, "colors": False}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def confirm(title, message, accept_label, on_accept):
     close = show_modal(page, AlertDialog(

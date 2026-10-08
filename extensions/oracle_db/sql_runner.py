@@ -10,6 +10,7 @@ from orches.ui.components.clickable import Clickable
 from orches.ui.components.clipboard import copy_text
 from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -33,8 +34,7 @@ def SqlToolbar(page, get_text):
   state = {"busy": False}
 
   def toast(message):
-    from flet import SnackBar
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def current():
     return next((p for p in profiles.load() if p.id == _chosen["id"]), None)

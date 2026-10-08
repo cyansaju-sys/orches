@@ -364,3 +364,29 @@ def test_marcas_de_git_en_el_margen(repo):
   nuevo.write_text("x\n")
   assert git.diff_marks(nuevo) == ({}, True)                 # sin seguimiento: todo se marca como añadido
   assert git.diff_marks(repo / "no_existe.txt") == ({}, False)
+
+
+def test_spawn_errors_and_exit_messages(tmp_path):
+  import pytest
+  from orches.core.pty_session import PtySession, SpawnError, exit_message
+  with pytest.raises(SpawnError, match="No se encontró"):
+    PtySession("comando-que-no-existe-xyz", tmp_path).start(lambda d: None, lambda c: None)
+  with pytest.raises(SpawnError, match="no existe"):
+    PtySession("sh", tmp_path / "nada").start(lambda d: None, lambda c: None)
+  assert exit_message("claude", 0) == ("«claude» terminó", "info")
+  assert exit_message("x", 127)[1] == "error" and "no encontrado" in exit_message("x", 127)[0]
+  assert exit_message("x", 2) == ("«x» terminó con código 2", "error")
+  assert "señal" in exit_message("x", -9)[0]
+
+
+def test_real_process_reports_exit_code(tmp_path):
+  import os
+  import threading
+  import pytest
+  if os.name == "nt":
+    pytest.skip("solo Unix")
+  from orches.core.pty_session import PtySession
+  done, codes = threading.Event(), []
+  session = PtySession("sh", tmp_path, args=["-c", "exit 3"])
+  session.start(lambda d: None, lambda c: (codes.append(c), done.set()))
+  assert done.wait(5) and codes == [3] and session.killed is False

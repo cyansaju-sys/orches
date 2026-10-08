@@ -1,7 +1,7 @@
 import asyncio
 from flet import (
   Container, Column, Row, Text, Icon, Icons, ListView, TextSpan, TextStyle, Padding, FontWeight,
-  CrossAxisAlignment, MainAxisAlignment, ScrollMode, ProgressRing, SnackBar,
+  CrossAxisAlignment, MainAxisAlignment, ScrollMode, ProgressRing,
 )
 from .oracle import SINGULAR, DbError
 from orches.ui.components.clickable import Clickable
@@ -10,6 +10,7 @@ from orches.ui.components.code_view import code_view
 from orches.ui.syntax import COLORS, highlight, spans
 from orches.ui.terminal.view import FONT
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -71,7 +72,7 @@ def ObjectViewer(page, session, owner, obj):
   state = {"text": ""}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def toolbar(extra=None):
     return Container(padding=Padding(left=10, right=6, top=6, bottom=6), border=None, content=Row(

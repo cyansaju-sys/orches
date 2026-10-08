@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from flet import (
   Container, Column, Row, Text, Icon, Icons, Image, Padding, Clipboard, TextField,
   KeyboardListener, NoInputBorder,
-  CrossAxisAlignment, MainAxisAlignment, Border, BorderSide, ClipBehavior, SnackBar, AlertDialog, TextButton,
+  CrossAxisAlignment, MainAxisAlignment, Border, BorderSide, ClipBehavior, AlertDialog, TextButton,
   RoundedRectangleBorder,
 )
 from orches.core import settings
@@ -27,6 +27,7 @@ from orches.ui.layout.editor_area import EditorArea
 from orches.ui.components.permissions import toggle_edit
 from orches.ui.dialogs.shortcuts import open_shortcuts
 from orches.ui.terminal.view import TerminalView, FONT, FONT_FILE
+from orches.ui.components.toast import toast as show_toast
 
 EDITOR_WIDTH = 560
 SHELL_HEIGHT = 260
@@ -300,7 +301,7 @@ def Workspace(page):
 
   def notify(text):
     async def show():
-      page.show_dialog(SnackBar(Text(text)))
+      show_toast(page, text)
     page.run_task(show)
 
   def host_delegate(caller, target, task, new_instance):

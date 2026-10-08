@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path, PurePosixPath
 from flet import (
   Container, Column, Row, Text, Icon, Icons, Image, Padding, ScrollMode, TextOverflow,
-  FontWeight, CrossAxisAlignment, MainAxisAlignment, SnackBar, TextField, TextStyle, Alignment,
+  FontWeight, CrossAxisAlignment, MainAxisAlignment, TextField, TextStyle, Alignment,
 )
 from orches.core import settings
 from orches.ui.file_icons import icon_for
@@ -11,6 +11,7 @@ from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, GIT_COLORS
 from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.modal import set_typing
 from orches.ui.dialogs.branch_picker import BranchPicker
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -71,7 +72,7 @@ def GitView(page, on_count=None):
   state = {"key": None, "staged": 0, "typing": False, "sync": (None, 0, False, False), "pushing": False, "last": None}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   # --- caja de commit (se crea una vez: así no pierde el texto al repintar la lista) ---
   def typing(active):

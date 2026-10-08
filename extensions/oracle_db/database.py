@@ -4,8 +4,7 @@ import threading
 import time
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, TextField, TextButton, Checkbox, Padding,
-  RoundedRectangleBorder, ScrollMode, TextOverflow, FontWeight, MainAxisAlignment, CrossAxisAlignment,
-  SnackBar, Dropdown, DropdownOption, TextStyle, ProgressRing,
+  RoundedRectangleBorder, ScrollMode, TextOverflow, FontWeight, MainAxisAlignment, CrossAxisAlignment, Dropdown, DropdownOption, TextStyle, ProgressRing,
 )
 from orches.core import secrets, settings
 from . import profiles
@@ -13,6 +12,7 @@ from .oracle import SINGULAR, DbError, OracleSession, TYPES
 from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -39,7 +39,7 @@ def DatabaseView(page, open_object):
            "busy_since": 0.0, "token": 0, "loading": "", "error": ""}
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def field(label, value="", **kwargs):
     return TextField(label=label, value=value, dense=True, text_size=12, cursor_color=ACCENT,

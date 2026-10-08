@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 import flet.canvas as cv
 from flet import (
-  AlertDialog, Border, ClipBehavior, RoundedRectangleBorder, TextButton, TextField, SnackBar, Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
+  AlertDialog, Border, ClipBehavior, RoundedRectangleBorder, TextButton, TextField, Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
   CrossAxisAlignment, MainAxisAlignment, StrokeCap,
 )
 from orches.core import settings
@@ -12,6 +12,7 @@ from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.terminal.view import FONT
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
 from . import graph
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -159,7 +160,7 @@ def GitGraphView(page, open_document):
                        shape=RoundedRectangleBorder(radius=10), bgcolor=CARD)
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def option(icon, label, on_click, color=TEXT):
     return Clickable(Row(spacing=10, controls=[Icon(icon, size=16, color=color if color != TEXT else MUTED),

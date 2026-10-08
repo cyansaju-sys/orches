@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from flet import (
   Container, Column, Row, Text, Icon, Icons, ProgressBar, Padding, ScrollMode, TextField,
-  TextButton, AlertDialog, SnackBar, RoundedRectangleBorder, TextStyle,
+  TextButton, AlertDialog, RoundedRectangleBorder, TextStyle,
   TextOverflow, FontWeight, MainAxisAlignment, CrossAxisAlignment,
 )
 from orches.core import settings
@@ -12,6 +12,7 @@ from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.modal import show_modal
 from orches.ui.theme import ACCENT, ACCENT_BG, ACCENT_DIM, BORDER_COLOR, border_all
 from orches.core.usage import collect, delete_session, fmt_delta, fmt_tokens, rename_session, WINDOW_HOURS
+from orches.ui.components.toast import toast as show_toast
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
@@ -180,7 +181,7 @@ def UsageView(page, on_resume):
     show()
 
   def toast(message):
-    page.show_dialog(SnackBar(Text(message)))
+    show_toast(page, message)
 
   def dialog(title, content, actions):
     return AlertDialog(

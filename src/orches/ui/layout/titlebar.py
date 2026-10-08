@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from flet import (
   Text, Icon, Icons, Image, Container, Row, Padding, MainAxisAlignment,
-  CrossAxisAlignment, WindowDragArea, SnackBar,
+  CrossAxisAlignment, WindowDragArea,
 )
 from orches.core import extensions, settings
 from orches.core.git import branch
@@ -11,6 +11,7 @@ from orches.ui.dialogs.branch_picker import BranchPicker
 from orches.ui.dialogs.shortcuts import open_shortcuts
 from orches.ui.theme import ACCENT, ACCENT_BG
 from orches.ui.components.clickable import IconAction, Clickable
+from orches.ui.components.toast import toast as show_toast
 
 HEIGHT = 34
 IDLE_COLOR = "#6B7088"
@@ -105,7 +106,7 @@ def TitleBar(page, on_terminal=None, title="IA orches"):
       try:
         item.on_click()
       except Exception as err:      # una extensión rota no debe tumbar la ventana
-        page.show_dialog(SnackBar(Text(f"{item.extension.name}: {type(err).__name__}: {err}")))
+        show_toast(page, f"{item.extension.name}: {type(err).__name__}: {err}")
 
     return Clickable(Row(spacing=6, controls=[glyph, Text(item.label, size=12, color=IDLE_COLOR)]), clicked,
                      hover_bg=ACCENT_BG, tooltip=item.tooltip,
