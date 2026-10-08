@@ -75,5 +75,13 @@ app.whenReady().then(() => {
   if (!process.env.ORCHES_SELFTEST) createWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
-app.on('before-quit', () => { stopHub(); pty.killAll() })
+let closing = false
+app.on('before-quit', (event) => {
+  if (closing) return
+  closing = true
+  event.preventDefault()          // se cierran los procesos y se espera un instante: node-pty aborta si la app sale con avisos de salida pendientes
+  stopHub()
+  pty.killAll()
+  setTimeout(() => app.quit(), 400)
+})
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

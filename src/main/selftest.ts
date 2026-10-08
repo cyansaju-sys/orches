@@ -50,5 +50,6 @@ export async function runSelfTest(): Promise<void> {
   const outsider = await rpc('tools/call', { name: 'delegate_task', arguments: { agent: a2, task } })
   void outsider
   pty.killAll()
+  await sleep(600)                    // deja que node-pty entregue los avisos de salida antes de cerrar
   app.quit()
 }

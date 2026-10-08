@@ -45,6 +45,14 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await snap('07-atajos')
   await run(`${store}.set({ modal: null }); ${store}.toast('Commit hecho', 'ok'); ${store}.toast('No se pudo iniciar «claude»: comando no encontrado', 'error')`)
   await snap('08-avisos', 400)
+  if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar los sub-agentes, con procesos falsos (`cat`)
+    await run(`${store}.set({ docs: [], activeDoc: null, tab: 'agents' })`)
+    await run(`${store}.addPane({ id: 'a1', kind: 'agent', name: 'Claude Code', title: 'Claude Code · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)} })`)
+    await run(`${store}.addPane({ id: 'a2', kind: 'agent', name: 'Claude Code', title: 'Claude Code · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
+    await run(`${store}.addPane({ id: 'a3', kind: 'agent', name: 'OpenCode', title: 'OpenCode · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
+    await snap('subagentes', 2000)
+    await run(`${store}.set({ panes: [], activePane: null })`)
+  }
   if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar: el prompt de tu shell no debe ir a la documentación
     await run(`${store}.set({ modal: null }); ${store}.toggleShell()`)
     await snap('terminal-verificacion', 2500)
