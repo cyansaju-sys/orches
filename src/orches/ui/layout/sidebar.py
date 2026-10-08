@@ -1,29 +1,27 @@
 from flet import Container, Icons, Row, Column, CrossAxisAlignment, Stack, Alignment, FontWeight
-from flet import Text, Padding
+from flet import Text, Padding, Image
 from pathlib import Path
-from orches.core import settings
+from orches.core import extensions, settings
 from orches.ui.views.agents import AgentsView
 from orches.ui.views.files import FilesView
-from orches.core.db.oracle import SINGULAR
-from orches.ui.views.database import DatabaseView
-from orches.ui.views.db_object import ObjectViewer
 from orches.ui.file_icons import icon_for
 from orches.ui.views.file_viewer import FileViewer
 from orches.ui.views.mcp import McpView
 from orches.ui.views.usage import UsageView
 from orches.ui.views.git import GitView
+from orches.ui.views.extensions import ExtensionsView
 from orches.ui.components.modal import set_typing
-from orches.ui.components.clickable import IconAction
+from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.resize import resize_handle
 from orches.ui.theme import ACCENT, ACCENT_BG, border_all, border_right
 
 options = [
-  {"icon": Icons.FOLDER, "view": "files"},
-  {"icon": Icons.SMART_TOY, "view": "agents"},
-  {"icon": Icons.CALL_SPLIT, "view": "git"},
-  {"icon": Icons.STORAGE, "view": "db"},
-  {"icon": Icons.EXTENSION, "view": "mcp"},
-  {"icon": Icons.AUTO_AWESOME, "view": "ai"},
+  {"icon": "icons/sidebar/files.svg", "view": "files", "title": "Archivos"},
+  {"icon": "icons/sidebar/agents.svg", "view": "agents", "title": "Agentes"},
+  {"icon": "icons/sidebar/git.svg", "view": "git", "title": "Git"},
+  {"icon": "icons/sidebar/mcp.svg", "view": "mcp", "title": "Servidores MCP"},
+  {"icon": "icons/sidebar/ai.svg", "view": "ai", "title": "Consumo e historial de IA"},
+  {"icon": "icons/sidebar/extensions.svg", "view": "extensions", "title": "Extensiones"},
 ]
 
 def placeholder(text):
@@ -53,13 +51,6 @@ def Sidebar(page, on_agent, on_document=None):
     except RuntimeError:
       pass   # aún no está en pantalla; se verá en el próximo ciclo
 
-  def open_object(session, owner, obj):
-    """Abre el código o los detalles de un objeto de la base en un panel del área de trabajo."""
-    if on_document:
-      on_document(f"{obj.name} · {SINGULAR.get(obj.type, obj.type.title())}", Icons.STORAGE,
-                  lambda: ObjectViewer(page, session, owner, obj), key=f"db:{owner}.{obj.type}.{obj.name}",
-                  crumbs=[session.profile.name if session.profile else "Base de datos", owner, SINGULAR.get(obj.type, obj.type.title()), obj.name])
-
   def open_file(path):
     """Abre el contenido de un archivo en un panel del área de trabajo."""
     if on_document:
@@ -69,14 +60,30 @@ def Sidebar(page, on_agent, on_document=None):
     "files": FilesView(page, open_file),
     "agents": AgentsView(page, on_agent),
     "git": GitView(page, on_git_count),
-    "db": DatabaseView(page, open_object),
     "mcp": McpView(page),
     "ai": UsageView(page, resume),
+    "extensions": ExtensionsView(page),
   }
+
+  # --- extensiones: cada una puede traer una pestaña propia (ícono del .zip) ---------------------------------
+  registry = extensions.load_all(page, {"open_document": on_document})
+  builders = {}        # id de la pestaña -> función que crea su contenido la primera vez que se abre
+  ext_tabs = {}        # letra del atajo Ctrl+Shift+<letra> -> id de la pestaña
+  for entry in registry.sidebar_views:
+    ext = entry.extension
+    builders[f"ext:{ext.id}"] = entry.build
+    if ext.shortcut:
+      ext_tabs.setdefault(ext.shortcut, f"ext:{ext.id}")
+
   body = Container(content=views["files"], padding=Padding(left=4, top=6), expand=True)
 
   def select(view):
     set_typing(False)   # un campo de texto oculto no avisa de que perdió el foco
+    if view not in views and view in builders:
+      try:
+        views[view] = builders[view](page)
+      except Exception as e:        # una extensión rota no debe tumbar la barra lateral
+        views[view] = Column(controls=[Text(f"La extensión falló: {type(e).__name__}: {e}", size=12, color="#FF6B81")])
     body.content = views[view]
     body.update()
     on_enter = getattr(views[view], "on_enter", None)
@@ -84,14 +91,23 @@ def Sidebar(page, on_agent, on_document=None):
       on_enter()
 
   def tab_button(option):
-    button = IconAction(
-      option["icon"],
+    button = Clickable(
+      Image(src=option["icon"], width=24, height=24),
       lambda e, view=option["view"]: select(view),
-      size=24, color=ACCENT, hover_bg=ACCENT_BG, width=40, height=40, radius=20,
+      hover_bg=ACCENT_BG, tooltip=option.get("title"), width=40, height=40, border_radius=20, alignment=Alignment.CENTER,
     )
     if option["view"] == "git":
       return Stack(width=40, height=40, controls=[button, git_badge])
     return button
+
+  def extension_button(entry):
+    ext = entry.extension
+    glyph = Image(src=ext.icon.read_bytes(), width=24, height=24) if ext.icon else Icons.EXTENSION
+    if ext.icon is None:
+      return IconAction(glyph, lambda e, v=f"ext:{ext.id}": select(v), size=24, color=ACCENT, hover_bg=ACCENT_BG,
+                        width=40, height=40, radius=20, tooltip=entry.title)
+    return Clickable(glyph, lambda e, v=f"ext:{ext.id}": select(v), hover_bg=ACCENT_BG, tooltip=entry.title,
+                     width=40, height=40, border_radius=20, alignment=Alignment.CENTER)
 
   panel = Container(
     border=border_all(),
@@ -104,7 +120,7 @@ def Sidebar(page, on_agent, on_document=None):
       controls=[
         Container(
           content=Column(
-            controls=[tab_button(option) for option in options],
+            controls=[*[tab_button(option) for option in options], *[extension_button(v) for v in registry.sidebar_views]],
           ),
           padding=2,
           border=border_right(),
@@ -136,6 +152,7 @@ def Sidebar(page, on_agent, on_document=None):
     files = views["files"]
     return row.visible and body.content is files and files.handle_key(e)
 
+  row.extension_tabs = lambda: ext_tabs      # atajos Ctrl+Shift+<letra> de las extensiones
   row.files_key = files_key
   row.files_blur = views["files"].blur
   row.select_tab = select_tab

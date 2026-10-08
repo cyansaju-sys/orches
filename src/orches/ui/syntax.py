@@ -26,6 +26,7 @@ class Lang:
   block: tuple = ()                 # (inicio, fin) de los comentarios de bloque
   quotes: str = "'\""               # caracteres que abren cadenas
   ignore_case: bool = False         # SQL no distingue mayúsculas
+  rules: tuple = ()                 # (tipo, regex) extra, para lenguajes que añaden una extensión (etiquetas, funciones...)
   _compiled: list = field(default_factory=list, compare=False, hash=False)
 
 
@@ -90,6 +91,20 @@ BY_EXTENSION = {
 }
 
 
+TITLES = {}     # nombre del lenguaje -> título que se muestra (para los que añaden las extensiones)
+
+
+def register_language(name, lang, suffixes, colors=None, title=None):
+  """Añade (o reemplaza) un lenguaje de resaltado: lo usan las extensiones. `colors`: colores de tipos nuevos."""
+  LANGS[name] = lang
+  _cache.pop(name, None)
+  for suffix in suffixes:
+    BY_EXTENSION[suffix.lower() if suffix.startswith(".") else f".{suffix.lower()}"] = name
+  COLORS.update(colors or {})
+  if title:
+    TITLES[name] = title
+
+
 def language_for(path):
   """Lenguaje de resaltado según el nombre del archivo."""
   p = PurePath(str(path))
@@ -103,6 +118,7 @@ def _pattern(lang):
   if lang.quotes:
     q = re.escape(lang.quotes)
     parts.append(r"(?P<string>(?P<q>[" + q + r"])(?:\\.|(?!(?P=q)).)*(?P=q)?)")
+  parts += [f"(?P<x_{kind}>{regex})" for kind, regex in lang.rules]     # sin grupos con nombre dentro de `regex`
   parts += [r"(?P<number>\b\d+(?:\.\d+)?\b)", r"(?P<word>[A-Za-z_][A-Za-z0-9_$#]*)", r"(?P<other>.)"]
   return re.compile("|".join(parts), re.DOTALL)
 
@@ -152,6 +168,8 @@ def tokenize_line(line, in_block, language="sql"):
     for m in pattern.finditer(segment):
       kind = m.lastgroup if m.lastgroup != "q" else "string"
       text = m.group()
+      if kind.startswith("x_"):
+        kind = kind[2:] if kind[2:] in COLORS else "plain"
       tokens.append((text, _kind(text, lang) if kind == "word" else "plain" if kind == "other" else kind))
     if start == -1:
       break

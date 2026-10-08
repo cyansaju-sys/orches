@@ -1,9 +1,14 @@
 """Pruebas del explorador de Oracle con una conexión simulada (no hace falta tener una base)."""
+import sys
+from pathlib import Path
+
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extensions"))   # la extensión Oracle vive fuera de src/
+
 from orches.core import secrets, settings
-from orches.core.db import profiles
-from orches.core.db.oracle import DbError, OracleSession, column_type
+from oracle_db import profiles
+from oracle_db.oracle import DbError, OracleSession, column_type
 
 
 class Cursor:
@@ -184,7 +189,7 @@ def test_resaltado_de_plsql():
 
 
 def test_sid_arma_el_descriptor_y_los_errores_no_traen_ruido():
-  from orches.core.db.oracle import _friendly
+  from oracle_db.oracle import _friendly
   servicio = profiles.Profile("A", "h", "ORCL", "u")
   assert servicio.dsn == "h:1521/ORCL"
   sid = profiles.Profile("A", "h", "ORCL", "u", use_sid=True)
@@ -207,5 +212,5 @@ def test_esquemas_se_leen_de_all_users_y_los_objetos_propios_de_user_objects():
 
 
 def test_los_errores_de_tiempo_se_explican():
-  from orches.core.db.oracle import _friendly
+  from oracle_db.oracle import _friendly
   assert "tardó demasiado" in _friendly(Exception("DPY-4024: call timeout of 90000 ms exceeded"))

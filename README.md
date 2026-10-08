@@ -31,8 +31,7 @@ src/
       models.py              modelo de cada agente y su nivel (basic/standard/advanced)
       orchestra.py           servidor MCP local para repartir tareas entre agentes
       mcp.py                 servidores MCP de cada agente: leer, añadir y quitar
-      db/oracle.py           explorador de Oracle (solo lectura): objetos, código, tablas
-      db/profiles.py         conexiones guardadas (la contraseña va al llavero, no a la configuración)
+      extensions.py          sistema de extensiones (.zip): instalar, cargar y API para las extensiones
       secrets.py             llavero del sistema (keyring)
       files.py, settings.py  utilidades de archivos y configuración del usuario
     ui/
@@ -43,7 +42,7 @@ src/
       terminal/view.py       terminal embebida (emulación con pyte, scroll, cursor)
       dialogs/               selector de agentes y de carpeta
       views/                 contenido de cada pestaña de la barra lateral
-        files.py  agents.py  git.py  database.py  db_object.py  file_viewer.py  mcp.py  usage.py
+        files.py  agents.py  git.py  file_viewer.py  mcp.py  usage.py
       layout/
         editor_area.py       pestañas de documentos y ruta de navegación
         titlebar.py          barra de título propia
@@ -100,3 +99,19 @@ cargada, y elige según el modelo (`models.py` lo clasifica solo). Se desactiva 
 Solo lectura: los registros de Claude Code (`~/.claude/projects`) y la base de OpenCode
 (`~/.local/share/opencode`). El porcentaje de uso de Claude se consulta a Anthropic con la sesión de
 Claude Code, solo al abrir la pestaña IA.
+
+## Extensiones
+
+Una extensión es un `.zip` con `extension.json` (id, nombre, versión, `icon`, `main`, `shortcut`), un `main.py` con
+`activate(api)` y su ícono. Se descomprime en `~/.config/orches/extensions/<id>/` y se carga al arrancar; una
+extensión rota se ignora sin tumbar la app. Su código corre con los permisos de la app: instala solo las que conozcas.
+
+Desde `activate(api)` puede:
+
+- `api.add_sidebar_view(build, title)` — pestaña propia en la barra lateral con el ícono del `.zip` (y atajo `Ctrl+Shift+<shortcut>`).
+- `api.add_editor_toolbar(["sql"], build)` — franja sobre los archivos de esos tipos; `build(page, doc)` recibe `doc.path` y `doc.get_text()`.
+- `api.open_document(...)` — abre una pestaña del editor.
+
+La base de datos Oracle (explorador + botón ▶ en los `.sql`) es ahora la extensión `extensions/oracle_db/`.
+`python tools/build_extensions.py` la empaqueta en `src/assets/extensions/oracle_db.zip`, que la app instala sola.
+Para quitarla: `extensions.uninstall("oracle_db")` (no se reinstala).

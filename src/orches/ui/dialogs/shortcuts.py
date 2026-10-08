@@ -29,9 +29,9 @@ SECTIONS = (
     ("Ctrl + Shift + E", "Archivos"),
     ("Ctrl + Shift + A", "Agentes"),
     ("Ctrl + Shift + G", "Git"),
-    ("Ctrl + Shift + D", "Base de datos"),
     ("Ctrl + Shift + X", "Servidores MCP"),
     ("Ctrl + Shift + U", "Consumo e historial de IA"),
+    ("Ctrl + Shift + Z", "Extensiones"),
   )),
   ("General", (
     ("Ctrl + Shift + V", "Pegar en la terminal"),

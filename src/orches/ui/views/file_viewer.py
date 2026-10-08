@@ -2,6 +2,7 @@ import asyncio
 import os
 import tempfile
 from dataclasses import dataclass
+from types import SimpleNamespace
 from pathlib import Path
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, Image, Markdown, MarkdownExtensionSet, Padding, FontWeight,
@@ -9,7 +10,7 @@ from flet import (
   TextStyle, TextSelection, RoundedRectangleBorder, NoInputBorder, Stack, GestureDetector, MouseCursor, Colors,
   TextSpan,
 )
-from orches.core import completion
+from orches.core import completion, extensions
 from orches.core.git import diff_marks
 from orches.ui.components.clickable import Clickable
 from orches.ui.components.clipboard import copy_text
@@ -18,9 +19,8 @@ from orches.ui.components.code_view import (
 )
 from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.components.permissions import edit_enabled, subscribe
-from orches.ui.syntax import COLORS, LANGS, highlight, language_for, spans
+from orches.ui.syntax import COLORS, LANGS, TITLES, highlight, language_for, spans
 from orches.ui.terminal.view import FONT
-from orches.ui.views.sql_runner import SqlToolbar
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
 
 MUTED = "#6B7088"
@@ -124,7 +124,7 @@ def FileViewer(page, path):
   holder = Container(expand=True, content=Column(expand=True, alignment=MainAxisAlignment.CENTER,
                                                   horizontal_alignment=CrossAxisAlignment.CENTER, controls=[
     ProgressRing(width=22, height=22, stroke_width=2, color=ACCENT), Text(f"Abriendo {path.name}…", size=11, color=MUTED)]))
-  sql_bar = []     # la franja del ▶ se crea una vez y se reutiliza en cada repintado
+  ext_bars = []    # franjas de extensiones: se crean una vez y se reutilizan en cada repintado
   editor = {"field": None, "stack": None, "popup": None, "overlay": None, "gutter": None, "wide": None, "colors": False}
 
   def toast(message):
@@ -395,16 +395,22 @@ def FileViewer(page, path):
     editor.update(field=None, stack=None, overlay=None, gutter=None, wide=None, popup=None)
     return code_view(state["text"].replace("\t", "    "), language, state["marks"], state["all_added"])
 
-  def toolbar():
-    """Archivos .sql: botón ▶ para ejecutarlos o compilarlos en una conexión de la base."""
-    if path.suffix.lower() != ".sql" or state["data"].kind != "text":
-      return None
-    if not sql_bar:
-      sql_bar.append(SqlToolbar(page, lambda: state["text"]))
-    return sql_bar[0]
+  def toolbars():
+    """Franjas que las extensiones añaden sobre este archivo (p. ej. el ▶ de los .sql)."""
+    if state["data"].kind != "text":
+      return []
+    if not ext_bars:
+      doc = SimpleNamespace(path=path, get_text=lambda: state["text"])
+      for entry in extensions.REGISTRY.toolbars_for(path):
+        try:
+          ext_bars.append(entry.build(page, doc))
+        except Exception as e:      # una extensión rota no debe impedir abrir el archivo
+          ext_bars.append(Container(padding=Padding(left=12, right=12, top=4, bottom=4), bgcolor="#151925",
+                                    content=Text(f"{entry.extension.name}: {type(e).__name__}: {e}", size=10, color=ERROR)))
+    return ext_bars
 
   def show():
-    column = Column(expand=True, spacing=0, controls=[c for c in (toolbar(), notice(), body()) if c is not None])
+    column = Column(expand=True, spacing=0, controls=[*toolbars(), *[c for c in (notice(), body()) if c is not None]])
     holder.content = column
     try:
       holder.update()

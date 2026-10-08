@@ -423,7 +423,7 @@ def Workspace(page):
     return control if control is not None and hasattr(control, "save") else None
 
   hooks = {}          # funciones que conecta main (p. ej. cambiar de pestaña de la barra lateral)
-  TABS = {"E": "files", "A": "agents", "G": "git", "D": "db", "X": "mcp", "U": "ai"}
+  TABS = {"E": "files", "A": "agents", "G": "git", "X": "mcp", "U": "ai", "Z": "extensions"}
 
   def cycle_panes(step):
     if state["editor_focus"] and len(editor.docs) > 1:      # con el editor enfocado se cambia de pestaña
@@ -447,8 +447,9 @@ def Workspace(page):
   def run_shortcut(e):
     """Atajos globales. Devuelve True si la tecla era un atajo (y por tanto no va a la terminal)."""
     key = e.key.upper() if len(e.key) == 1 else e.key
-    if e.ctrl and e.shift and key in TABS and hooks.get("tab"):
-      hooks["tab"](TABS[key])
+    tab = TABS.get(key) or (hooks["ext_tabs"]().get(key) if hooks.get("ext_tabs") else None)
+    if e.ctrl and e.shift and tab and hooks.get("tab"):
+      hooks["tab"](tab)
     elif e.ctrl and e.shift and key == "N":
       choose_agent()
     elif e.ctrl and e.shift and key == "T":

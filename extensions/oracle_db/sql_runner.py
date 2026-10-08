@@ -4,8 +4,8 @@ from flet import (
   RoundedRectangleBorder, ScrollMode, FontWeight, MainAxisAlignment, CrossAxisAlignment, ProgressRing, TextOverflow,
 )
 from orches.core import secrets
-from orches.core.db import profiles
-from orches.core.db.oracle import DbError, OracleSession
+from . import profiles
+from .oracle import DbError, OracleSession
 from orches.ui.components.clickable import Clickable
 from orches.ui.components.clipboard import copy_text
 from orches.ui.components.modal import set_typing, show_modal
