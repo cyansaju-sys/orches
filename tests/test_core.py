@@ -297,6 +297,8 @@ def test_leer_archivos_texto_binario_e_imagen(tmp_path):
 
 def test_guardar_archivo_conserva_fines_de_linea_y_permisos(tmp_path):
   import os
+  if os.name == "nt":
+    pytest.skip("Windows no tiene permisos de Unix (chmod)")
   from orches.ui.views.file_viewer import read_file, write_file
   ruta = tmp_path / "x.txt"
   ruta.write_bytes(b"uno\r\ndos\r\n")

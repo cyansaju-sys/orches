@@ -178,6 +178,8 @@ def test_git_graph_operations_and_conflict_state(tmp_path):
   sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extensions"))
   from git_graph import graph
   _git(tmp_path, "init", "-q", "-b", "main")
+  _git(tmp_path, "config", "user.name", "t")           # graph.run() ejecuta git sin -c: la identidad debe estar en el repo
+  _git(tmp_path, "config", "user.email", "t@t")
   (tmp_path / "f").write_text("1\n"); _git(tmp_path, "add", "."); _git(tmp_path, "commit", "-qm", "base")
   _git(tmp_path, "checkout", "-qb", "x")
   (tmp_path / "f").write_text("x\n"); _git(tmp_path, "commit", "-qam", "x")
