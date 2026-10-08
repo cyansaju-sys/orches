@@ -6,7 +6,7 @@ import { FilesView } from '@/views/FilesView'
 import { GitView } from '@/views/GitView'
 import { McpView } from '@/views/McpView'
 import { UsageView } from '@/views/UsageView'
-import { Placeholder } from '@/views/Placeholder'
+import { ComingSoon } from '@/views/Placeholder'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; title: string; key: string }> = [
   { id: 'files', icon: 'files', title: 'Archivos', key: 'E' },
@@ -48,7 +48,7 @@ export function Sidebar() {
         {tab === 'git' && <GitView />}
         {tab === 'mcp' && <McpView />}
         {tab === 'ai' && <UsageView />}
-        {tab === 'extensions' && <Placeholder title="Extensiones" text="Extensiones en TypeScript: pestañas, botones, resaltado y sugerencias." />}
+        {tab === 'extensions' && <ComingSoon />}
       </div>
     </div>
   )

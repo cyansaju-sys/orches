@@ -1,6 +1,6 @@
 {
   "name": "orches",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "Panel de escritorio para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",
@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "start": "electron-vite preview",
     "test": "vitest run",
-    "postinstall": "electron-rebuild -f -w node-pty,better-sqlite3"
+    "postinstall": "electron-rebuild -f -w node-pty,better-sqlite3",
+    "dist": "npm run build && electron-builder --linux --publish never"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",
@@ -35,6 +36,7 @@
     "@xterm/xterm": "^5.5.0",
     "better-sqlite3": "^11.10.0",
     "clsx": "^2.1.1",
+    "electron-updater": "^6.8.9",
     "node-pty": "^1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -50,10 +52,43 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^5.4.0",
     "vitest": "^2.1.0"
+  },
+  "build": {
+    "appId": "com.cyansaju.orches",
+    "productName": "Orches",
+    "executableName": "orches",
+    "copyright": "cyansaju",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "out/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**",
+      "node_modules/better-sqlite3/**"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "resources/icon.png",
+      "category": "Development",
+      "synopsis": "Panel para trabajar con varios agentes de programación",
+      "artifactName": "Orches-${version}-x86_64.AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "cyansaju-sys",
+      "repo": "orches"
+    }
   }
 }

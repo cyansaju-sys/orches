@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AgentInfo, FileData, GitStatus } from '@shared/types'
+import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
 
 export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'extensions'
@@ -33,6 +33,7 @@ interface State {
   toasts: Toast[]
   maximized: boolean
   agents: AgentInfo[]
+  update: UpdateState
 
   set: (patch: Partial<State>) => void
   setProject: (path: string | null) => void
@@ -64,7 +65,7 @@ const guessKind = (m: string): ToastKind => {
 export const useStore = create<State>((set, get) => ({
   project: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
   docs: [], activeDoc: null, panes: [], shell: null, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
-  maximized: false, agents: [],
+  maximized: false, agents: [], update: { status: 'idle' },
 
   set: (patch) => set(patch),
 

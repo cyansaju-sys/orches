@@ -1,11 +1,12 @@
-export function Placeholder({ title, text }: { title: string; text: string }) {
+import { MdExtension } from 'react-icons/md'
+
+/** Pestaña de extensiones: todavía no existe en la versión TypeScript. */
+export function ComingSoon() {
   return (
-    <div className="px-3 py-2">
-      <h3 className="text-[12px] font-semibold">{title}</h3>
-      <p className="mt-2 text-[12px] leading-relaxed text-muted">{text}</p>
-      <p className="mt-3 rounded-md border border-line bg-raised px-2.5 py-2 text-[11px] text-muted">
-        Todavía no está en la versión TypeScript; llegará en una próxima etapa de la migración.
-      </p>
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 pb-16 text-center">
+      <span className="grid size-14 place-items-center rounded-2xl bg-accent/10 text-accent"><MdExtension size={28} /></span>
+      <h3 className="text-[14px] font-semibold">Extensiones</h3>
+      <p className="text-[12px] leading-relaxed text-muted">Esto vendrá pronto.</p>
     </div>
   )
 }

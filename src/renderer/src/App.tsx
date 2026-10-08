@@ -46,6 +46,18 @@ export function App() {
     return () => { offPane(); offToast() }
   }, [])
 
+  // actualizaciones: el estado llega del proceso principal; al haber una release nueva se avisa una vez por versión
+  useEffect(() => {
+    const announced = new Set<string>()
+    const apply = (update: import('@shared/types').UpdateState): void => {
+      useStore.setState({ update })
+      if (update.status === 'available' && !announced.has(update.version)) { announced.add(update.version); useStore.getState().toast(`Hay una versión nueva: v${update.version}`, 'info') }
+      if (update.status === 'error') useStore.getState().toast(`No se pudo actualizar: ${update.message}`, 'error')
+    }
+    void window.api.update.state().then(apply)
+    return window.api.update.onState(apply)
+  }, [])
+
   // git se vigila cada pocos segundos: letras en el árbol, globo del ícono y rama de la barra de título
   useEffect(() => {
     void refreshGit()

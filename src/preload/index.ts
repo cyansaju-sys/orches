@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Api, OpenPane, PtyExit } from '../shared/types'
+import type { Api, OpenPane, PtyExit, UpdateState } from '../shared/types'
 
 const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => void): (() => void) => {
   const handler = (_e: unknown, ...args: unknown[]): void => cb(...(args as T))
@@ -22,6 +22,11 @@ const api: Api = {
     createBranch: (r, n) => ipcRenderer.invoke('git:createBranch', r, n), marks: (f) => ipcRenderer.invoke('git:marks', f)
   },
   agents: { detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell') },
+  update: {
+    state: () => ipcRenderer.invoke('update:state'), check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'), version: () => ipcRenderer.invoke('update:version'),
+    onState: (cb) => subscribe<[UpdateState]>('update:state', cb)
+  },
   usage: {
     collect: (p, f) => ipcRenderer.invoke('usage:collect', p, f), rename: (s, n) => ipcRenderer.invoke('usage:rename', s, n),
     remove: (s) => ipcRenderer.invoke('usage:remove', s), names: () => ipcRenderer.invoke('usage:names')

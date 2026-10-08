@@ -7,10 +7,14 @@ import * as pty from './pty'
 import { getSetting, setSetting } from './settings'
 import type { PtyOptions } from '../shared/types'
 import { runCapture } from './capture'
+import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './usage'
 import { runSelfTest } from './selftest'
 import { newId, startHub, stopHub } from './hub'
+
+if (process.argv.includes('--orches-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
+if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
 
 let win: BrowserWindow | null = null
 
@@ -61,6 +65,10 @@ function registerIpc(): void {
   ipcMain.handle('usage:rename', (_e, session, name: string) => renameSession(session, name))
   ipcMain.handle('usage:remove', (_e, session) => deleteSession(session))
   ipcMain.handle('usage:names', () => sessionNames())
+  ipcMain.handle('update:state', () => updateState())
+  ipcMain.handle('update:check', () => checkForUpdates())
+  ipcMain.handle('update:install', () => installUpdate())
+  ipcMain.handle('update:version', () => app.getVersion())
   ipcMain.handle('orchestra:newId', () => newId())
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
@@ -80,6 +88,7 @@ if (process.env.ORCHES_CAPTURE) app.setPath('appData', join(app.getPath('temp'),
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)             // sin menú: los atajos los gestiona la propia app
   registerIpc()
+  if (!process.env.ORCHES_CAPTURE && !process.env.ORCHES_SELFTEST) setupUpdater(() => win)
   void startHub(() => win).then(() => { if (process.env.ORCHES_SELFTEST) void runSelfTest() })
   if (!process.env.ORCHES_SELFTEST) createWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
@@ -90,6 +99,7 @@ app.on('before-quit', (event) => {
   closing = true
   event.preventDefault()          // se cierran los procesos y se espera un instante: node-pty aborta si la app sale con avisos de salida pendientes
   stopHub()
+  stopUpdater()
   pty.killAll()
   setTimeout(() => app.quit(), 400)
 })

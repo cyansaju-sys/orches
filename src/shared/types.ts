@@ -59,6 +59,15 @@ export interface AgentUsage {
 }
 export interface UsageData { agents: AgentUsage[]; history: SessionInfo[] }
 
+/** Estado de las actualizaciones: `available` muestra el botón «Actualizar». */
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'available'; version: string; canInstall: boolean; url: string }   // canInstall=false: se abre la página de la release
+  | { status: 'downloading'; version: string; percent: number }
+  | { status: 'restarting'; version: string }
+  | { status: 'error'; message: string }
+
 export type Settings = Record<string, unknown>
 
 export interface Api {
@@ -83,6 +92,13 @@ export interface Api {
     marks(file: string): Promise<GitMarks>
   }
   agents: { detect(): Promise<AgentInfo[]>; shell(): Promise<string> }
+  update: {
+    state(): Promise<UpdateState>
+    check(): Promise<void>
+    install(): Promise<void>
+    version(): Promise<string>
+    onState(cb: (state: UpdateState) => void): () => void
+  }
   usage: {
     collect(project: string | null, fetchLimits: boolean): Promise<UsageData>
     rename(session: SessionInfo, name: string): Promise<void>
