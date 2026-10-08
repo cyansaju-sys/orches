@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { join } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents'
+import { placeOnDisplay } from './placement'
 import { suggestCommit } from './commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
 import * as git from './git'
@@ -20,8 +21,10 @@ if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un A
 let win: BrowserWindow | null = null
 
 function createWindow(): void {
+  // se abre en la pantalla donde está el cursor (en el modo captura se deja la predeterminada)
+  const spot = process.env.ORCHES_CAPTURE ? {} : placeOnDisplay(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, 1360, 860)
   win = new BrowserWindow({
-    width: 1360, height: 860, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
+    width: 1360, height: 860, ...spot, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
     title: 'Orches', icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true }
   })
