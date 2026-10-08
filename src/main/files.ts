@@ -1,6 +1,6 @@
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { extname, join } from 'node:path'
-import type { DirEntry, FileData } from '../shared/types'
+import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { dirname, extname, join } from 'node:path'
+import type { DirEntry, FileData, McpResult } from '../shared/types'
 
 const MAX_BYTES = 1_000_000
 const MAX_EDIT_BYTES = 500_000
@@ -56,4 +56,29 @@ export async function writeFileData(path: string, text: string, crlf: boolean): 
 
 export async function mtime(path: string): Promise<number> {
   try { return (await stat(path)).mtimeMs } catch { return 0 }
+}
+
+const exists = (path: string): Promise<boolean> => stat(path).then(() => true, () => false)
+/** Un nombre simple: sin separadores ni «..» (así nunca se sale de la carpeta). */
+export const validName = (name: string): boolean => !!name.trim() && name === name.trim() && !/[\\/\0]/.test(name) && name !== '.' && name !== '..'
+
+/** Crea un archivo vacío o una carpeta dentro de `dir`. No pisa nada que ya exista. */
+export async function createEntry(dir: string, name: string, isDir: boolean): Promise<McpResult> {
+  if (!validName(name)) return { ok: false, message: 'Nombre no válido (sin / ni \\)' }
+  const target = join(dir, name)
+  if (await exists(target)) return { ok: false, message: `«${name}» ya existe` }
+  try {
+    if (isDir) await mkdir(target)
+    else await writeFile(target, '', { flag: 'wx' })
+    return { ok: true, message: target }
+  } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
+}
+
+/** Cambia el nombre de un archivo o carpeta (dentro de la misma carpeta). Devuelve la ruta nueva en `message`. */
+export async function renameEntry(path: string, name: string): Promise<McpResult> {
+  if (!validName(name)) return { ok: false, message: 'Nombre no válido (sin / ni \\)' }
+  const target = join(dirname(path), name)
+  if (target === path) return { ok: true, message: path }
+  if (await exists(target)) return { ok: false, message: `«${name}» ya existe` }
+  try { await rename(path, target); return { ok: true, message: target } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
 }

@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary'
+  kind: 'text' | 'image' | 'binary' | 'diff'
   text: string
   crlf: boolean
   truncated: boolean
@@ -81,6 +81,9 @@ export interface Api {
     read(path: string): Promise<FileData>
     write(path: string, text: string, crlf: boolean): Promise<number>
     mtime(path: string): Promise<number>
+    create(dir: string, name: string, isDir: boolean): Promise<McpResult>
+    rename(path: string, name: string): Promise<McpResult>
+    trash(path: string): Promise<McpResult>
   }
   git: {
     status(root: string): Promise<GitStatus>
@@ -93,6 +96,11 @@ export interface Api {
     checkout(root: string, name: string, remote: boolean): Promise<string>
     createBranch(root: string, name: string): Promise<string>
     marks(file: string): Promise<GitMarks>
+    pull(root: string): Promise<string>
+    fetch(root: string): Promise<string>
+    suggestCommit(root: string): Promise<McpResult & { agent?: string }>
+    onCommitAgent(cb: (name: string) => void): () => void
+    show(root: string, rev: 'HEAD' | 'index', path: string): Promise<string | null>
   }
   agents: {
     detect(): Promise<AgentInfo[]>

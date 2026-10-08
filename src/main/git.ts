@@ -63,6 +63,42 @@ export async function commit(root: string, message: string): Promise<string> {
   return flat(await run(root, ['commit', '-m', message], undefined, 60000))
 }
 
+export interface StagedFile { status: string; path: string; added: number; deleted: number }
+
+/** Archivos preparados con su estado (A, M, D, R…) y las líneas añadidas y borradas. */
+export async function stagedSummary(root: string): Promise<StagedFile[]> {
+  const names = await run(root, ['diff', '--cached', '--name-status', '-M'])
+  const stats = await run(root, ['diff', '--cached', '--numstat', '-M'])
+  if (!names.ok) return []
+  const counts = new Map<string, [number, number]>()
+  for (const line of stats.ok ? stats.out.split('\n') : []) {
+    const [a, d, ...p] = line.split('\t')
+    if (p.length) counts.set(p[p.length - 1].replace(/^.*=> /, '').replace(/[{}]/g, ''), [Number(a) || 0, Number(d) || 0])
+  }
+  return names.out.split('\n').filter(Boolean).map((l) => {
+    const [status, ...p] = l.split('\t')
+    const path = p[p.length - 1]
+    const [added, deleted] = counts.get(path) ?? [0, 0]
+    return { status: status[0], path, added, deleted }
+  })
+}
+
+/** Lo que describirá el mensaje: solo lo preparado, y los últimos títulos para copiar el estilo. */
+export async function changesForMessage(root: string): Promise<{ diff: string; recent: string }> {
+  const staged = await run(root, ['diff', '--cached', '--no-color'])
+  const log = await run(root, ['log', '-8', '--format=%s'])
+  return { diff: staged.ok ? staged.out : '', recent: log.ok ? log.out : '' }
+}
+
+/** Trae lo nuevo del remoto sin tocar nada local (así se sabe cuántos commits faltan). Devuelve el error, o '' si salió bien. */
+export const fetch = async (root: string): Promise<string> => {
+  const res = await run(root, ['fetch', '--quiet'], undefined, 30000)
+  return res.ok ? '' : flat(res)
+}
+
+/** Trae y une los cambios de la rama remota; solo avance simple (`--ff-only`): si las ramas divergieron, avisa en vez de unir a ciegas. */
+export const pull = async (root: string): Promise<string> => flat(await run(root, ['pull', '--ff-only'], undefined, 120000))
+
 export async function push(root: string): Promise<string> {
   const upstream = await run(root, ['rev-parse', '--abbrev-ref', '@{u}'])
   return flat(await (upstream.ok ? run(root, ['push'], undefined, 120000) : run(root, ['push', '-u', 'origin', 'HEAD'], undefined, 120000)))
@@ -85,6 +121,12 @@ export async function branches(root: string): Promise<GitBranch[]> {
 export const checkout = async (root: string, name: string, remote: boolean): Promise<string> =>
   flat(await run(root, remote ? ['checkout', '--track', name] : ['checkout', name]))
 export const createBranch = async (root: string, name: string): Promise<string> => flat(await run(root, ['checkout', '-b', name]))
+
+/** Contenido de un archivo en HEAD (`rev` = 'HEAD') o en lo preparado (`rev` = 'index'); null si no existe ahí (archivo nuevo). */
+export async function show(root: string, rev: 'HEAD' | 'index', path: string): Promise<string | null> {
+  const res = await run(root, ['show', `${rev === 'HEAD' ? 'HEAD' : ''}:${path.replace(/\\/g, '/')}`])
+  return res.ok ? res.out : null
+}
 
 /** Líneas añadidas, modificadas o borradas de un archivo respecto a HEAD (marcas del margen del editor). */
 export async function marks(file: string): Promise<GitMarks> {
