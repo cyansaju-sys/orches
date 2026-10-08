@@ -2,15 +2,15 @@ import asyncio
 from pathlib import Path
 from flet import (
   Container, Text, Image, Icon, Icons, Row, Column, Padding, ScrollMode,
-  TextOverflow, ButtonStyle, TextButton, FontWeight,
+  TextOverflow, ButtonStyle, TextButton, FontWeight, MainAxisAlignment, CrossAxisAlignment,
 )
-from widgets.others.clickable import Clickable
-from utils import settings
-from utils.file_icons import icon_for
-from utils.files import list_dir
-from utils.git import ignored_paths, status_map
-from widgets.others.folder_picker import open_folder_picker
-from utils.theme import ACCENT, ACCENT_BG, GIT_COLORS
+from orches.ui.components.clickable import Clickable, IconAction
+from orches.core import settings
+from orches.ui.file_icons import icon_for
+from orches.core.files import list_dir
+from orches.core.git import ignored_paths, status_map
+from orches.ui.dialogs.folder_picker import open_folder_picker
+from orches.ui.theme import ACCENT, ACCENT_BG, GIT_COLORS
 
 IGNORED = {".git"}
 DIM_OPACITY = 0.4  # archivos que git ignora
@@ -19,7 +19,7 @@ TEXT = "#E6E8EF"
 HOVER = ACCENT_BG
 
 
-def FilesView(page):
+def FilesView(page, open_file=None):
   state = {"root": None, "expanded": set(), "status": {}}
   tree = Column(spacing=0, scroll=ScrollMode.AUTO, expand=True)
   title = Text("Ningún proyecto", size=11, color=MUTED, no_wrap=True, overflow=TextOverflow.ELLIPSIS)
@@ -55,7 +55,7 @@ def FilesView(page):
           *badge,
         ],
       ),
-      (lambda e, p=path: toggle(p)) if is_dir else (lambda e: None),
+      (lambda e, p=path: toggle(p)) if is_dir else (lambda e, p=path: open_file(p) if open_file else None),
       hover_bg=HOVER,
       tooltip=str(path),
       opacity=DIM_OPACITY if ignored else 1,
@@ -137,12 +137,16 @@ def FilesView(page):
     show_project(saved)
   render(update=False)
 
+  # el nombre del proyecto va con un botón para abrir otro cuando quieras (antes solo se podía al inicio)
+  change_button = IconAction(Icons.FOLDER_OPEN, choose, size=16, color=MUTED, hover_color=ACCENT, hover_bg=ACCENT_BG,
+                             width=26, height=26, tooltip="Abrir otro proyecto")
   return Column(
     expand=True,
     spacing=4,
     controls=[
       open_button,
-      Container(content=title, padding=Padding(left=8)),
+      Row(alignment=MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=CrossAxisAlignment.CENTER, controls=[
+        Container(content=title, padding=Padding(left=8), expand=True), change_button]),
       tree,
     ],
   )

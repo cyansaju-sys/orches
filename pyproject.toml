@@ -9,6 +9,8 @@ authors = [
 ]
 dependencies = [
     "flet>=1.0.3",
+    "keyring>=25.7.0",
+    "oracledb>=26.0.1",
     "pyte>=0.8.2",
     "pywinpty>=3.0.5 ; sys_platform == 'win32'",
 ]
@@ -47,4 +49,5 @@ copyright = "Copyright (C) 2023-2026 by Flet"
 path = "src"
 
 [tool.poe.tasks]
-dev="flet run -r src/main.py"
+dev="flet run"
+test="pytest"

@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import threading
+import time
 from collections import deque
 
 import pyte
@@ -9,8 +10,8 @@ from flet import (
   Container, Column, Text, TextSpan, TextStyle, TextDecoration, FontWeight,
   ClipBehavior, CrossAxisAlignment, GestureDetector, Stack, MouseCursor,
 )
-from utils.pty_session import PtySession
-from utils.theme import ACCENT, ACCENT_DIM
+from orches.core.pty_session import PtySession
+from orches.ui.theme import ACCENT, ACCENT_DIM
 
 FONT = "TermMono"  # DejaVu Sans Mono incluida en assets: métricas iguales en todos los sistemas
 FONT_FILE = "fonts/DejaVuSansMono.ttf"
@@ -149,7 +150,7 @@ BLANK = pyte.screens.Char(" ")
 class TerminalView:
   """Terminal embebida: pty + emulación con pyte, dibujada con controles de Flet."""
 
-  def __init__(self, page, command, cwd, on_exit=None, args=()):
+  def __init__(self, page, command, cwd, on_exit=None, args=(), env=None):
     self.page = page
     self.on_exit = on_exit
     self.rows, self.cols = 24, 80
@@ -158,8 +159,9 @@ class TerminalView:
     self._full = False       # repintar todas las filas (tras desplazarse)
     self._height = 0
     self._drag = 0.0
+    self.last_output = 0.0   # momento de la última salida del agente (para saber si está ocupado)
     self.stream = TermStream(self.screen)
-    self.session = PtySession(command, cwd, self.rows, self.cols, args=args)
+    self.session = PtySession(command, cwd, self.rows, self.cols, args=args, env=env)
     # respuestas a consultas del programa (posición del cursor, atributos del terminal...)
     self.screen.write_process_input = self.session.write
     self._cursor_row = 0
@@ -228,6 +230,7 @@ class TerminalView:
 
   # --- datos del proceso (hilo lector) ------------------------------------
   def _on_data(self, data):
+    self.last_output = time.monotonic()
     with self._lock:
       before = len(self.screen.scrollback)
       self.stream.feed(UNSUPPORTED.sub(b"", data))
@@ -403,6 +406,31 @@ class TerminalView:
       self._blink_on = True   # el cursor se queda fijo mientras escribes
       self._blink_t = 0.0
       self.session.write(text)
+
+  # --- uso por otro agente (orquestación) ----------------------------------------------------
+  def idle_for(self):
+    """Segundos sin salida del proceso: poco = está trabajando."""
+    return time.monotonic() - self.last_output if self.last_output else 999.0
+
+  def screen_text(self, lines=80):
+    """Texto de las últimas `lines` líneas (historial + pantalla), sin espacios sobrantes."""
+    with self._lock:
+      history = ["".join(c.data for c in row).rstrip() for row in self.screen.scrollback]
+      screen = ["".join(self.screen.buffer[y][x].data for x in range(self.cols)).rstrip()
+                for y in range(self.rows)]
+    rows = history + screen
+    while rows and not rows[-1]:
+      rows.pop()
+    return "\n".join(rows[-lines:])
+
+  def send_prompt(self, text):
+    """Escribe una instrucción en el agente y la envía (como si la pegaras y pulsaras Enter)."""
+    text = text.strip()
+    if (2004 << 5) in self.screen.mode:        # pegado entre corchetes: acepta varias líneas
+      self.session.write("\x1b[200~" + text + "\x1b[201~")
+    else:
+      self.session.write(" ".join(text.split()))
+    threading.Timer(0.5, lambda: self.session.write("\r")).start()
 
   def write_text(self, text):
     """Texto ya compuesto (AltGr, teclas muertas, métodos de entrada)."""

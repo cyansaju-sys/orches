@@ -6,12 +6,12 @@ from flet import (
   TextButton, AlertDialog, SnackBar, RoundedRectangleBorder, TextStyle,
   TextOverflow, FontWeight, MainAxisAlignment, CrossAxisAlignment,
 )
-from utils import settings
-from utils.agents import detect_agents
-from widgets.others.clickable import Clickable, IconAction
-from widgets.others.modal import show_modal
-from utils.theme import ACCENT, ACCENT_BG, ACCENT_DIM, BORDER_COLOR, border_all
-from utils.usage import collect, delete_session, fmt_delta, fmt_tokens, rename_session, WINDOW_HOURS
+from orches.core import settings
+from orches.core.agents import detect_agents
+from orches.ui.components.clickable import Clickable, IconAction
+from orches.ui.components.modal import show_modal
+from orches.ui.theme import ACCENT, ACCENT_BG, ACCENT_DIM, BORDER_COLOR, border_all
+from orches.core.usage import collect, delete_session, fmt_delta, fmt_tokens, rename_session, WINDOW_HOURS
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"

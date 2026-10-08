@@ -3,9 +3,9 @@ from flet import (
   AlertDialog, Container, Text, Icon, Icons, IconButton, Row, Column, TextButton,
   ScrollMode, TextOverflow, Padding, ButtonStyle,
 )
-from utils.files import list_dir, list_roots
-from widgets.others.modal import show_modal
-from utils.theme import ACCENT
+from orches.core.files import list_dir, list_roots
+from orches.ui.components.modal import show_modal
+from orches.ui.theme import ACCENT
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"

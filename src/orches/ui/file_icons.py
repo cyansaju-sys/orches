@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 # Íconos de "Material Icon Theme" (MIT, https://github.com/material-extensions/vscode-material-icon-theme)
-ASSETS = Path(__file__).resolve().parent.parent / "assets" / "icons"
+ASSETS = Path(__file__).resolve().parents[2] / "assets" / "icons"   # src/assets/icons
 ICON_DIR = "icons/material"  # ruta relativa a assets/, como la espera ft.Image
 
 _theme = json.loads((ASSETS / "material.json").read_text(encoding="utf-8"))

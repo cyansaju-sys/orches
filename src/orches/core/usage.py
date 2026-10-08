@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from utils import settings
+from orches.core import settings
 
 WINDOW_HOURS = 5   # Claude reinicia el límite de sesión en ventanas de 5 horas
 

@@ -1,8 +1,8 @@
 from flet import Container, Icons, Icon, Row, Column, Text, Padding, SnackBar
-from utils import settings
-from utils.agents import detect_agents
-from utils.theme import ACCENT, ACCENT_BG
-from widgets.others.clickable import Clickable
+from orches.core import settings
+from orches.core.agents import detect_agents
+from orches.ui.theme import ACCENT, ACCENT_BG
+from orches.ui.components.clickable import Clickable
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"

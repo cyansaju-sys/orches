@@ -3,10 +3,10 @@ from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, TextField, Padding,
   RoundedRectangleBorder, ScrollMode, TextOverflow, MainAxisAlignment, CrossAxisAlignment,
 )
-from utils import settings
-from utils.agents import detect_agents
-from utils.theme import ACCENT, ACCENT_BG, BORDER_COLOR
-from widgets.others.clickable import Clickable
+from orches.core import settings
+from orches.core.agents import detect_agents
+from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
+from orches.ui.components.clickable import Clickable
 
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"

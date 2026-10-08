@@ -1,18 +1,21 @@
 import flet as ft
 from flet import Container, Row
-from widgets.layout.tabar import TabBar
-from widgets.layout.workspace import Workspace
-from widgets.layout.titlebar import TitleBar
+from orches.ui.layout.sidebar import Sidebar
+from orches.ui.layout.workspace import Workspace
+from orches.ui.layout.titlebar import TitleBar
 
 def main(page: ft.Page):
   page.title = "IA orches"
   page.bgcolor = "#07080C"
-  page.padding = 2
+  page.padding = 4
   page.spacing = 0
   page.window.title_bar_hidden = True
   page.window.title_bar_buttons_hidden = True
 
   workspace = Workspace(page)
+  sidebar = Sidebar(page, workspace.open_agent, workspace.open_document)
+  workspace.bind("tab", sidebar.select_tab)                    # atajos de teclado que tocan la barra lateral
+  workspace.bind("toggle_sidebar", sidebar.toggle_sidebar)
 
   page.add(
     TitleBar(page, workspace.toggle_terminal),
@@ -23,7 +26,7 @@ def main(page: ft.Page):
         expand=True,
         vertical_alignment=ft.CrossAxisAlignment.STRETCH,
         controls=[
-          TabBar(page, workspace.open_agent),
+          sidebar,
           workspace,
         ],
         spacing=0,

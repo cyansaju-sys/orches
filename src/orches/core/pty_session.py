@@ -61,9 +61,10 @@ def default_shell():
 class PtySession:
   """Proceso conectado a un pseudo-terminal (pty en Linux/macOS, ConPTY en Windows)."""
 
-  def __init__(self, command, cwd, rows=24, cols=80, args=()):
+  def __init__(self, command, cwd, rows=24, cols=80, args=(), env=None):
     self.command = command
     self.args = list(args)
+    self.extra_env = dict(env or {})
     self.cwd = str(cwd)
     self.rows = rows
     self.cols = cols
@@ -77,10 +78,10 @@ class PtySession:
     exe = shutil.which(self.command) or self.command
     if IS_WINDOWS:
       argv = ["cmd", "/c", exe, *self.args] if exe.lower().endswith((".cmd", ".bat")) else [exe, *self.args]
-      self._proc = PtyProcess.spawn(argv, cwd=self.cwd, env=child_env(), dimensions=(self.rows, self.cols))
+      self._proc = PtyProcess.spawn(argv, cwd=self.cwd, env={**child_env(), **self.extra_env}, dimensions=(self.rows, self.cols))
       reader = self._read_windows
     else:
-      env = child_env()
+      env = {**child_env(), **self.extra_env}
       with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         pid, fd = pty.fork()

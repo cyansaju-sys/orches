@@ -8,6 +8,8 @@ from flet import Container, GestureDetector, Icon, MouseCursor, Alignment
 def Clickable(content, on_click, hover_bg=None, tooltip=None, **container_args):
   """Área pulsable sin foco de teclado, con color de fondo al pasar el mouse."""
   base_bg = container_args.pop("bgcolor", None)
+  visible = container_args.pop("visible", True)   # igual: lo controla el detector
+  expand = container_args.pop("expand", None)   # el que debe expandirse es el detector, no el contenedor
 
   def hover(e):
     box.bgcolor = hover_bg if e.data and hover_bg else base_bg
@@ -24,6 +26,8 @@ def Clickable(content, on_click, hover_bg=None, tooltip=None, **container_args):
     content=box,
     on_tap=on_click,
     mouse_cursor=MouseCursor.CLICK,
+    expand=expand,
+    visible=visible,
   )
 
 

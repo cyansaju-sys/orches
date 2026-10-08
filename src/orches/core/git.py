@@ -1,3 +1,4 @@
+import re
 import os
 import shutil
 import subprocess
@@ -224,3 +225,91 @@ def push(root):
     return False, str(e)
   text = (out.stderr or out.stdout).strip()   # git escribe el progreso de push en stderr
   return out.returncode == 0, text
+
+
+@dataclass(frozen=True)
+class Branch:
+  name: str              # "master" o "origin/master"
+  remote: bool
+  current: bool
+  commit: str            # hash corto del último commit
+  author: str
+  subject: str
+  timestamp: int         # fecha del último commit (segundos)
+  ahead: int = 0         # solo la rama actual: commits por subir / por bajar
+  behind: int = 0
+  has_upstream: bool = False
+
+
+def branches(root):
+  """Ramas locales y remotas con su último commit, la actual primero."""
+  fmt = "%1f".join(["%(HEAD)", "%(refname)", "%(objectname:short)", "%(authorname)", "%(committerdate:unix)", "%(subject)"])
+  out = _git(root, "for-each-ref", "--sort=-committerdate", f"--format={fmt}%1e", "refs/heads", "refs/remotes")
+  if not out:
+    return []
+  result = []
+  for record in out.split("\x1e"):
+    fields = record.strip("\n").split("\x1f")
+    if len(fields) < 6:
+      continue
+    head, ref, commit, author, ts, subject = fields[:6]
+    remote = ref.startswith("refs/remotes/")
+    name = ref.split("refs/remotes/", 1)[1] if remote else ref.split("refs/heads/", 1)[1]
+    if name.endswith("/HEAD"):
+      continue
+    current = head.strip() == "*"
+    ahead = behind = 0
+    upstream = False
+    if current:
+      counts = _git(root, "rev-list", "--left-right", "--count", "@{u}...HEAD")
+      if counts and len(counts.split()) == 2:
+        behind, ahead = (int(n) for n in counts.split())
+        upstream = True
+    result.append(Branch(name, remote, current, commit, author, subject, int(ts or 0), ahead, behind, upstream))
+  result.sort(key=lambda b: (not b.current, b.remote, -b.timestamp))
+  return result
+
+
+def checkout(root, name, remote=False):
+  """Cambia de rama. Una remota (origin/x) se convierte en rama local que la sigue."""
+  if not remote:
+    return _run(root, "checkout", name)
+  local = name.split("/", 1)[1] if "/" in name else name
+  exists = _run(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{local}")[0]
+  return _run(root, "checkout", local) if exists else _run(root, "checkout", "--track", name)
+
+
+def create_branch(root, name, start=None):
+  """Crea una rama y cambia a ella (opcionalmente a partir de otra)."""
+  return _run(root, "checkout", "-b", name, *([start] if start else []))
+
+
+def diff_marks(path):
+  """Marcas del margen para un archivo: ({línea: 'added'|'modified'|'deleted'}, ¿archivo nuevo sin seguimiento?).
+
+  Compara el archivo con el último commit (HEAD). Las líneas son 1-based, en el archivo actual.
+  Un `deleted` va en la línea siguiente a la que se borró.
+  """
+  from pathlib import Path
+  path = Path(path)
+  if not shutil.which("git") or not path.is_file():
+    return {}, False
+  root = path.parent
+  tracked = _git(root, "ls-files", "--error-unmatch", "--", path.name)
+  if tracked is None:
+    inside = _git(root, "rev-parse", "--is-inside-work-tree")
+    return {}, bool(inside and inside.strip() == "true")       # sin seguimiento (nuevo): todo cuenta como añadido
+  out = _git(root, "diff", "-U0", "--no-color", "--no-ext-diff", "HEAD", "--", path.name)
+  if out is None:                                                  # repositorio sin commits todavía
+    out = _git(root, "diff", "-U0", "--no-color", "--no-ext-diff", "--", path.name) or ""
+  marks = {}
+  for header in re.findall(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", out, flags=re.M):
+    old_count = int(header[1]) if header[1] != "" else 1
+    new_start = int(header[2])
+    new_count = int(header[3]) if header[3] != "" else 1
+    if new_count == 0:
+      marks[new_start + 1] = "deleted"
+    else:
+      for i in range(new_count):
+        marks[new_start + i] = "modified" if i < old_count else "added"
+  return marks, False
