@@ -2,12 +2,13 @@ import asyncio
 from pathlib import Path
 import flet.canvas as cv
 from flet import (
-  Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
+  AlertDialog, RoundedRectangleBorder, TextButton, TextField, SnackBar, Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
   CrossAxisAlignment, MainAxisAlignment, StrokeCap,
 )
 from orches.core import settings
 from orches.ui.components.clickable import Clickable, IconAction
 from orches.ui.components.clipboard import copy_text
+from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.terminal.view import FONT
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR
 from . import graph
@@ -15,6 +16,7 @@ from . import graph
 MUTED = "#6B7088"
 TEXT = "#E6E8EF"
 ERROR = "#FF6B81"
+CARD = "#11141D"
 PALETTE = ["#22D3EE", "#C792EA", "#F0B67F", "#7CCB8B", "#F07178", "#82AAFF", "#FFCB6B", "#4CC9B0"]
 REF_COLORS = {"head": "#E2C08D", "branch": "#7CCB8B", "remote": "#82AAFF", "tag": "#FFCB6B"}
 LANE_W = 14
@@ -72,7 +74,7 @@ def GitGraphView(page, open_document):
                                                    overflow=TextOverflow.ELLIPSIS, expand=True)]),
           Text(f"{c.hash[:7]} · {c.author} · {c.when}", size=10, color=MUTED, no_wrap=True,
                overflow=TextOverflow.ELLIPSIS)])]),
-      lambda e, c=c: show(c), hover_bg=ACCENT_BG, tooltip=f"{c.subject}\n{c.hash}", height=ROW_H,
+      lambda e, c=c: show(c), on_secondary_tap=lambda e, c=c: menu(c), hover_bg=ACCENT_BG, tooltip=f"{c.subject}\n{c.hash}", height=ROW_H,
       padding=Padding(right=6), border_radius=4)
 
   def render(update=True):
@@ -114,6 +116,7 @@ def GitGraphView(page, open_document):
           state["commits"] = (state["commits"] if more else []) + found
           state.update(error="", more=len(found) == PAGE)
         state["signature"] = await asyncio.to_thread(graph.signature, folder) if folder else None
+        state["head"] = state["signature"][1].strip() if state["signature"] else None
       title.value = f"Git Graph · {folder.name}" if folder else "Git Graph"
       try:
         title.update()
@@ -134,6 +137,115 @@ def GitGraphView(page, open_document):
         continue
       if folder != state["root"] or await asyncio.to_thread(graph.signature, folder) != state["signature"]:
         await load()
+
+  # --- menú del clic derecho: operaciones de git sobre un commit ----------------------------------------------
+  def dialog(heading, content, actions):
+    return AlertDialog(modal=True, title=Text(heading, size=14, weight=FontWeight.W_600), content=content, actions=actions,
+                       shape=RoundedRectangleBorder(radius=10), bgcolor=CARD)
+
+  def toast(message):
+    page.show_dialog(SnackBar(Text(message)))
+
+  def option(icon, label, on_click, color=TEXT):
+    return Clickable(Row(spacing=10, controls=[Icon(icon, size=16, color=color if color != TEXT else MUTED),
+                                               Text(label, size=12, color=color, expand=True)]),
+                     on_click, hover_bg=ACCENT_BG, padding=Padding(left=10, right=10, top=8, bottom=8), border_radius=6)
+
+  def report(heading, text):
+    """Resultado de un comando que falló (o que dejó un conflicto), con la salida de git para poder copiarla."""
+    async def copy():
+      await copy_text(page, text)
+      toast("Copiado")
+    close = show_modal(page, dialog(heading, Container(width=480, content=Column(
+      tight=True, scroll=ScrollMode.AUTO, height=min(300, 40 + 16 * len(text.splitlines())),
+      controls=[Text(text or "Sin detalles", size=11, color=ERROR, font_family=FONT, selectable=True)])),
+      [TextButton("Copiar", icon=Icons.CONTENT_COPY, on_click=lambda e: page.run_task(copy)),
+       TextButton("Cerrar", on_click=lambda e: close())]))
+
+  def confirm(heading, message, accept_label, on_accept):
+    close = show_modal(page, dialog(heading, Container(width=380, content=Text(message, size=12, color=MUTED)),
+                                    [TextButton("Cancelar", on_click=lambda e: close()),
+                                     TextButton(accept_label, on_click=lambda e: (close(), on_accept()))]))
+
+  def ask_name(heading, label, on_accept):
+    name = TextField(label=label, dense=True, autofocus=True, text_size=12, cursor_color=ACCENT,
+                     on_focus=lambda e: set_typing(True), on_blur=lambda e: set_typing(False))
+
+    def accept(e=None):
+      if name.value and name.value.strip():
+        set_typing(False)
+        close()
+        on_accept(name.value.strip())
+
+    name.on_submit = accept
+    close = show_modal(page, dialog(heading, Container(width=340, content=name),
+                                    [TextButton("Cancelar", on_click=lambda e: (set_typing(False), close())),
+                                     TextButton("Crear", on_click=accept)]))
+
+  async def execute(heading, *args):
+    ok, output = await asyncio.to_thread(graph.run, state["root"], *args)
+    await load()
+    if ok:
+      toast(heading)
+    else:
+      report(f"{heading}: falló" if "CONFLICT" not in output else f"{heading}: hay conflictos", output)
+
+  def do(heading, *args):
+    page.run_task(execute, heading, *args)
+
+  def reset_menu(c, current):
+    close = show_modal(page, dialog(f"Reset de «{current}» a {c.hash[:7]}", Container(width=380, content=Column(tight=True, spacing=2, controls=[
+      option(Icons.UNDO, "Soft: mueve la rama y conserva todos los cambios preparados", lambda e: (close(), do("Reset soft", "reset", "--soft", c.hash))),
+      option(Icons.UNDO, "Mixed: conserva los cambios pero sin preparar", lambda e: (close(), do("Reset mixed", "reset", "--mixed", c.hash))),
+      option(Icons.DELETE_FOREVER, "Hard: descarta los cambios sin guardar", lambda e: (close(), confirm(
+        "Reset hard", f"Se perderán los cambios sin commit y «{current}» volverá a {c.hash[:7]}. No se puede deshacer.",
+        "Descartar y resetear", lambda: do("Reset hard", "reset", "--hard", c.hash))), color=ERROR)])),
+      [TextButton("Cancelar", on_click=lambda e: close())]))
+
+  def menu(c):
+    """Clic derecho sobre un commit: cambiar de rama, merge, cherry-pick, revert, reset, ramas y etiquetas."""
+    root_dir = state["root"]
+    current = graph.current_branch(root_dir)
+    operation = graph.in_progress(root_dir)
+    branches = [n for n, k in c.refs if k == "branch"]
+    short = c.hash[:7]
+    items = []
+
+    def add(icon, label, fn, color=TEXT):
+      items.append(option(icon, label, lambda e, fn=fn: (close(), fn()), color))
+
+    if operation:
+      add(Icons.CANCEL, f"Abortar {operation} en curso", lambda: do(f"{operation} abortado", operation, "--abort"), ERROR)
+    add(Icons.CONTENT_COPY, "Copiar hash", lambda: page.run_task(copy_hash, c.hash))
+    for b in branches:
+      if b != current:
+        add(Icons.CALL_SPLIT, f"Cambiar a la rama «{b}»", lambda b=b: do(f"Ahora en «{b}»", "checkout", b))
+        if current:
+          add(Icons.CALL_MERGE, f"Merge «{b}» en «{current}»", lambda b=b: confirm(
+            "Merge", f"Se hará merge de «{b}» en «{current}».", "Merge", lambda: do(f"Merge de «{b}» hecho", "merge", "--no-edit", b)))
+    if c.hash != state.get("head"):
+      add(Icons.COMMIT, f"Cambiar a este commit ({short}, HEAD suelto)", lambda: do(f"Ahora en {short}", "checkout", c.hash))
+    add(Icons.ACCOUNT_TREE, "Crear rama aquí…", lambda: ask_name(
+      f"Rama nueva en {short}", "Nombre de la rama", lambda n: do(f"Rama «{n}» creada", "checkout", "-b", n, c.hash)))
+    add(Icons.LABEL, "Crear etiqueta aquí…", lambda: ask_name(
+      f"Etiqueta nueva en {short}", "Nombre de la etiqueta", lambda n: do(f"Etiqueta «{n}» creada", "tag", n, c.hash)))
+    if current and c.hash != state.get("head"):
+      if not branches or all(b == current for b in branches):
+        add(Icons.CALL_MERGE, f"Merge este commit en «{current}»", lambda: confirm(
+          "Merge", f"Se hará merge de {short} en «{current}».", "Merge", lambda: do(f"Merge de {short} hecho", "merge", "--no-edit", c.hash)))
+      add(Icons.CONTENT_PASTE, f"Cherry-pick de {short} en «{current}»", lambda: confirm(
+        "Cherry-pick", f"Se copiará {short} como un commit nuevo en «{current}».", "Cherry-pick",
+        lambda: do("Cherry-pick hecho", "cherry-pick", c.hash)))
+      add(Icons.REPLAY, f"Revert de {short}", lambda: confirm(
+        "Revert", f"Se creará un commit que deshace {short} en «{current}».", "Revert",
+        lambda: do("Revert hecho", "revert", "--no-edit", c.hash)))
+      add(Icons.HISTORY, f"Reset de «{current}» a este commit…", lambda: reset_menu(c, current), ERROR)
+    close = show_modal(page, dialog(f"{short} · {c.subject[:36]}", Container(width=380, content=Column(
+      tight=True, spacing=2, scroll=ScrollMode.AUTO, controls=items)), [TextButton("Cerrar", on_click=lambda e: close())]))
+
+  async def copy_hash(value):
+    await copy_text(page, value)
+    toast("Hash copiado")
 
   def show(c):
     """Detalles del commit en una pestaña del editor."""

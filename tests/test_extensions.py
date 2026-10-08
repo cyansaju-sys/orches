@@ -170,3 +170,24 @@ def test_git_graph_lanes_with_branch_and_merge(tmp_path):
   assert graph.log(tmp_path / "nada") is None
   info = graph.details(tmp_path, commits[0].hash)
   assert info["message"] == "merge"
+
+
+def test_git_graph_operations_and_conflict_state(tmp_path):
+  import sys
+  from pathlib import Path
+  sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extensions"))
+  from git_graph import graph
+  _git(tmp_path, "init", "-q", "-b", "main")
+  (tmp_path / "f").write_text("1\n"); _git(tmp_path, "add", "."); _git(tmp_path, "commit", "-qm", "base")
+  _git(tmp_path, "checkout", "-qb", "x")
+  (tmp_path / "f").write_text("x\n"); _git(tmp_path, "commit", "-qam", "x")
+  _git(tmp_path, "checkout", "-q", "main")
+  (tmp_path / "f").write_text("m\n"); _git(tmp_path, "commit", "-qam", "m")
+  assert graph.current_branch(tmp_path) == "main" and graph.in_progress(tmp_path) is None
+  ok, out = graph.run(tmp_path, "merge", "--no-edit", "x")           # conflicto: git devuelve error y deja el merge a medias
+  assert not ok and "CONFLICT" in out and graph.in_progress(tmp_path) == "merge"
+  assert graph.run(tmp_path, "merge", "--abort")[0] and graph.in_progress(tmp_path) is None
+  ok, _ = graph.run(tmp_path, "checkout", "-b", "nueva", graph.head(tmp_path))
+  assert ok and graph.current_branch(tmp_path) == "nueva"
+  assert graph.run(tmp_path, "tag", "v1", "HEAD")[0]
+  assert not graph.run(tmp_path, "checkout", "no-existe")[0]

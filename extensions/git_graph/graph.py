@@ -121,3 +121,42 @@ def details(root, hash):
     return None
   full, author, date, body = (head.split(SEP, 3) + ["", "", "", ""])[:4]
   return {"hash": full, "author": author, "date": date, "message": body.strip(), "files": (files or "").rstrip()}
+
+
+def run(root, *args, timeout=60):
+  """Ejecuta un comando de git. Devuelve (ok, salida); la salida incluye lo que git cuenta de un error o un conflicto."""
+  if not shutil.which("git"):
+    return False, "git no está instalado"
+  try:
+    result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, timeout=timeout,
+                            creationflags=_FLAGS, encoding="utf-8", errors="replace", stdin=subprocess.DEVNULL,
+                            env={**os.environ, "GIT_EDITOR": "true", "GIT_TERMINAL_PROMPT": "0"})
+  except subprocess.TimeoutExpired:
+    return False, "git tardó demasiado y se canceló"
+  except OSError as e:
+    return False, str(e)
+  text = "\n".join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
+  return result.returncode == 0, text
+
+
+def current_branch(root):
+  """Nombre de la rama actual, o None con HEAD suelto."""
+  out = _git(root, "symbolic-ref", "--short", "-q", "HEAD")
+  return out.strip() if out and out.strip() else None
+
+
+def head(root):
+  out = _git(root, "rev-parse", "HEAD")
+  return out.strip() if out else None
+
+
+def in_progress(root):
+  """Operación a medias (por un conflicto): "merge", "cherry-pick" o "revert"; None si no hay ninguna."""
+  out = _git(root, "rev-parse", "--git-dir")
+  if not out:
+    return None
+  git_dir = os.path.join(str(root), out.strip()) if not os.path.isabs(out.strip()) else out.strip()
+  for name, marker in (("merge", "MERGE_HEAD"), ("cherry-pick", "CHERRY_PICK_HEAD"), ("revert", "REVERT_HEAD")):
+    if os.path.exists(os.path.join(git_dir, marker)):
+      return name
+  return None

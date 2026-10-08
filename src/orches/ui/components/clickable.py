@@ -5,7 +5,7 @@ from flet import Container, GestureDetector, Icon, MouseCursor, Alignment
 # GestureDetector no es enfocable, así que el teclado siempre queda para la terminal.
 
 
-def Clickable(content, on_click, hover_bg=None, tooltip=None, **container_args):
+def Clickable(content, on_click, hover_bg=None, tooltip=None, on_secondary_tap=None, **container_args):
   """Área pulsable sin foco de teclado, con color de fondo al pasar el mouse."""
   base_bg = container_args.pop("bgcolor", None)
   visible = container_args.pop("visible", True)   # igual: lo controla el detector
@@ -25,6 +25,7 @@ def Clickable(content, on_click, hover_bg=None, tooltip=None, **container_args):
   return GestureDetector(
     content=box,
     on_tap=on_click,
+    on_secondary_tap=on_secondary_tap,       # clic derecho (menú contextual)
     mouse_cursor=MouseCursor.CLICK,
     expand=expand,
     visible=visible,
