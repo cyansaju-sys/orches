@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
-import { MdAltRoute, MdCallMerge, MdCallSplit, MdContentCopy, MdLabelOutline, MdLocalOffer, MdRestartAlt, MdSubdirectoryArrowRight, MdUndo, MdOutlineNotes, MdCheckCircleOutline } from 'react-icons/md'
-import type { GitCommit, GitOp } from '@shared/types'
-import { refreshGit } from '@/lib/gitSync'
+import { MdAltRoute, MdCallMerge, MdCallSplit, MdContentCopy, MdLabelOutline, MdLocalOffer, MdRestartAlt, MdSubdirectoryArrowRight, MdUndo, MdOutlineNotes, MdCheckCircleOutline, MdClose } from 'react-icons/md'
+import type { GitChangedFile, GitCommit, GitOp } from '@shared/types'
+import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
 import { layoutGraph, type GraphRow } from '@/lib/graphLayout'
 import { useStore } from '@/store'
 import { Menu, type MenuItem } from './Menu'
@@ -94,11 +94,13 @@ export function GitGraph() {
   const [menu, setMenu] = useState<{ commit: GitCommit; anchor: DOMRect } | null>(null)
   const [ask, setAsk] = useState<Ask | null>(null)
   const [busy, setBusy] = useState(false)
+  const [selected, setSelected] = useState<string | null>(null)
 
   // se relee al abrir, al operar y cuando cambia el estado de git (commit, cambio de rama, pull…)
   useEffect(() => { if (project) void window.api.git.log(project, LIMIT).then(setCommits) }, [project, reloads, status?.branch, status?.ahead, status?.behind, status?.files.length])
   const graph = useMemo(() => layoutGraph(commits ?? []), [commits])
   const changes = status?.files.length ?? 0
+  const detail = commits?.find((c) => c.hash === selected) ?? null
   const headIndex = graph.rows.findIndex((r) => r.commit.refs.some((x) => x === 'HEAD' || x.startsWith('HEAD -> ')))
   const headLane = headIndex >= 0 ? graph.rows[headIndex].lane : 0
   const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast('No se pudo copiar', 'error')) }
@@ -147,6 +149,7 @@ export function GitGraph() {
 
   if (!project) return <div className="grid flex-1 place-items-center text-[12px] text-muted">Abre un proyecto para ver su grafo</div>
   return (
+    <div className="flex min-h-0 flex-1 flex-col">
     <div className="@container min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-2">
       {commits === null && <p className="px-2 py-4 text-[12px] text-muted">Leyendo el historial…</p>}
       {commits?.length === 0 && <p className="px-2 py-4 text-[12px] text-muted">Este repositorio todavía no tiene commits</p>}
@@ -168,9 +171,9 @@ export function GitGraph() {
       {graph.rows.map((row) => {
         const merge = row.commit.parents.length > 1 || /^(Merge|Merged)\b/i.test(row.commit.subject)      // merges de dos padres y los que solo dicen «Merge…»
         return (
-          <div key={row.commit.hash} onClick={() => copy(row.commit.hash)} onContextMenu={(e) => { e.preventDefault(); setMenu({ commit: row.commit, anchor: new DOMRect(e.clientX + 290, e.clientY, 0, 0) }) }}
-            title={`${row.commit.hash}\n${row.commit.author} · ${new Date(row.commit.time).toLocaleString()}\nClic: copiar hash · clic derecho: más acciones`}
-            className="flex cursor-pointer items-center gap-2 rounded-md pr-2 text-[12px] transition-colors hover:bg-accent-bg" style={{ height: HEIGHT }}>
+          <div key={row.commit.hash} onClick={() => setSelected((h) => (h === row.commit.hash ? null : row.commit.hash))} onContextMenu={(e) => { e.preventDefault(); setMenu({ commit: row.commit, anchor: new DOMRect(e.clientX + 290, e.clientY, 0, 0) }) }}
+            title={`${row.commit.hash}\n${row.commit.author} · ${new Date(row.commit.time).toLocaleString()}\nClic: ver los cambios · clic derecho: más acciones`}
+            className={clsx('flex cursor-pointer items-center gap-2 rounded-md pr-2 text-[12px] transition-colors hover:bg-accent-bg', selected === row.commit.hash && 'bg-accent-bg ring-1 ring-inset ring-accent/40')} style={{ height: HEIGHT }}>
             <Lines row={row} lanes={graph.lanes} head={row.commit.refs.some((r) => r === 'HEAD' || r.startsWith('HEAD -> '))} />
             <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
               {refBadges(row.commit.refs).map((b) => <RefBadge key={`${b.kind}${b.label}`} b={b} />)}
@@ -186,6 +189,8 @@ export function GitGraph() {
       {commits && commits.length >= LIMIT && <p className="px-2 pt-2 text-center text-[11px] text-muted">Se muestran los últimos {LIMIT} commits</p>}
       {menu && <Menu width={290} anchor={menu.anchor} onClose={() => setMenu(null)} items={menuItems(menu.commit)} />}
       {ask && <AskDialog ask={ask} busy={busy} onClose={() => setAsk(null)} onOk={(op, commit, arg, done) => { setAsk(null); void run(op, commit, arg, done) }} />}
+    </div>
+    {detail && <CommitDetail commit={detail} project={project} onClose={() => setSelected(null)} onCopy={copy} />}
     </div>
   )
 }
@@ -267,4 +272,51 @@ function MergeDialog({ ask, busy, onClose, onOk }: { ask: Extract<Ask, { kind: '
         </div>
       </Modal>
     )
+}
+
+/** Panel de abajo: datos del commit y los archivos que cambió (en un merge, lo que trajo la rama unida). */
+function CommitDetail({ commit, project, onClose, onCopy }: { commit: GitCommit; project: string; onClose: () => void; onCopy: (t: string) => void }) {
+  const openCommitDiff = useStore((s) => s.openCommitDiff)
+  const [files, setFiles] = useState<GitChangedFile[] | null>(null)
+  const parent = commit.parents[0] ?? null
+  const merge = commit.parents.length > 1
+
+  useEffect(() => { setFiles(null); void window.api.git.commitFiles(project, commit.hash, parent).then(setFiles) }, [project, commit.hash, parent])
+  const label = parent ? `${parent.slice(0, 7)} → ${commit.hash.slice(0, 7)}` : `Commit inicial ${commit.hash.slice(0, 7)}`
+  const total = (files ?? []).reduce((n, f) => [n[0] + f.added, n[1] + f.deleted], [0, 0])
+
+  return (
+    <div className="flex max-h-[48%] min-h-[120px] shrink-0 flex-col border-t border-line bg-panel">
+      <div className="flex items-start gap-2 px-3 pb-1.5 pt-2">
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-[12.5px] font-medium leading-snug">{commit.subject}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted">
+            <button title="Copiar el hash completo" onClick={() => onCopy(commit.hash)} className="font-mono transition-colors hover:text-accent">{commit.hash.slice(0, 10)}</button>
+            <span>{commit.author}</span><span>{new Date(commit.time).toLocaleString()}</span>
+            {merge && <span className="text-accent">merge de {commit.parents.map((p) => p.slice(0, 7)).join(' + ')}</span>}
+          </p>
+        </div>
+        <button title="Cerrar" onClick={onClose} className="grid size-5 shrink-0 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={13} /></button>
+      </div>
+      <div className="flex items-center gap-2 px-3 pb-1 text-[10px] font-semibold tracking-wide text-muted">
+        <span>{merge ? 'lo que trajo la unión' : 'archivos cambiados'} · {files?.length ?? '…'}</span>
+        {files && <><span className="text-ok">+{total[0]}</span><span className="text-danger">−{total[1]}</span></>}
+        {merge && <span className="font-normal opacity-70">(respecto a {parent!.slice(0, 7)})</span>}
+      </div>
+      <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+        {files?.length === 0 && <li className="px-2 py-1 text-[11px] text-muted">Sin cambios de archivos</li>}
+        {files?.map((f) => (
+          <li key={f.path}>
+            <button onClick={() => void openCommitDiff(commit.hash, parent, f.path, label)} title="Ver los cambios de este archivo"
+              className="flex w-full items-center gap-2 rounded px-2 py-[3px] text-left text-[12px] transition-colors hover:bg-accent-bg">
+              <span className="w-3 shrink-0 text-center text-[10px] font-semibold" style={{ color: GIT_COLOR[f.status] }}>{f.status}</span>
+              <span className="min-w-0 flex-1 truncate" style={{ direction: 'rtl', textAlign: 'left' }}><bdi>{f.path}</bdi></span>
+              <span className="shrink-0 text-[11px] text-ok">+{f.added}</span>
+              <span className="shrink-0 text-[11px] text-danger">−{f.deleted}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }

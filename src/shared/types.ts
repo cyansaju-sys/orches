@@ -47,6 +47,7 @@ export interface McpSpec {
   command?: string; args?: string[]; env?: Record<string, string>
 }
 export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | 'merge' | 'rebase' | 'reset-soft' | 'reset-mixed' | 'reset-hard'
+export interface GitChangedFile { status: string; path: string; added: number; deleted: number }
 export interface GitCommit { hash: string; parents: string[]; author: string; time: number; refs: string[]; subject: string }
 export interface McpResult { ok: boolean; message: string }
 
@@ -104,7 +105,8 @@ export interface Api {
     fetch(root: string): Promise<string>
     suggestCommit(root: string): Promise<McpResult & { agent?: string }>
     onCommitAgent(cb: (name: string) => void): () => void
-    show(root: string, rev: 'HEAD' | 'index', path: string): Promise<string | null>
+    show(root: string, rev: string, path: string): Promise<string | null>
+    commitFiles(root: string, hash: string, parent: string | null): Promise<GitChangedFile[]>
   }
   agents: {
     detect(): Promise<AgentInfo[]>

@@ -65,22 +65,40 @@ export async function commit(root: string, message: string): Promise<string> {
 
 export interface StagedFile { status: string; path: string; added: number; deleted: number }
 
-/** Archivos preparados con su estado (A, M, D, R…) y las líneas añadidas y borradas. */
-export async function stagedSummary(root: string): Promise<StagedFile[]> {
-  const names = await run(root, ['diff', '--cached', '--name-status', '-M'])
-  const stats = await run(root, ['diff', '--cached', '--numstat', '-M'])
-  if (!names.ok) return []
+/** Ruta final de una línea de `--numstat` (con renombrados: «a => b» o «dir/{a => b}/f»). */
+export const numstatPath = (p: string): string => p.replace(/\{[^}]* => ([^}]*)\}/, '$1').replace(/\/\//g, '/').replace(/^.* => /, '')
+
+/** Une `--name-status` y `--numstat` en una lista de archivos con estado y líneas añadidas / borradas. */
+export function joinSummary(nameStatus: string, numstat: string): StagedFile[] {
   const counts = new Map<string, [number, number]>()
-  for (const line of stats.ok ? stats.out.split('\n') : []) {
+  for (const line of numstat.split('\n')) {
     const [a, d, ...p] = line.split('\t')
-    if (p.length) counts.set(p[p.length - 1].replace(/^.*=> /, '').replace(/[{}]/g, ''), [Number(a) || 0, Number(d) || 0])
+    if (p.length) counts.set(numstatPath(p.join('\t')), [Number(a) || 0, Number(d) || 0])      // binarios: «-» → 0
   }
-  return names.out.split('\n').filter(Boolean).map((l) => {
+  return nameStatus.split('\n').filter(Boolean).map((l) => {
     const [status, ...p] = l.split('\t')
     const path = p[p.length - 1]
     const [added, deleted] = counts.get(path) ?? [0, 0]
     return { status: status[0], path, added, deleted }
   })
+}
+
+/** Archivos preparados con su estado (A, M, D, R…) y las líneas añadidas y borradas. */
+export async function stagedSummary(root: string): Promise<StagedFile[]> {
+  const names = await run(root, ['diff', '--cached', '--name-status', '-M'])
+  const stats = await run(root, ['diff', '--cached', '--numstat', '-M'])
+  return names.ok ? joinSummary(names.out, stats.ok ? stats.out : '') : []
+}
+
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+
+/** Archivos que cambió un commit respecto a su primer padre (en un merge: lo que trajo la rama unida). */
+export async function commitFiles(root: string, hash: string, parent: string | null): Promise<StagedFile[]> {
+  if (!HASH.test(hash) || (parent && !HASH.test(parent))) return []
+  const from = parent ?? EMPTY_TREE
+  const names = await run(root, ['diff', '--name-status', '-M', from, hash])
+  const stats = await run(root, ['diff', '--numstat', '-M', from, hash])
+  return names.ok ? joinSummary(names.out, stats.ok ? stats.out : '') : []
 }
 
 /** Lo que describirá el mensaje: solo lo preparado, y los últimos títulos para copiar el estilo. */
@@ -175,8 +193,9 @@ export const checkout = async (root: string, name: string, remote: boolean): Pro
 export const createBranch = async (root: string, name: string): Promise<string> => flat(await run(root, ['checkout', '-b', name]))
 
 /** Contenido de un archivo en HEAD (`rev` = 'HEAD') o en lo preparado (`rev` = 'index'); null si no existe ahí (archivo nuevo). */
-export async function show(root: string, rev: 'HEAD' | 'index', path: string): Promise<string | null> {
-  const res = await run(root, ['show', `${rev === 'HEAD' ? 'HEAD' : ''}:${path.replace(/\\/g, '/')}`])
+export async function show(root: string, rev: string, path: string): Promise<string | null> {
+  if (rev !== 'HEAD' && rev !== 'index' && !HASH.test(rev)) return null
+  const res = await run(root, ['show', `${rev === 'index' ? '' : rev}:${path.replace(/\\/g, '/')}`])
   return res.ok ? res.out : null
 }
 

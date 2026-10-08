@@ -44,6 +44,7 @@ interface State {
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
+  openCommitDiff: (hash: string, parent: string | null, path: string, label: string) => Promise<void>
   renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen
   dropDocs: (path: string) => void                    // se borró: se cierran sus pestañas
   updateDocText: (path: string, text: string) => void
@@ -98,6 +99,20 @@ export const useStore = create<State>((set, get) => ({
     const path = 'graph:git'
     const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+  },
+  openCommitDiff: async (hash, parent, path, label) => {
+    const root = get().project
+    if (!root) return
+    try {
+      const before = parent ? ((await window.api.git.show(root, parent, path)) ?? '') : ''
+      const after = (await window.api.git.show(root, hash, path)) ?? ''
+      const key = `diff:commit:${hash}:${path}`
+      const doc: Doc = { kind: 'diff', text: after, savedText: after, original: before, crlf: false, truncated: false, readOnly: true, mtimeMs: 0,
+        path: key, title: `${basename(path)} (${hash.slice(0, 7)})`, diffOf: `${root}/${path}`, diffLabel: label }
+      set((s) => ({ docs: s.docs.some((d) => d.path === key) ? s.docs : [...s.docs, doc], activeDoc: key, focus: 'editor' }))
+    } catch (e) {
+      get().toast(`No se pudo comparar ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+    }
   },
   openDiff: async (file, staged) => {
     const root = get().project
