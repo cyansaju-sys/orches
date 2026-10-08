@@ -9,6 +9,10 @@ describe('operaciones sobre un commit', () => {
     expect(opArgs('branch', H, 'feat/x')).toEqual(['branch', 'feat/x', H])
     expect(opArgs('checkout', H)).toEqual(['checkout', H])
     expect(opArgs('merge', H)).toEqual(['merge', '--no-edit', H])
+    expect(opArgs('merge', H, 'noff')).toEqual(['merge', '--no-ff', '--no-edit', H])
+    expect(opArgs('merge', H, 'noff,nocommit')).toEqual(['merge', '--no-ff', '--no-commit', H])
+    expect(opArgs('merge', H, 'noff,squash')).toEqual(['merge', '--squash', H])
+    expect(opArgs('merge', H, '--x')).toBeNull()
     expect(opArgs('reset-hard', H)).toEqual(['reset', '--hard', H])
   })
   it('en un merge, cherry-pick y revert indican el padre', () => {

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
-import { MdAltRoute, MdCallMerge, MdCallSplit, MdContentCopy, MdLabelOutline, MdRestartAlt, MdSubdirectoryArrowRight, MdUndo, MdOutlineNotes, MdCheckCircleOutline } from 'react-icons/md'
+import { MdAltRoute, MdCallMerge, MdCallSplit, MdContentCopy, MdLabelOutline, MdLocalOffer, MdRestartAlt, MdSubdirectoryArrowRight, MdUndo, MdOutlineNotes, MdCheckCircleOutline } from 'react-icons/md'
 import type { GitCommit, GitOp } from '@shared/types'
 import { refreshGit } from '@/lib/gitSync'
 import { layoutGraph, type GraphRow } from '@/lib/graphLayout'
@@ -19,18 +19,43 @@ const when = (ms: number): string => {
   return new Date(ms).toLocaleDateString()
 }
 
-/** Etiquetas de un commit: «HEAD -> main» se queda en «main» (la actual), y se distinguen remotas y tags. */
-function refBadges(refs: string[]): Array<{ label: string; kind: 'head' | 'branch' | 'remote' | 'tag' }> {
-  return refs.map((r) => {
-    if (r.startsWith('HEAD -> ')) return { label: r.slice(8), kind: 'head' as const }
-    if (r === 'HEAD') return { label: 'HEAD', kind: 'head' as const }
-    if (r.startsWith('tag: ')) return { label: r.slice(5), kind: 'tag' as const }
-    return { label: r, kind: r.includes('/') ? ('remote' as const) : ('branch' as const) }
-  })
-}
-const BADGE = { head: 'bg-accent/25 text-accent', branch: 'bg-ok/15 text-ok', remote: 'bg-white/[0.07] text-muted', tag: 'bg-warn/15 text-warn' }
+interface Badge { label: string; kind: 'head' | 'branch' | 'remote' | 'tag'; remote?: string }
 
-function Lines({ row, lanes }: { row: GraphRow; lanes: number }) {
+/** Etiquetas de un commit: la rama local y su copia remota van en una sola etiqueta («main | origin»); la actual se resalta. */
+function refBadges(refs: string[]): Badge[] {
+  const heads = refs.filter((r) => r.startsWith('HEAD -> ')).map((r) => r.slice(8))
+  const plain = refs.filter((r) => !r.startsWith('HEAD -> ') && r !== 'HEAD' && !r.startsWith('tag: '))
+  const locals = [...heads, ...plain.filter((r) => !r.includes('/'))]
+  const remotes = plain.filter((r) => r.includes('/'))
+  const used = new Set<string>()
+  const out: Badge[] = locals.map((name) => {
+    const twin = remotes.find((r) => r.slice(r.indexOf('/') + 1) === name)
+    if (twin) used.add(twin)
+    return { label: name, kind: heads.includes(name) ? 'head' : 'branch', remote: twin?.slice(0, twin.indexOf('/')) }
+  })
+  for (const r of remotes) if (!used.has(r)) out.push({ label: r, kind: 'remote' })
+  if (refs.includes('HEAD') && !heads.length) out.unshift({ label: 'HEAD', kind: 'head' })
+  for (const r of refs) if (r.startsWith('tag: ')) out.push({ label: r.slice(5), kind: 'tag' })
+  return out
+}
+const BADGE = {
+  head: 'bg-accent/25 text-accent ring-1 ring-inset ring-accent/60', branch: 'bg-ok/15 text-ok',
+  remote: 'bg-white/[0.07] text-muted', tag: 'bg-warn/15 text-warn'
+}
+
+function RefBadge({ b }: { b: Badge }) {
+  return (
+    <span className={clsx('inline-flex max-w-[12rem] shrink-0 items-stretch overflow-hidden rounded text-[10px] font-medium', BADGE[b.kind])}>
+      <span className="flex items-center gap-1 truncate px-1.5 py-px">
+        {b.kind === 'tag' && <MdLocalOffer size={10} />}
+        <span className="truncate">{b.label}</span>
+      </span>
+      {b.remote && <span className="border-l border-white/10 bg-black/20 px-1.5 py-px text-[9px] opacity-80">{b.remote}</span>}
+    </span>
+  )
+}
+
+function Lines({ row, lanes, head }: { row: GraphRow; lanes: number; head: boolean }) {
   const x = (l: number): number => l * STEP + STEP / 2
   const mid = HEIGHT / 2
   const col = (c: number): string => COLORS[c % COLORS.length]
@@ -43,6 +68,7 @@ function Lines({ row, lanes }: { row: GraphRow; lanes: number }) {
       {row.parents.map((e, i) => (e.lane === row.lane
         ? <line key={`p${i}`} x1={x(row.lane)} y1={mid} x2={x(row.lane)} y2={HEIGHT} stroke={col(e.color)} strokeWidth={1.6} />
         : <path key={`p${i}`} d={curve(x(row.lane), mid, x(e.lane), HEIGHT)} fill="none" stroke={col(e.color)} strokeWidth={1.6} />))}
+      {head && <circle cx={x(row.lane)} cy={mid} r={7} fill="none" stroke={col(row.color)} strokeWidth={1.4} opacity={0.7} />}
       <circle cx={x(row.lane)} cy={mid} r={row.commit.parents.length > 1 ? 3.5 : 4.5} fill={row.commit.parents.length > 1 ? '#0f121a' : col(row.color)} stroke={col(row.color)} strokeWidth={1.8} />
     </svg>
   )
@@ -55,11 +81,13 @@ type Ask =
   | { kind: 'name'; op: 'tag' | 'branch'; commit: GitCommit }
   | { kind: 'confirm'; op: GitOp; commit: GitCommit; title: string; text: string; danger?: boolean; arg?: string }
   | { kind: 'reset'; commit: GitCommit }
+  | { kind: 'merge'; commit: GitCommit; target: string; current: string }
 
 /** Grafo de commits de todas las ramas, con sus etiquetas (se abre como una pestaña más). */
 export function GitGraph() {
   const project = useStore((s) => s.project)
   const status = useStore((s) => s.git)
+  const set = useStore((s) => s.set)
   const toast = useStore((s) => s.toast)
   const [commits, setCommits] = useState<GitCommit[] | null>(null)
   const [reloads, setReloads] = useState(0)
@@ -70,6 +98,9 @@ export function GitGraph() {
   // se relee al abrir, al operar y cuando cambia el estado de git (commit, cambio de rama, pull…)
   useEffect(() => { if (project) void window.api.git.log(project, LIMIT).then(setCommits) }, [project, reloads, status?.branch, status?.ahead, status?.behind, status?.files.length])
   const graph = useMemo(() => layoutGraph(commits ?? []), [commits])
+  const changes = status?.files.length ?? 0
+  const headIndex = graph.rows.findIndex((r) => r.commit.refs.some((x) => x === 'HEAD' || x.startsWith('HEAD -> ')))
+  const headLane = headIndex >= 0 ? graph.rows[headIndex].lane : 0
   const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast('No se pudo copiar', 'error')) }
 
   const run = async (op: GitOp, commit: GitCommit, arg?: string, done?: string): Promise<void> => {
@@ -106,7 +137,7 @@ export function GitGraph() {
       ...switches,
       { label: 'Cherry-pick…', icon: <MdSubdirectoryArrowRight size={14} />, onClick: () => setAsk({ kind: 'confirm', op: 'cherry-pick', commit: c, title: 'Cherry-pick', text: `Se aplicarán los cambios de ${SHORT(c)} como un commit nuevo en «${status?.branch}».` }) },
       { label: 'Revertir…', icon: <MdUndo size={14} />, onClick: () => setAsk({ kind: 'confirm', op: 'revert', commit: c, title: 'Revertir', text: `Se creará un commit nuevo en «${status?.branch}» que deshace los cambios de ${SHORT(c)}.` }) },
-      { label: 'Unir a la rama actual…', icon: <MdCallMerge size={14} />, onClick: () => setAsk({ kind: 'confirm', op: 'merge', commit: c, title: 'Unir (merge)', text: `Se unirá ${SHORT(c)} a «${status?.branch}».` }) },
+      { label: 'Unir a la rama actual…', icon: <MdCallMerge size={14} />, onClick: () => setAsk({ kind: 'merge', commit: c, target: local.find((b) => b !== status?.branch) ?? remote[0] ?? SHORT(c), current: status?.branch ?? 'HEAD' }) },
       { label: 'Rebase de la rama actual sobre este commit…', icon: <MdAltRoute size={14} />, onClick: () => setAsk({ kind: 'confirm', op: 'rebase', commit: c, title: 'Rebase', text: `Los commits de «${status?.branch}» se volverán a aplicar encima de ${SHORT(c)}. Cambia su historial.`, danger: true }) },
       { label: 'Reset de la rama actual a este commit…', icon: <MdRestartAlt size={14} />, onClick: () => setAsk({ kind: 'reset', commit: c }) },
       { label: 'Copiar hash', icon: <MdContentCopy size={14} />, onClick: () => copy(c.hash) },
@@ -119,16 +150,31 @@ export function GitGraph() {
     <div className="@container min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-2">
       {commits === null && <p className="px-2 py-4 text-[12px] text-muted">Leyendo el historial…</p>}
       {commits?.length === 0 && <p className="px-2 py-4 text-[12px] text-muted">Este repositorio todavía no tiene commits</p>}
+      <div className="relative">
+        {commits && changes > 0 && headIndex >= 0 && (
+          <svg className="pointer-events-none absolute left-0 top-0" width={graph.lanes * STEP} height={(headIndex + 2) * HEIGHT} style={{ overflow: 'visible' }}>
+            <line x1={headLane * STEP + STEP / 2} y1={HEIGHT / 2 + 5} x2={headLane * STEP + STEP / 2} y2={(headIndex + 1) * HEIGHT + HEIGHT / 2 - 8} stroke="#8b92a8" strokeWidth={1.6} strokeDasharray="3 3" />
+          </svg>
+        )}
+      {commits && changes > 0 && (
+        <div onClick={() => set({ tab: 'git' })} title="Hay cambios sin commit: clic para verlos en la sección Git" style={{ height: HEIGHT }}
+          className="flex cursor-pointer items-center gap-2 rounded-md pr-2 text-[12px] transition-colors hover:bg-accent-bg">
+          <svg width={graph.lanes * STEP} height={HEIGHT} className="shrink-0" style={{ overflow: 'visible' }}>
+            <circle cx={headLane * STEP + STEP / 2} cy={HEIGHT / 2} r={4.5} fill="#0d0f16" stroke="#8b92a8" strokeWidth={1.8} />
+          </svg>
+          <span className="font-medium text-muted">Cambios sin commit ({changes})</span>
+        </div>
+      )}
       {graph.rows.map((row) => {
         const merge = row.commit.parents.length > 1 || /^(Merge|Merged)\b/i.test(row.commit.subject)      // merges de dos padres y los que solo dicen «Merge…»
         return (
           <div key={row.commit.hash} onClick={() => copy(row.commit.hash)} onContextMenu={(e) => { e.preventDefault(); setMenu({ commit: row.commit, anchor: new DOMRect(e.clientX + 290, e.clientY, 0, 0) }) }}
             title={`${row.commit.hash}\n${row.commit.author} · ${new Date(row.commit.time).toLocaleString()}\nClic: copiar hash · clic derecho: más acciones`}
             className="flex cursor-pointer items-center gap-2 rounded-md pr-2 text-[12px] transition-colors hover:bg-accent-bg" style={{ height: HEIGHT }}>
-            <Lines row={row} lanes={graph.lanes} />
-            <div className={clsx('flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden', merge && 'opacity-50')}>
-              {refBadges(row.commit.refs).map((b) => <span key={b.label} className={clsx('max-w-[9rem] shrink-0 truncate rounded px-1.5 py-px text-[10px] font-medium', BADGE[b.kind])}>{b.label}</span>)}
-              <span className="min-w-0 flex-1 truncate">{row.commit.subject}</span>
+            <Lines row={row} lanes={graph.lanes} head={row.commit.refs.some((r) => r === 'HEAD' || r.startsWith('HEAD -> '))} />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+              {refBadges(row.commit.refs).map((b) => <RefBadge key={`${b.kind}${b.label}`} b={b} />)}
+              <span className={clsx('min-w-0 flex-1 truncate', merge && 'opacity-50')}>{row.commit.subject}</span>
             </div>
             <span className="hidden w-28 shrink-0 truncate text-[11px] text-muted @2xl:block">{row.commit.author}</span>
             <span className="hidden w-24 shrink-0 text-right text-[11px] text-muted @md:block">{when(row.commit.time)}</span>
@@ -136,6 +182,7 @@ export function GitGraph() {
           </div>
         )
       })}
+      </div>
       {commits && commits.length >= LIMIT && <p className="px-2 pt-2 text-center text-[11px] text-muted">Se muestran los últimos {LIMIT} commits</p>}
       {menu && <Menu width={290} anchor={menu.anchor} onClose={() => setMenu(null)} items={menuItems(menu.commit)} />}
       {ask && <AskDialog ask={ask} busy={busy} onClose={() => setAsk(null)} onOk={(op, commit, arg, done) => { setAsk(null); void run(op, commit, arg, done) }} />}
@@ -163,6 +210,7 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
       </Modal>
     )
   }
+  if (ask.kind === 'merge') return <MergeDialog ask={ask} busy={busy} onClose={onClose} onOk={onOk} />
   if (ask.kind === 'reset') {
     const go = (op: GitOp, done: string): void => onOk(op, ask.commit, undefined, done)
     return (
@@ -189,4 +237,34 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
       </div>
     </Modal>
   )
+}
+
+function MergeDialog({ ask, busy, onClose, onOk }: { ask: Extract<Ask, { kind: 'merge' }>; busy: boolean; onClose: () => void; onOk: (op: GitOp, commit: GitCommit, arg?: string, done?: string) => void }) {
+  const btn = 'rounded-lg px-4 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-50'
+  const cancel = <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
+    const [noff, setNoff] = useState(true)
+    const [squash, setSquash] = useState(false)
+    const [nocommit, setNocommit] = useState(false)
+    const opts = squash ? 'squash' : [noff && 'noff', nocommit && 'nocommit'].filter(Boolean).join(',')
+    const Check = ({ on, set, label, hint, disabled }: { on: boolean; set: (v: boolean) => void; label: string; hint: string; disabled?: boolean }) => (
+      <label title={hint} className={clsx('flex items-center gap-2.5 text-[12px]', disabled ? 'opacity-40' : 'cursor-pointer')}>
+        <input type="checkbox" checked={on && !disabled} disabled={disabled} onChange={(e) => set(e.target.checked)} className="size-3.5 accent-[var(--color-accent)]" />
+        {label}
+      </label>
+    )
+    return (
+      <Modal onClose={onClose} width={480} title="Unir (merge)">
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          <p className="text-[12px] leading-relaxed text-muted">¿Seguro que quieres unir <b className="text-text">{ask.target}</b> a <b className="text-text">{ask.current}</b> (la rama actual)?</p>
+          <div className="flex flex-col gap-2">
+            <Check on={noff} set={setNoff} disabled={squash} label="Crear un commit nuevo aunque se pueda avanzar (fast-forward)" hint="--no-ff: deja un commit de merge aunque no haga falta" />
+            <Check on={squash} set={setSquash} label="Juntar los commits en uno (squash)" hint="--squash: deja los cambios preparados, sin commit de merge; el commit lo haces tú" />
+            <Check on={nocommit} set={setNocommit} disabled={squash} label="No hacer commit" hint="--no-commit: une pero te deja revisar antes de confirmar" />
+          </div>
+          <div className="flex justify-end gap-2">{cancel}
+            <button autoFocus disabled={busy} onClick={() => onOk('merge', ask.commit, opts, squash || nocommit ? 'Cambios unidos: falta hacer el commit' : 'Merge hecho')} className={`${btn} bg-accent/20 text-accent hover:bg-accent/30`}>Sí, unir</button>
+          </div>
+        </div>
+      </Modal>
+    )
 }

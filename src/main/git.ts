@@ -97,6 +97,7 @@ const REF_NAME = /^(?!-)[A-Za-z0-9._/-]+$/
 export function opArgs(op: GitOp, hash: string, arg = '', isMerge = false): string[] | null {
   if (!HASH.test(hash)) return null
   const needsName = op === 'tag' || op === 'branch'
+  if (op === 'merge' && !/^[a-z,]*$/.test(arg)) return null
   if (needsName && (!REF_NAME.test(arg) || arg.endsWith('/') || arg.includes('..'))) return null
   const parent = isMerge ? ['-m', '1'] : []                    // en un merge hay que decir con qué padre se compara
   switch (op) {
@@ -105,7 +106,11 @@ export function opArgs(op: GitOp, hash: string, arg = '', isMerge = false): stri
     case 'checkout': return ['checkout', hash]
     case 'cherry-pick': return ['cherry-pick', ...parent, hash]
     case 'revert': return ['revert', '--no-edit', ...parent, hash]
-    case 'merge': return ['merge', '--no-edit', hash]
+    case 'merge': {                                            // arg: opciones separadas por coma (noff, squash, nocommit)
+      const o = new Set(arg.split(',').filter(Boolean))
+      if (o.has('squash')) return ['merge', '--squash', hash]  // squash junta todo en el índice y nunca hace commit solo
+      return ['merge', ...(o.has('noff') ? ['--no-ff'] : []), ...(o.has('nocommit') ? ['--no-commit'] : ['--no-edit']), hash]
+    }
     case 'rebase': return ['rebase', hash]
     case 'reset-soft': return ['reset', '--soft', hash]
     case 'reset-mixed': return ['reset', '--mixed', hash]
@@ -120,7 +125,8 @@ export async function commitOp(root: string, op: GitOp, hash: string, arg?: stri
   const res = await run(root, args, undefined, 60000)
   if (res.ok) return ''
   if (['cherry-pick', 'revert', 'merge', 'rebase'].includes(op) && /conflict/i.test(res.out)) {
-    await run(root, [op === 'merge' ? 'merge' : op, '--abort'])               // no se deja el repositorio a medias
+    // no se deja el repositorio a medias (un merge --squash no deja estado de merge: se deshace con reset --merge)
+    await run(root, op === 'merge' && arg?.includes('squash') ? ['reset', '--merge'] : [op, '--abort'])
     return `Hay conflictos: se canceló la operación sin tocar nada.\n${flat(res)}`
   }
   return flat(res)
