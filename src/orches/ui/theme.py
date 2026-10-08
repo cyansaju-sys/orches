@@ -2,7 +2,7 @@ from flet import Border, BorderSide
 
 BORDER_COLOR = "#2A2F3D"
 ACCENT = "#22D3EE"      # color de acento (cian)
-ACCENT_BG = "#0F2A33"   # fondo tenue del acento: hover y selección
+ACCENT_BG = "#2E2447"   # fondo morado: hover y selección en toda la interfaz
 ACCENT_DIM = "#2B5663"  # acento apagado
 
 

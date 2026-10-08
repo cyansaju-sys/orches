@@ -17,6 +17,7 @@ MUTED = "#6B7088"
 TEXT = "#E6E8EF"
 ERROR = "#FF6B81"
 CARD = "#11141D"
+SELECT_BG = ACCENT_BG      # el mismo morado de selección que el resto de la interfaz
 PALETTE = ["#22D3EE", "#C792EA", "#F0B67F", "#7CCB8B", "#F07178", "#82AAFF", "#FFCB6B", "#4CC9B0"]
 REF_COLORS = {"head": "#E2C08D", "branch": "#7CCB8B", "remote": "#82AAFF", "tag": "#FFCB6B"}
 LANE_W = 16
@@ -32,7 +33,7 @@ def _color(lane):
 
 def GitGraphView(page, open_document):
   """Historial del proyecto como grafo de ramas: cada fila es un commit; al pulsarla se abren sus detalles."""
-  state = {"attached": False, "gone": False, "root": None, "commits": [], "carry": [], "signature": None, "more": False, "error": "", "busy": False}
+  state = {"attached": False, "gone": False, "root": None, "commits": [], "carry": [], "selected": None, "signature": None, "more": False, "error": "", "busy": False}
   rows = Column(spacing=0, scroll=ScrollMode.AUTO, expand=True)
   title = Text("Git Graph", size=12, weight=FontWeight.W_600, color=TEXT)
 
@@ -86,7 +87,8 @@ def GitGraphView(page, open_document):
           Text(c.subject, size=12, color=MERGE_TEXT if merge else TEXT, no_wrap=True, overflow=TextOverflow.ELLIPSIS,
                expand=True)]),
         cell(c.date, 84), cell(c.author, 120), cell(c.hash[:8], 62, mono=True)]),
-      lambda e, c=c: show(c), on_secondary_tap=lambda e, c=c: menu(c), hover_bg=ACCENT_BG,
+      lambda e, c=c: show(c), on_secondary_tap=lambda e, c=c: menu(c), hover_bg=SELECT_BG,
+      bgcolor=SELECT_BG if c.hash == state["selected"] else None,
       tooltip=f"{c.subject}\n{c.hash}\n{c.author} · {c.when}", height=ROW_H,
       padding=Padding(right=8), border_radius=4)
 
@@ -162,7 +164,7 @@ def GitGraphView(page, open_document):
   def option(icon, label, on_click, color=TEXT):
     return Clickable(Row(spacing=10, controls=[Icon(icon, size=16, color=color if color != TEXT else MUTED),
                                                Text(label, size=12, color=color, expand=True)]),
-                     on_click, hover_bg=ACCENT_BG, padding=Padding(left=10, right=10, top=8, bottom=8), border_radius=6)
+                     on_click, hover_bg=SELECT_BG, padding=Padding(left=10, right=10, top=8, bottom=8), border_radius=6)
 
   def report(heading, text):
     """Resultado de un comando que falló (o que dejó un conflicto), con la salida de git para poder copiarla."""
@@ -217,6 +219,7 @@ def GitGraphView(page, open_document):
 
   def menu(c):
     """Clic derecho sobre un commit: cambiar de rama, merge, cherry-pick, revert, reset, ramas y etiquetas."""
+    select(c)
     root_dir = state["root"]
     current = graph.current_branch(root_dir)
     operation = graph.in_progress(root_dir)
@@ -260,7 +263,13 @@ def GitGraphView(page, open_document):
     await copy_text(page, value)
     toast("Hash copiado")
 
+  def select(c):
+    """Deja resaltada (en morado) la fila sobre la que se hizo clic."""
+    state["selected"] = c.hash
+    render()
+
   def show(c):
+    select(c)
     """Detalles del commit en una pestaña del editor."""
     info = graph.details(state["root"], c.hash)
     if info is None:
