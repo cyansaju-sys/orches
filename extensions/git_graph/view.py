@@ -253,8 +253,8 @@ def GitGraphView(page, open_document):
         "Revert", f"Se creará un commit que deshace {short} en «{current}».", "Revert",
         lambda: do("Revert hecho", "revert", "--no-edit", c.hash)))
       add(Icons.HISTORY, f"Reset de «{current}» a este commit…", lambda: reset_menu(c, current), ERROR)
-    close = show_modal(page, dialog(f"{short} · {c.subject[:36]}", Container(width=380, content=Column(
-      tight=True, spacing=2, scroll=ScrollMode.AUTO, controls=items)), [TextButton("Cerrar", on_click=lambda e: close())]))
+    close = show_modal(page, dialog(f"{short} · {c.subject[:36]}", Container(width=340, content=Column(
+      tight=True, spacing=0, controls=items)), [TextButton("Cerrar", on_click=lambda e: close())]))
 
   async def copy_hash(value):
     await copy_text(page, value)
