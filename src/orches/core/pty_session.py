@@ -2,6 +2,8 @@ import os
 import shutil
 import threading
 
+from orches.core.shellpath import extended_path, which
+
 IS_WINDOWS = os.name == "nt"
 
 if IS_WINDOWS:
@@ -48,6 +50,7 @@ def child_env():
     if ".flet" in env.get(k, ""):
       env[k] = _system_temp()
   env.update(TERM="xterm-256color", COLORTERM="truecolor")
+  env["PATH"] = extended_path()          # el agente también necesita encontrar node, git, etc.
   return env
 
 
@@ -94,7 +97,7 @@ class PtySession:
 
     Lanza `SpawnError` (con un mensaje legible) si el comando o la carpeta no existen o no se pudo abrir.
     """
-    exe = shutil.which(self.command)
+    exe = which(self.command)
     if exe is None:
       if os.sep in self.command or (os.altsep and os.altsep in self.command):
         exe = self.command if os.path.isfile(self.command) else None

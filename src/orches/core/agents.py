@@ -1,4 +1,4 @@
-import shutil
+from orches.core.shellpath import which
 
 # nombre visible -> ejecutables posibles
 KNOWN_AGENTS = {
@@ -16,11 +16,11 @@ KNOWN_AGENTS = {
 
 
 def detect_agents():
-  """Devuelve [{"name", "command", "path"}] de los agentes instalados en el PATH."""
+  """Devuelve [{"name", "command", "path"}] de los agentes instalados (PATH, shell de login y carpetas habituales)."""
   found = []
   for name, commands in KNOWN_AGENTS.items():
     for command in commands:
-      path = shutil.which(command)
+      path = which(command)
       if path:
         found.append({"name": name, "command": command, "path": path})
         break

@@ -390,3 +390,27 @@ def test_real_process_reports_exit_code(tmp_path):
   session = PtySession("sh", tmp_path, args=["-c", "exit 3"])
   session.start(lambda d: None, lambda c: (codes.append(c), done.set()))
   assert done.wait(5) and codes == [3] and session.killed is False
+
+
+def test_agents_found_outside_process_path(tmp_path, monkeypatch):
+  """Una app lanzada desde el escritorio no hereda el PATH de la shell: claude en ~/.local/bin debe encontrarse igual."""
+  import os
+  import pytest
+  if os.name == "nt":
+    pytest.skip("usa permisos de Unix")
+  from orches.core import shellpath
+  from orches.core.agents import detect_agents
+  fake = tmp_path / "home" / ".local" / "bin"
+  fake.mkdir(parents=True)
+  exe = fake / "claude"
+  exe.write_text("#!/bin/sh\n")
+  exe.chmod(0o755)
+  monkeypatch.setenv("HOME", str(tmp_path / "home"))
+  monkeypatch.setenv("PATH", "/usr/bin")
+  monkeypatch.setenv("SHELL", "/bin/false")        # sin shell de login utilizable: solo las carpetas habituales
+  shellpath.reset()
+  try:
+    assert any(a["command"] == "claude" and a["path"] == str(exe) for a in detect_agents())
+    assert str(fake) in shellpath.extended_path().split(os.pathsep)
+  finally:
+    shellpath.reset()
