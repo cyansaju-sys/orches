@@ -3,9 +3,10 @@
  * app se reinicia sola para aplicarla.
  *
  * - AppImage (Linux): electron-updater descarga el AppImage nuevo, verifica su hash y lo coloca en el lugar del actual.
+ * - Instalador de Windows (NSIS): descarga el instalador nuevo (latest.yml), lo ejecuta en silencio y reinicia la app.
  * - Cualquier otra forma de ejecutarla (código, desarrollo): solo se avisa y el botón abre la página de la release.
  *
- * ORCHES_UPDATE_URL apunta a una carpeta con `latest-linux.yml` (pruebas) en lugar de GitHub.
+ * ORCHES_UPDATE_URL apunta a una carpeta con `latest-linux.yml` o `latest.yml` (pruebas) en lugar de GitHub.
  */
 import { app, shell, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
@@ -20,8 +21,9 @@ let state: UpdateState = { status: 'idle' }
 let notify: (s: UpdateState) => void = () => undefined
 let timer: ReturnType<typeof setInterval> | undefined
 
-/** ¿Puede actualizarse sola? Solo un AppImage empaquetado (o la carpeta de pruebas). */
-export const canAutoUpdate = (): boolean => Boolean(process.env.ORCHES_UPDATE_URL) || (app.isPackaged && Boolean(process.env.APPIMAGE))
+/** ¿Puede actualizarse sola? Solo un AppImage (Linux) o la app instalada en Windows; o la carpeta de pruebas. */
+export const canAutoUpdate = (): boolean =>
+  Boolean(process.env.ORCHES_UPDATE_URL) || (app.isPackaged && (process.platform === 'win32' || Boolean(process.env.APPIMAGE)))
 
 function set(next: UpdateState): void { state = next; notify(next) }
 const releaseUrl = (version?: string): string => `https://github.com/${REPO}/releases${version ? `/tag/v${version}` : '/latest'}`

@@ -23,7 +23,14 @@ descarga la versión nueva, verifica su hash, reemplaza el AppImage y la app se 
 
 ![Botón de actualización](docs/img/actualizar.png)
 
-Windows y macOS llegarán más adelante. El código de la versión anterior (Python) sigue en la rama `master` y en los tags `v0.1.x`.
+## Instalar (Windows)
+
+Descarga **Orches-Setup-X.Y.Z.exe** de la [última release](https://github.com/cyansaju-sys/orches/releases/latest) y ábrelo: se instala
+para tu usuario, sin permisos de administrador, y crea el acceso directo. El instalador no está firmado, así que Windows puede
+mostrar el aviso de SmartScreen: pulsa **Más información → Ejecutar de todas formas**. También se actualiza solo con el botón
+**Actualizar**.
+
+macOS llegará más adelante. El código de la versión anterior (Python) sigue en la rama `master` y en los tags `v0.1.x`.
 
 ## Qué incluye
 
@@ -86,6 +93,7 @@ npm run dev          # con recarga en caliente (la interfaz se actualiza al guar
 npm test             # pruebas unitarias (vitest)
 npm run typecheck
 npm run dist         # empaqueta el AppImage en release/
+npm run dist:win     # empaqueta el instalador de Windows (hay que ejecutarlo en Windows)
 ```
 
 Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `npm run dev` ya la quita por ti.
@@ -109,8 +117,9 @@ de este README); `ORCHES_SELFTEST=1` prueba el reparto de tareas de punta a punt
 1. Sube `version` en `package.json` (p. ej. `0.2.1`) y haz commit.
 2. `git tag v0.2.1 && git push origin v0.2.1`.
 
-GitHub Actions comprueba que el tag coincide con la versión, pasa tipos y pruebas, empaqueta el AppImage y crea la release con el
-AppImage, `latest-linux.yml` (lo que lee el actualizador) e `install.sh`. Las instalaciones existentes ven el botón **Actualizar**
+GitHub Actions comprueba que el tag coincide con la versión, pasa tipos y pruebas, empaqueta el AppImage (Linux) y el instalador
+(Windows) y crea la release con el AppImage, `latest-linux.yml`, `install.sh`, `Orches-Setup-X.Y.Z.exe` y `latest.yml` (lo que lee el
+actualizador). Si el build de Windows falla, la de Linux sale igual. Las instalaciones existentes ven el botón **Actualizar**
 al cabo de unos minutos.
 
 ## Datos que lee
