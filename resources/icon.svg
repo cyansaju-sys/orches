@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A1D2B"/>
+      <stop offset="1" stop-color="#0B0D14"/>
+    </linearGradient>
+    <linearGradient id="hub" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C4B5FD"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="node" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+  </defs>
+  <!-- baldosa que llena todo el lienzo (las esquinas quedan transparentes) -->
+  <rect width="1024" height="1024" rx="230" fill="url(#tile)"/>
+  <rect x="6" y="6" width="1012" height="1012" rx="224" fill="none" stroke="#A78BFA" stroke-opacity="0.22" stroke-width="12"/>
+  <g transform="translate(512 512) scale(1.2) translate(-512 -512)">
+  <!-- agentes: tres nodos alrededor del líder -->
+  <g stroke="#A78BFA" stroke-opacity="0.55" stroke-width="30" stroke-linecap="round">
+    <line x1="512" y1="512" x2="512" y2="222"/>
+    <line x1="512" y1="512" x2="763" y2="657"/>
+    <line x1="512" y1="512" x2="261" y2="657"/>
+  </g>
+  <g fill="url(#node)">
+    <circle cx="512" cy="222" r="78"/>
+    <circle cx="763" cy="657" r="78"/>
+    <circle cx="261" cy="657" r="78"/>
+  </g>
+  <!-- líder con el prompt de una terminal -->
+  <circle cx="512" cy="512" r="150" fill="url(#hub)"/>
+  <g fill="none" stroke="#12141C" stroke-width="38" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M464 456 L518 512 L464 568"/>
+    <line x1="548" y1="574" x2="594" y2="574"/>
+  </g>
+  </g>
+</svg>

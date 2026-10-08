@@ -1,0 +1,129 @@
+import { create } from 'zustand'
+import type { AgentInfo, FileData, GitStatus } from '@shared/types'
+import { basename } from '@/lib/paths'
+
+export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'extensions'
+export type ToastKind = 'ok' | 'error' | 'info'
+export type Modal = null | 'agents' | 'shortcuts' | 'branches'
+export type Focus = 'tree' | 'editor' | 'pane'
+
+export interface Doc extends FileData { path: string; title: string; savedText: string }
+export interface Pane {
+  id: string; kind: 'agent' | 'shell'; title: string; command: string; args: string[]; cwd: string
+  name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
+}
+export interface Toast { id: number; kind: ToastKind; message: string }
+
+interface State {
+  project: string | null
+  tab: SidebarTab
+  sidebarOpen: boolean
+  sidebarWidth: number
+  editorWidth: number
+  shellHeight: number
+  editEnabled: boolean
+  docs: Doc[]
+  activeDoc: string | null
+  panes: Pane[]
+  shell: Pane | null
+  activePane: string | null
+  focus: Focus
+  git: GitStatus | null
+  modal: Modal
+  toasts: Toast[]
+  maximized: boolean
+  agents: AgentInfo[]
+
+  set: (patch: Partial<State>) => void
+  setProject: (path: string | null) => void
+  toast: (message: string, kind?: ToastKind) => void
+  dismissToast: (id: number) => void
+  openDoc: (path: string) => Promise<void>
+  closeDoc: (path: string) => void
+  updateDocText: (path: string, text: string) => void
+  markSaved: (path: string, text: string, mtimeMs: number) => void
+  replaceDoc: (path: string, data: FileData) => void
+  openAgent: (agent: { name: string; command: string }, args?: string[]) => Promise<void>
+  addPane: (pane: Pane) => void
+  toggleShell: () => Promise<void>
+  closePane: (id: string) => void
+  setEdit: (enabled: boolean) => void
+}
+
+let toastId = 1
+let paneId = 1   // solo para la terminal (los agentes piden su id a la app)
+
+/** Deduce el tipo de aviso a partir del texto cuando no se indica. */
+const guessKind = (m: string): ToastKind => {
+  const low = m.toLowerCase()
+  if (['no se pudo', 'falló', 'error', 'no se encontr', 'no existe'].some((w) => low.includes(w))) return 'error'
+  if (['copiad', 'guardad', 'creada', 'creado', 'hecho', 'subido'].some((w) => low.includes(w))) return 'ok'
+  return 'info'
+}
+
+export const useStore = create<State>((set, get) => ({
+  project: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
+  docs: [], activeDoc: null, panes: [], shell: null, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
+  maximized: false, agents: [],
+
+  set: (patch) => set(patch),
+
+  setProject: (path) => { set({ project: path, git: null }); void window.api.settings.set('project', path) },
+
+  toast: (message, kind) => {
+    const id = toastId++
+    set((s) => ({ toasts: [...s.toasts, { id, kind: kind ?? guessKind(message), message }].slice(-4) }))
+    const long = (kind ?? guessKind(message)) === 'error'
+    setTimeout(() => get().dismissToast(id), long ? 6000 : 3500)
+  },
+  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+  openDoc: async (path) => {
+    if (get().docs.some((d) => d.path === path)) { set({ activeDoc: path, focus: 'editor' }); return }
+    try {
+      const data = await window.api.fs.read(path)
+      const doc: Doc = { ...data, path, title: basename(path), savedText: data.text }
+      set((s) => ({ docs: [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+    } catch (e) {
+      get().toast(`No se pudo abrir ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+    }
+  },
+  closeDoc: (path) => set((s) => {
+    const i = s.docs.findIndex((d) => d.path === path)
+    const docs = s.docs.filter((d) => d.path !== path)
+    const activeDoc = s.activeDoc === path ? (docs[Math.min(i, docs.length - 1)]?.path ?? null) : s.activeDoc
+    return { docs, activeDoc }
+  }),
+  updateDocText: (path, text) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, text } : d)) })),
+  markSaved: (path, text, mtimeMs) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, savedText: text, mtimeMs } : d)) })),
+  replaceDoc: (path, data) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, ...data, savedText: data.text } : d)) })),
+
+  openAgent: async (agent, args = []) => {
+    const cwd = get().project
+    if (!cwd) { get().toast('Abre un proyecto primero (pestaña Archivos)', 'error'); return }
+    const id = await window.api.orchestra.newId()          // los ids los reparte la app: así no chocan con los de los sub-agentes
+    const title = `${agent.name} · ${basename(cwd)}`
+    set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args, cwd }], activePane: id, focus: 'pane', modal: null }))
+  },
+  /** Un agente pidió abrir otro (reparto de tareas): se añade su panel y la terminal inicia el proceso con la tarea. */
+  addPane: (pane) => set((s) => (s.panes.some((p) => p.id === pane.id) ? s : { panes: [...s.panes, pane] })),
+  toggleShell: async () => {
+    if (get().shell) { window.api.pty.kill(get().shell!.id); set({ shell: null, activePane: get().panes.at(-1)?.id ?? null }); return }
+    const project = get().project
+    const cwd = project ?? ''
+    const command = await window.api.agents.shell()
+    const id = `s${paneId++}`
+    set({ shell: { id, kind: 'shell', title: `Terminal · ${project ? basename(project) : '~'}`, command, args: [], cwd }, activePane: id, focus: 'pane' })
+  },
+  closePane: (id) => set((s) => {
+    window.api.pty.kill(id)
+    const panes = s.panes.filter((p) => p.id !== id)
+    const shell = s.shell?.id === id ? null : s.shell
+    const activePane = s.activePane === id ? (panes.at(-1)?.id ?? shell?.id ?? null) : s.activePane
+    return { panes, shell, activePane }
+  }),
+
+  setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
+}))
+
+export const isDirty = (d: Doc): boolean => d.text !== d.savedText
