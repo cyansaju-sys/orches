@@ -21,9 +21,9 @@
   --color-panel: #11141d;
   --color-raised: #151925;
   --color-line: #2a2f3d;
-  --color-accent: #a78bfa;
-  --color-accent-bg: #2e2447;
-  --color-accent-dim: #4b3f72;
+  --color-accent: #8fa6c4;
+  --color-accent-bg: #222c3c;
+  --color-accent-dim: #3b4a63;
   --color-muted: #6b7088;
   --color-text: #e6e8ef;
   --color-ok: #7ee0a1;
@@ -74,5 +74,5 @@ input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { outli
 /* CodeMirror y xterm ocupan todo su contenedor */
 .cm-editor { height: 100%; outline: none !important; }
 .cm-scroller { font-family: var(--font-mono) !important; }
-.xterm { padding: 6px 8px; height: 100%; }
-.xterm-viewport { background: transparent !important; }
+.xterm { height: 100%; }
+.xterm-viewport { background: transparent !important; overflow-y: scroll !important; overflow-x: hidden !important; }

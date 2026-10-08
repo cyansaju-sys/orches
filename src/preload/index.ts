@@ -21,7 +21,12 @@ const api: Api = {
     branches: (r) => ipcRenderer.invoke('git:branches', r), checkout: (r, n, rem) => ipcRenderer.invoke('git:checkout', r, n, rem),
     createBranch: (r, n) => ipcRenderer.invoke('git:createBranch', r, n), marks: (f) => ipcRenderer.invoke('git:marks', f)
   },
-  agents: { detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell') },
+  agents: {
+    detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell'),
+    candidates: () => ipcRenderer.invoke('agents:candidates'),
+    addCustom: (name, commandLine) => ipcRenderer.invoke('agents:addCustom', name, commandLine),
+    removeCustom: (command) => ipcRenderer.invoke('agents:removeCustom', command)
+  },
   update: {
     state: () => ipcRenderer.invoke('update:state'), check: () => ipcRenderer.invoke('update:check'),
     install: () => ipcRenderer.invoke('update:install'), version: () => ipcRenderer.invoke('update:version'),

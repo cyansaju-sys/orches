@@ -1,7 +1,8 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdDeleteOutline, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow, MdSmartToy } from 'react-icons/md'
+import { MdDeleteOutline, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow } from 'react-icons/md'
 import type { AgentUsage, LimitInfo, SessionInfo, UsageData } from '@shared/types'
+import { AgentIcon } from '@/components/AgentIcon'
 import { Menu } from '@/components/Menu'
 import { Modal } from '@/components/ui'
 import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
@@ -38,7 +39,7 @@ function Card({ u, now }: { u: AgentUsage; now: number }) {
   const w = u.window
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3">
-      <div className="flex items-center gap-2"><MdSmartToy size={16} className="text-accent" /><span className="text-[13px] font-semibold">{u.name}</span></div>
+      <div className="flex items-center gap-2"><AgentIcon name={u.name} command={u.command} size={18} /><span className="text-[13px] font-semibold">{u.name}</span></div>
       {u.limits.length > 0 ? (
         <>
           {u.limits.map((l, i) => <Limit key={l.label} limit={l} now={now} extra={i === 0 && w ? `${fmtTokens(w.tokens)} tokens` : undefined} />)}
