@@ -46,10 +46,14 @@ jobs:
             install.sh
 
   windows:
-    runs-on: windows-latest
+    runs-on: windows-2022          # con Visual Studio 2022: el node-gyp de Electron aún no reconoce VS 2026 (el de windows-latest)
     continue-on-error: true        # no debe impedir la release de Linux
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # node-gyp necesita Python para compilar node-pty y better-sqlite3
 
       - uses: actions/setup-node@v4
         with:
