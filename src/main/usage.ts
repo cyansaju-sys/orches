@@ -216,7 +216,7 @@ export function agySessions(now: number): { usage: Omit<AgentUsage, 'limits' | '
   const sessions: SessionInfo[] = rows.map((r) => {
     const cwd = firstWorkspace(r.workspace_uris)
     const end = toMs(r.last_modified_time)
-    return { command: 'agy', agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || '(sin título)', cwd,
+    return { command: 'agy' as const, agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || '(sin título)', cwd,
       project: basename(cwd), tokens: 0, start: end, end }
   }).sort((a, b) => b.end - a.end)
   const startOfToday = new Date(now).setHours(0, 0, 0, 0)

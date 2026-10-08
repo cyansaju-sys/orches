@@ -1,6 +1,6 @@
 {
   "name": "orches",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Panel de escritorio para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",
