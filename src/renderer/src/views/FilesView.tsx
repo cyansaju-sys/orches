@@ -1,7 +1,8 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdFolderOpen } from 'react-icons/md'
+import { MdContentCopy, MdFolderOpen, MdLink } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
+import { Menu } from '@/components/Menu'
 import { GIT_COLOR } from '@/lib/gitSync'
 import { iconFor } from '@/lib/icons'
 import { basename, relative, toPosix } from '@/lib/paths'
@@ -19,6 +20,8 @@ export function FilesView() {
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
   const [ignored, setIgnored] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<string | null>(null)
+  const [menu, setMenu] = useState<{ entry: DirEntry; anchor: DOMRect } | null>(null)
+  const toast = useStore((s) => s.toast)
   const box = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async (dir: string) => {
@@ -75,6 +78,8 @@ export function FilesView() {
     else void openDoc(row.entry.path)
   }
 
+  const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast('No se pudo copiar', 'error')) }
+
   // navegación con el teclado: ↑↓ mueven la selección, → abre, ← cierra o sube, Enter abre, Esc devuelve el teclado a la terminal
   const onKeyDown = (e: React.KeyboardEvent): void => {
     if (e.ctrlKey || e.altKey || e.metaKey) return
@@ -129,6 +134,11 @@ export function FilesView() {
               key={entry.path}
               title={entry.path}
               onClick={() => activate(row)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setCursor(entry.path)
+                setMenu({ entry, anchor: new DOMRect(e.clientX + 190, e.clientY, 0, 0) })      // el menú se abre justo en el cursor
+              }}
               style={{ paddingLeft: 6 + depth * 12 }}
               className={clsx(
                 'flex w-full items-center gap-1.5 rounded-[4px] py-[3px] pr-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg',
@@ -143,6 +153,12 @@ export function FilesView() {
           )
         })}
       </div>
+      {menu && (
+        <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
+          { label: 'Copiar ruta', icon: <MdContentCopy size={14} />, onClick: () => copy(menu.entry.path) },
+          { label: 'Copiar ruta relativa', icon: <MdLink size={14} />, onClick: () => copy(toPosix(relative(project, menu.entry.path))) }
+        ]} />
+      )}
     </div>
   )
 }

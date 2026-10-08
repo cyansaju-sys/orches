@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MdAdd, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import type { McpAgent, McpScope, McpServer, McpSpec } from '@shared/types'
 import { Modal } from '@/components/ui'
-import { AGENT_NAMES, agentsMissing, isSecret, mask, parsePairs, SCOPE_LABELS, specFromServer, splitArgs } from '@/lib/mcp'
+import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, SCOPE_LABELS, specFromServer, splitArgs } from '@/lib/mcp'
 import { useStore } from '@/store'
 
 const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy']
@@ -106,7 +106,8 @@ function Details({ server, all, installed, project, onClose, onChanged }: {
   const headers = (cfg.headers as Record<string, string>) ?? {}
   const env = { ...((cfg.environment as Record<string, string>) ?? {}), ...((cfg.env as Record<string, string>) ?? {}) }
   const hasSecrets = [...Object.keys(headers), ...Object.keys(env)].some(isSecret)
-  const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent)) as McpAgent[]
+  const projectOnly = server.scope !== 'global'          // un servidor de proyecto no se puede copiar a un agente que solo guarda globales
+  const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent) && !(projectOnly && GLOBAL_ONLY.includes(a))) as McpAgent[]
   const copy = async (text: string): Promise<void> => { await navigator.clipboard.writeText(text); toast('Copiado', 'ok') }
 
   const copyTo = async (agent: McpAgent): Promise<void> => {
@@ -178,17 +179,18 @@ function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgen
     const spec: McpSpec = kind === 'remote'
       ? { name: name.trim(), kind, url: url.trim(), headers: parsePairs(headers, [': ', ':']) }
       : { name: name.trim(), kind, command: command.trim(), args: splitArgs(args), env: parsePairs(env, ['=']) }
-    if (!targets.length) { setError('Elige al menos un agente'); return }
+    const chosen = scope === 'project' ? targets.filter((a) => !GLOBAL_ONLY.includes(a)) : targets
+    if (!chosen.length) { setError('Elige al menos un agente'); return }
     setBusy(true); setError('')
     const failed: string[] = []
-    for (const agent of targets) {
+    for (const agent of chosen) {
       const res = await window.api.mcp.add(agent, spec, scope, project)
       if (!res.ok) failed.push(`${AGENT_NAMES[agent]}: ${res.message}`)
     }
     setBusy(false)
     onDone()
     if (failed.length) { setError(failed.join('\n')); return }
-    toast(`«${spec.name}» añadido a ${targets.map((a) => AGENT_NAMES[a]).join(' y ')}`, 'ok')
+    toast(`«${spec.name}» añadido a ${chosen.map((a) => AGENT_NAMES[a]).join(' y ')}`, 'ok')
     onClose()
   }
 
@@ -212,7 +214,7 @@ function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgen
         <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">Agentes</div>
           <div className="flex flex-wrap gap-2">
-            {installed.map((a) => <Choice key={a} on={targets.includes(a)} label={AGENT_NAMES[a]} onClick={() => setTargets((t) => (t.includes(a) ? t.filter((x) => x !== a) : [...t, a]))} />)}
+            {installed.map((a) => <Choice key={a} on={targets.includes(a) && !(scope === 'project' && GLOBAL_ONLY.includes(a))} disabled={scope === 'project' && GLOBAL_ONLY.includes(a)} label={AGENT_NAMES[a]} onClick={() => setTargets((t) => (t.includes(a) ? t.filter((x) => x !== a) : [...t, a]))} />)}
           </div>
         </div>
         <div>
@@ -222,6 +224,9 @@ function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgen
             <Choice on={scope === 'project'} label={SCOPE_LABELS.project} onClick={() => setScope('project')} disabled={!project} />
           </div>
         </div>
+        {scope === 'project' && installed.some((a) => GLOBAL_ONLY.includes(a)) && (
+          <p className="text-[11px] text-muted">{installed.filter((a) => GLOBAL_ONLY.includes(a)).map((a) => AGENT_NAMES[a]).join(' y ')} solo guarda{installed.filter((a) => GLOBAL_ONLY.includes(a)).length > 1 ? 'n' : ''} MCP globales: para añadirlo ahí elige «{SCOPE_LABELS.global}».</p>
+        )}
         {error && <pre className="selectable whitespace-pre-wrap text-[11px] leading-snug text-danger">{error}</pre>}
         <div className="flex justify-end gap-2 pt-1">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
