@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 _FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
 SEP = "\x1f"
-FORMAT = SEP.join(["%H", "%P", "%an", "%ar", "%s", "%D"])
+FORMAT = SEP.join(["%H", "%P", "%an", "%ar", "%s", "%D", "%ad"])
 
 
 @dataclass
@@ -16,6 +16,7 @@ class Commit:
   author: str
   when: str
   subject: str
+  date: str = ""                                # "05 Oct 2026"
   refs: list = field(default_factory=list)      # [("HEAD", "head"), ("main", "branch"), ("v1", "tag"), ("origin/main", "remote")]
   lane: int = 0
   # trazos de la fila, con carriles como columnas: (x_arriba, x_abajo, carril de color)
@@ -55,16 +56,16 @@ def parse_refs(text):
 def log(root, limit=300, skip=0):
   """Commits de todas las ramas, del más nuevo al más viejo. None si no es un repositorio."""
   out = _git(root, "log", "--all", "--date-order", f"--max-count={limit}", f"--skip={skip}",
-             "--decorate=short", f"--format={FORMAT}")
+             "--decorate=short", "--date=format:%d %b %Y", f"--format={FORMAT}")
   if out is None:
     return None
   commits = []
   for line in out.splitlines():
     parts = line.split(SEP)
-    if len(parts) < 6:
+    if len(parts) < 7:
       continue
-    h, parents, author, when, subject, refs = parts[:6]
-    commits.append(Commit(h, parents.split(), author, when, subject, parse_refs(refs)))
+    h, parents, author, when, subject, refs, date = parts[:7]
+    commits.append(Commit(h, parents.split(), author, when, subject, date=date, refs=parse_refs(refs)))
   return commits
 
 

@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 import flet.canvas as cv
 from flet import (
-  AlertDialog, RoundedRectangleBorder, TextButton, TextField, SnackBar, Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
+  AlertDialog, Border, ClipBehavior, RoundedRectangleBorder, TextButton, TextField, SnackBar, Container, Column, Row, Text, Icon, Icons, Padding, Paint, PaintingStyle, ScrollMode, FontWeight, TextOverflow,
   CrossAxisAlignment, MainAxisAlignment, StrokeCap,
 )
 from orches.core import settings
@@ -19,8 +19,9 @@ ERROR = "#FF6B81"
 CARD = "#11141D"
 PALETTE = ["#22D3EE", "#C792EA", "#F0B67F", "#7CCB8B", "#F07178", "#82AAFF", "#FFCB6B", "#4CC9B0"]
 REF_COLORS = {"head": "#E2C08D", "branch": "#7CCB8B", "remote": "#82AAFF", "tag": "#FFCB6B"}
-LANE_W = 14
-ROW_H = 40
+LANE_W = 16
+ROW_H = 28
+MERGE_TEXT = "#7B8099"      # el mensaje de un merge se atenúa: importa menos que los commits reales
 PAGE = 300           # commits que se cargan cada vez
 MAX_LANES = 8        # más carriles de estos no caben en la barra lateral
 
@@ -60,22 +61,34 @@ def GitGraphView(page, open_document):
       shapes.append(cv.Circle(lane_x(c.lane), mid, 2, Paint(color="#11141D", style=PaintingStyle.FILL)))
     return cv.Canvas(shapes=shapes, width=width, height=ROW_H)
 
-  def chip(name, kind):
-    return Container(content=Text(name, size=9, color="#07080C", weight=FontWeight.W_600, no_wrap=True),
-                     bgcolor=REF_COLORS[kind], border_radius=8, padding=Padding(left=6, right=6, top=1, bottom=1))
+  def chip(name, kind, lane):
+    """Etiqueta de rama, remoto o tag: recuadro del color del carril con un ícono a la izquierda."""
+    color = REF_COLORS["head"] if kind == "head" else _color(lane)
+    icon = {"branch": Icons.CALL_SPLIT, "remote": Icons.CLOUD_OUTLINED, "tag": Icons.LABEL, "head": Icons.MY_LOCATION}[kind]
+    return Container(
+      border=Border.all(1, color), border_radius=5, bgcolor="#151925", clip_behavior=ClipBehavior.HARD_EDGE,
+      content=Row(spacing=0, controls=[
+        Container(content=Icon(icon, size=11, color="#07080C"), bgcolor=color, padding=Padding(left=3, right=3, top=2, bottom=2)),
+        Container(content=Text(name, size=11, color=TEXT, no_wrap=True), padding=Padding(left=5, right=6))]))
+
+  def cell(text, width, color=MUTED, mono=False):
+    return Container(width=width, content=Text(text, size=11, color=color, no_wrap=True, overflow=TextOverflow.ELLIPSIS,
+                                               font_family=FONT if mono else None))
 
   def row(c, width):
-    refs = [chip(n, k) for n, k in c.refs if n != "HEAD" or not any(r[1] == "branch" for r in c.refs)]
+    merge = len(c.parents) > 1
+    refs = [chip(n, k, c.lane) for n, k in c.refs if n != "HEAD" or not any(r[1] == "branch" for r in c.refs)]
     return Clickable(
-      Row(spacing=4, vertical_alignment=CrossAxisAlignment.CENTER, controls=[
+      Row(spacing=6, vertical_alignment=CrossAxisAlignment.CENTER, controls=[
         drawing(c, width),
-        Column(spacing=1, expand=True, alignment=MainAxisAlignment.CENTER, controls=[
-          Row(spacing=4, controls=[*refs[:3], Text(c.subject, size=12, color=TEXT, no_wrap=True,
-                                                   overflow=TextOverflow.ELLIPSIS, expand=True)]),
-          Text(f"{c.hash[:7]} · {c.author} · {c.when}", size=10, color=MUTED, no_wrap=True,
-               overflow=TextOverflow.ELLIPSIS)])]),
-      lambda e, c=c: show(c), on_secondary_tap=lambda e, c=c: menu(c), hover_bg=ACCENT_BG, tooltip=f"{c.subject}\n{c.hash}", height=ROW_H,
-      padding=Padding(right=6), border_radius=4)
+        Row(spacing=6, expand=True, vertical_alignment=CrossAxisAlignment.CENTER, controls=[
+          *refs[:3],
+          Text(c.subject, size=12, color=MERGE_TEXT if merge else TEXT, no_wrap=True, overflow=TextOverflow.ELLIPSIS,
+               expand=True)]),
+        cell(c.date, 84), cell(c.author, 120), cell(c.hash[:8], 62, mono=True)]),
+      lambda e, c=c: show(c), on_secondary_tap=lambda e, c=c: menu(c), hover_bg=ACCENT_BG,
+      tooltip=f"{c.subject}\n{c.hash}\n{c.author} · {c.when}", height=ROW_H,
+      padding=Padding(right=8), border_radius=4)
 
   def render(update=True):
     commits = state["commits"]
