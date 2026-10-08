@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui'
 import { AGENT_NAMES, agentsMissing, isSecret, mask, parsePairs, SCOPE_LABELS, specFromServer, splitArgs } from '@/lib/mcp'
 import { useStore } from '@/store'
 
-const SUPPORTED: McpAgent[] = ['claude', 'opencode']
+const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy']
 const REFRESH_MS = 5000
 
 const Tag = ({ children }: { children: React.ReactNode }) => (

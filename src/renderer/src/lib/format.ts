@@ -18,4 +18,4 @@ export const ago = (ms: number, now = Date.now()): string => (now - ms < 90_000 
 export const severity = (percent: number): 'danger' | 'warn' | 'accent' => (percent >= 85 ? 'danger' : percent >= 60 ? 'warn' : 'accent')
 
 export const resumeArgs = (command: string, id: string): string[] | null =>
-  command === 'claude' ? ['--resume', id] : command === 'opencode' ? ['--session', id] : null
+  command === 'claude' ? ['--resume', id] : command === 'opencode' ? ['--session', id] : command === 'agy' ? ['--conversation', id] : null
