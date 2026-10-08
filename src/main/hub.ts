@@ -71,7 +71,7 @@ const host: Host = {
         const win = getWindow()
         if (!win) return { ok: false, info: 'No se pudo abrir el agente: la ventana no está disponible.' }
         const id = newId()
-        const request: OpenPane = { id, name: match.name, command: match.command, cwd: me.cwd, prompt: task, parentId: caller }
+        const request: OpenPane = { id, name: match.name, command: match.command, args: match.args ?? [], cwd: me.cwd, prompt: task, parentId: caller }
         win.webContents.send('orchestra:open-pane', request)         // la interfaz crea su panel; la terminal inicia el proceso
         if (!(await pty.waitForSpawn(id, 20_000))) return { ok: false, info: `No se pudo abrir ${match.name}: no arrancó a tiempo.` }
         toast(`${label(me.name)} abrió ${match.name} en un panel con una tarea`)

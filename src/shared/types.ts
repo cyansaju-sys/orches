@@ -17,7 +17,10 @@ export interface GitStatus { isRepo: boolean; branch: string; ahead: number; beh
 export interface GitBranch { name: string; current: boolean; remote: boolean }
 export type GitMarks = Record<number, 'added' | 'modified' | 'deleted'>
 
-export interface AgentInfo { name: string; command: string; path: string }
+/** `custom`: lo añadió el usuario (no está en la lista conocida). `args`: argumentos fijos con los que se arranca. */
+export interface AgentInfo { name: string; command: string; path: string; args?: string[]; custom?: boolean }
+/** Ejecutable instalado por el usuario que podría ser un agente (para «Añadir agente»). */
+export interface AgentCandidate { name: string; path: string }
 
 export interface PtyOptions {
   id: string; command: string; args?: string[]; cwd: string; cols: number; rows: number
@@ -26,7 +29,7 @@ export interface PtyOptions {
   parentId?: string                              // agente que lo abrió
 }
 /** Panel que un agente pide abrir (reparto de tareas): la interfaz lo crea y su terminal inicia el proceso. */
-export interface OpenPane { id: string; name: string; command: string; cwd: string; prompt: string; parentId: string }
+export interface OpenPane { id: string; name: string; command: string; args?: string[]; cwd: string; prompt: string; parentId: string }
 export interface PtyExit { id: string; code: number | null; error?: string }
 
 export type McpScope = 'global' | 'project' | 'shared'
@@ -47,7 +50,7 @@ export interface McpResult { ok: boolean; message: string }
 
 /** Una sesión del historial de un agente. */
 export interface SessionInfo {
-  command: 'claude' | 'opencode'; agent: string; id: string; title: string; project: string; cwd: string
+  command: 'claude' | 'opencode' | 'agy'; agent: string; id: string; title: string; project: string; cwd: string
   tokens: number; start: number; end: number      // fechas en milisegundos
 }
 export interface LimitInfo { label: string; percent: number; resetsAt: number }
@@ -91,7 +94,13 @@ export interface Api {
     createBranch(root: string, name: string): Promise<string>
     marks(file: string): Promise<GitMarks>
   }
-  agents: { detect(): Promise<AgentInfo[]>; shell(): Promise<string> }
+  agents: {
+    detect(): Promise<AgentInfo[]>
+    shell(): Promise<string>
+    candidates(): Promise<AgentCandidate[]>
+    addCustom(name: string, commandLine: string): Promise<McpResult>
+    removeCustom(command: string): Promise<void>
+  }
   update: {
     state(): Promise<UpdateState>
     check(): Promise<void>

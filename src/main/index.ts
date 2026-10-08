@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'node:path'
-import { detectAgents, defaultShell } from './agents'
+import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents'
 import { listDir, mtime, readFileData, writeFileData } from './files'
 import * as git from './git'
 import * as pty from './pty'
@@ -72,6 +72,9 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:newId', () => newId())
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
+  ipcMain.handle('agents:candidates', () => candidateExecutables())
+  ipcMain.handle('agents:addCustom', (_e, name: string, commandLine: string) => addCustomAgent(name, commandLine))
+  ipcMain.handle('agents:removeCustom', (_e, command: string) => removeCustomAgent(command))
 
   ipcMain.handle('pty:spawn', (e, opts: PtyOptions) => pty.spawn(e.sender, opts))
   ipcMain.on('pty:write', (_e, id: string, data: string) => pty.write(id, data))

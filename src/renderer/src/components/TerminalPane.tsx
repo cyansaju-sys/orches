@@ -29,7 +29,7 @@ function wire(): void {
 }
 
 const theme = {
-  background: '#0d0f16', foreground: '#e6e8ef', cursor: '#a78bfa', cursorAccent: '#0d0f16', selectionBackground: '#2e2447',
+  background: '#0d0f16', foreground: '#e6e8ef', cursor: '#8fa6c4', cursorAccent: '#0d0f16', selectionBackground: '#2c3a50',
   black: '#1a1d2b', red: '#ff6b81', green: '#7ee0a1', yellow: '#e2c08d', blue: '#82aaff', magenta: '#c792ea', cyan: '#4cc9b0', white: '#e6e8ef',
   brightBlack: '#6b7088', brightRed: '#ff8a9b', brightGreen: '#9bf0b9', brightYellow: '#f0d4a8', brightBlue: '#a3bdff',
   brightMagenta: '#d9b3f5', brightCyan: '#6fe0c9', brightWhite: '#ffffff'
@@ -47,7 +47,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     void (async () => {
     await Promise.all([document.fonts.load('13px "DejaVu Sans Mono"'), document.fonts.load('13px "Symbols Nerd Font Mono"')]).catch(() => undefined)
     if (disposed || !host.current) return
-    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, theme, allowProposedApi: true })
+    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme, allowProposedApi: true })
     const fit = new FitAddon()
     t.loadAddon(fit)
     t.loadAddon(new WebLinksAddon((_e, url) => window.open(url)))
@@ -63,7 +63,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     let timer: ReturnType<typeof setTimeout> | undefined
     const sendSize = (): void => {
       clearTimeout(timer)
-      timer = setTimeout(() => { try { fit.fit(); window.api.pty.resize(pane.id, t.cols, t.rows) } catch { /* aún sin tamaño */ } }, 90)
+      timer = setTimeout(() => { try { const atEnd = t.buffer.active.viewportY >= t.buffer.active.baseY; fit.fit(); window.api.pty.resize(pane.id, t.cols, t.rows); if (atEnd) t.scrollToBottom() } catch { /* aún sin tamaño */ } }, 90)
     }
     // el proceso se inicia cuando el contenedor ya tiene su tamaño definitivo (así nace con las columnas correctas)
     let cancelled = false
@@ -87,6 +87,6 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     return () => { disposed = true; cleanup() }
   }, [pane.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { if (active) term.current?.focus() }, [active])
-  return <div ref={host} className="min-h-0 flex-1 overflow-hidden bg-surface" />
+  useEffect(() => { if (active) { term.current?.focus(); term.current?.scrollToBottom() } }, [active])
+  return <div ref={host} className="min-h-0 flex-1 overflow-hidden bg-surface px-2 pb-3 pt-1.5" />
 }

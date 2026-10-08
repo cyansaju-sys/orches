@@ -3,6 +3,7 @@
  *
  * - Claude Code: ~/.claude/projects/<proyecto>/<sesión>.jsonl (cada respuesta trae su `usage`).
  * - OpenCode: su base SQLite (tabla session_v2).
+ * - Antigravity (agy): solo historial, desde conversation_summaries.db (no guarda tokens).
  *
  * Solo se lee: nunca se modifica nada de los agentes (salvo borrar una sesión si el usuario lo pide).
  */
@@ -11,6 +12,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, 
 import { homedir } from 'node:os'
 import { basename, join, relative, isAbsolute } from 'node:path'
 import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../shared/types'
+import { readAgyConversations } from './agyDb'
 import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from './settings'
 import { extendedPath } from './shellpath'
@@ -195,6 +197,35 @@ export function opencodeSessions(now: number): { usage: Omit<AgentUsage, 'limits
   return { usage: { command: 'opencode', window: null, today, week, total, note: 'Sin límite propio: el reinicio depende del proveedor y del modelo.' }, sessions }
 }
 
+// --- Antigravity (agy) ------------------------------------------------------------------------
+/** Fecha de la base: milisegundos, segundos o texto ISO. */
+const toMs = (v: string | number): number => {
+  const n = typeof v === 'number' ? v : Number(v)
+  if (Number.isFinite(n) && n > 0) return n < 1e11 ? n * 1000 : n
+  const t = Date.parse(String(v)); return Number.isFinite(t) ? t : 0
+}
+const uriToPath = (u: string): string => { try { return u.startsWith('file://') ? decodeURIComponent(new URL(u).pathname) : u } catch { return u } }
+const firstWorkspace = (raw: string): string => {
+  try { const v = JSON.parse(raw) as unknown; const first = Array.isArray(v) ? v[0] : v; return typeof first === 'string' ? uriToPath(first) : '' } catch { return uriToPath(raw.split(',')[0] ?? '') }
+}
+
+/** agy no guarda tokens en local: solo el historial de conversaciones (título, pasos, carpeta). */
+export function agySessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[] } | null {
+  const rows = readAgyConversations()
+  if (rows === null) return null
+  const sessions: SessionInfo[] = rows.map((r) => {
+    const cwd = firstWorkspace(r.workspace_uris)
+    const end = toMs(r.last_modified_time)
+    return { command: 'agy', agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || '(sin título)', cwd,
+      project: basename(cwd), tokens: 0, start: end, end }
+  }).sort((a, b) => b.end - a.end)
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0)
+  const note = sessions.length
+    ? `Antigravity no guarda tokens en local. Conversaciones: ${sessions.length} (hoy ${sessions.filter((s) => s.end >= startOfToday).length}).`
+    : 'Sin conversaciones todavía. Antigravity no guarda tokens en local; aquí aparecerá el historial.'
+  return { usage: { command: 'agy', window: null, today: 0, week: 0, total: 0, note }, sessions }
+}
+
 // --- reunir todo ------------------------------------------------------------------------------
 const real = (p: string): string => { try { return realpathSync.native(p) } catch { return p } }
 /** ¿La sesión se ejecutó en el proyecto (o en una de sus subcarpetas)? Sigue enlaces simbólicos. */
@@ -212,6 +243,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
     let found: ReturnType<typeof claudeSessions> | null = null
     if (agent.command === 'claude') found = claudeSessions(now)
     else if (agent.command === 'opencode') found = opencodeSessions(now)
+    else if (agent.command === 'agy') found = agySessions(now)
     if (!found) {
       out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: 'Todavía no se puede leer el consumo de este agente.', limits: [], limitsError: '', limitsAge: 0 })
       continue
@@ -252,6 +284,7 @@ export function deleteSession(session: SessionInfo): Promise<McpResult> {
     }
     return Promise.resolve(finish({ ok: removed, message: removed ? 'Borrada' : 'No se encontró el archivo de la sesión' }))
   }
+  if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: 'Este agente no permite borrar sesiones desde aquí' })
   return new Promise((done) => {
     execFile('opencode', ['session', 'delete', session.id], { cwd: session.cwd || undefined, timeout: 30_000, encoding: 'utf8', env: { ...process.env, PATH: extendedPath() } },
       (err, stdout, stderr) => done(finish({ ok: !err, message: ((err ? stderr || stdout : stdout) || '').trim() || (err ? String(err.message) : 'Borrada') })))

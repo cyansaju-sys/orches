@@ -6,7 +6,10 @@ export interface Launch { args: string[]; env: Record<string, string>; after?: (
 // herramientas del servidor «orches» que Claude Code puede usar sin pedir permiso cada vez
 export const ORCHES_TOOLS = ['mcp__orches__list_agents', 'mcp__orches__delegate_task', 'mcp__orches__wait_agent', 'mcp__orches__read_agent_output']
 // cómo arrancar cada agente con una tarea inicial (el resto la recibe escrita cuando ya está listo)
-export const PROMPT_ARGS: Record<string, (text: string) => string[]> = { claude: (t) => [t], opencode: (t) => ['--prompt', t] }
+export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
+  claude: (t) => [t], opencode: (t) => ['--prompt', t],
+  agy: (t) => ['--prompt-interactive', t]            // Antigravity: ejecuta la tarea y sigue en modo interactivo
+}
 
 /**
  * OpenCode 2.x atiende a todos sus clientes desde UN servicio en segundo plano compartido: la configuración que se le pasa

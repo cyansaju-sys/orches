@@ -26,20 +26,20 @@ const highlight = HighlightStyle.define([
 
 const theme = EditorView.theme({
   '&': { color: '#e6e8ef', backgroundColor: '#0d0f16', fontSize: '12.5px' },
-  '.cm-content': { caretColor: '#a78bfa', padding: '4px 0' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#a78bfa', borderLeftWidth: '2px' },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#2e2447 !important' },
+  '.cm-content': { caretColor: '#8fa6c4', padding: '4px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#8fa6c4', borderLeftWidth: '2px' },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#222c3c !important' },
   '.cm-activeLine': { backgroundColor: '#ffffff08' },
   '.cm-gutters': { backgroundColor: '#0d0f16', color: '#6b7088', border: 'none' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: '#e6e8ef' },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 6px', minWidth: '34px' },
-  '.cm-matchingBracket': { backgroundColor: '#4b3f7266', outline: 'none' },
+  '.cm-matchingBracket': { backgroundColor: '#3b4a6366', outline: 'none' },
   '.cm-tooltip': { backgroundColor: '#11141d', border: '1px solid #2a2f3d', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 12px 32px #000a' },
   '.cm-tooltip-autocomplete ul': { fontFamily: 'var(--font-mono)', fontSize: '12px', maxHeight: '260px' },
   '.cm-tooltip-autocomplete ul li': { padding: '4px 10px' },
-  '.cm-tooltip-autocomplete ul li[aria-selected]': { backgroundColor: '#2e2447', color: '#e6e8ef' },
+  '.cm-tooltip-autocomplete ul li[aria-selected]': { backgroundColor: '#222c3c', color: '#e6e8ef' },
   '.cm-completionIcon': { opacity: 0.6 },
-  '.cm-searchMatch': { backgroundColor: '#4b3f7288' },
+  '.cm-searchMatch': { backgroundColor: '#3b4a6388' },
   '.cm-panels': { backgroundColor: '#11141d', color: '#e6e8ef', borderColor: '#2a2f3d' },
   '.cm-git-gutter': { width: '4px' }
 }, { dark: true })

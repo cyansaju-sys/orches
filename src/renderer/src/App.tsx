@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/components/AgentsArea'
-import { AgentPicker, BranchPicker, ShortcutsDialog } from '@/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ShortcutsDialog } from '@/components/Dialogs'
 import { EditorArea, saveDoc } from '@/components/EditorArea'
 import { Sidebar, TABS } from '@/components/Sidebar'
 import { Toasts } from '@/components/Toasts'
@@ -40,7 +40,7 @@ export function App() {
   useEffect(() => {
     const offPane = window.api.orchestra.onOpenPane((p) => {
       const st = useStore.getState()
-      st.addPane({ id: p.id, kind: 'agent', name: p.name, title: `${p.name} · ${p.cwd.split(/[\\/]/).filter(Boolean).pop() ?? ''}`, command: p.command, args: [], cwd: p.cwd, prompt: p.prompt, parentId: p.parentId })
+      st.addPane({ id: p.id, kind: 'agent', name: p.name, title: `${p.name} · ${p.cwd.split(/[\\/]/).filter(Boolean).pop() ?? ''}`, command: p.command, args: p.args ?? [], cwd: p.cwd, prompt: p.prompt, parentId: p.parentId })
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
     return () => { offPane(); offToast() }
@@ -108,7 +108,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div className="flex min-h-0 flex-1 p-1.5">
+      <div className="flex min-h-0 flex-1 p-1.5 pt-0.5">
         {s.sidebarOpen && (<><Sidebar /><Resizer onDrag={dragSidebar} /></>)}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1">
@@ -129,6 +129,7 @@ export function App() {
         </div>
       </div>
       {s.modal === 'agents' && <AgentPicker />}
+      {s.modal === 'addAgent' && <AddAgentDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
       <Toasts />
