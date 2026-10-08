@@ -7,7 +7,24 @@ demás según su modelo. Se amplía con [extensiones](docs/EXTENSIONES.md).
 
 ![Archivos y editor](docs/img/01-archivos-y-editor.png)
 
-## Ejecutar
+## Instalar
+
+**Linux** — instala sin permisos de administrador (necesita `git`; instala `uv` si falta, preguntando antes):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cyansaju-sys/orches/master/install.sh | bash
+```
+
+Crea el comando `orches` (en `~/.local/bin`) y la entrada del menú de aplicaciones. Es el mismo script para actualizar
+(`./install.sh --ref v0.2.0`) y para quitarlo (`./install.sh --uninstall`; tus ajustes en `~/.config/orches` se conservan).
+
+**Windows** — descarga `Orches-vX.Y.Z-windows.zip` de la [página de releases](https://github.com/cyansaju-sys/orches/releases),
+descomprímelo y ejecuta `Orches.exe`. Lo compila GitHub Actions al subir un tag `v*`
+([release.yml](.github/workflows/release.yml)); no se puede compilar desde Linux.
+
+**macOS** — por ahora, desde el código (abajo).
+
+## Ejecutar desde el código
 
 ```bash
 uv sync

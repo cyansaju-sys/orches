@@ -1,0 +1,40 @@
+# Al subir un tag v* (p. ej. v0.1.0): corre las pruebas, compila el .exe de Windows y crea la release de GitHub
+# con el .zip del ejecutable y el instalador de Linux (install.sh).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write      # crear la release y subir los archivos
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Dependencias y pruebas
+        run: |
+          uv sync
+          uv run pytest -q
+
+      # Compila con Flet (Flutter + Python empaquetado). El resultado queda en build/windows/.
+      - name: Compilar el .exe
+        run: uv run flet build windows --yes --product Orches --artifact Orches --no-rich-output
+
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/* -DestinationPath "Orches-${{ github.ref_name }}-windows.zip"
+
+      - name: Crear la release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" "Orches-${{ github.ref_name }}-windows.zip" install.sh `
+            --title "Orches ${{ github.ref_name }}" --generate-notes
