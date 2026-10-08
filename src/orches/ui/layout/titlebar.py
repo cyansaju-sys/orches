@@ -1,10 +1,10 @@
 import asyncio
 from pathlib import Path
 from flet import (
-  Text, Icon, Icons, Container, Row, Padding, MainAxisAlignment,
-  CrossAxisAlignment, WindowDragArea,
+  Text, Icon, Icons, Image, Container, Row, Padding, MainAxisAlignment,
+  CrossAxisAlignment, WindowDragArea, SnackBar,
 )
-from orches.core import settings
+from orches.core import extensions, settings
 from orches.core.git import branch
 from orches.ui.components.permissions import edit_enabled, subscribe, toggle_edit
 from orches.ui.dialogs.branch_picker import BranchPicker
@@ -96,6 +96,21 @@ def TitleBar(page, on_terminal=None, title="IA orches"):
   subscribe(paint_edit)
   paint_edit(edit_enabled())
 
+  def extension_chip(item):
+    """Botón que aporta una extensión: su ícono y su nombre, como el de «Terminal»."""
+    icon = item.extension.icon
+    glyph = Image(src=icon.read_bytes(), width=14, height=14) if icon else Icon(Icons.EXTENSION, size=14, color=ACCENT)
+
+    def clicked(e):
+      try:
+        item.on_click()
+      except Exception as err:      # una extensión rota no debe tumbar la ventana
+        page.show_dialog(SnackBar(Text(f"{item.extension.name}: {type(err).__name__}: {err}")))
+
+    return Clickable(Row(spacing=6, controls=[glyph, Text(item.label, size=12, color=IDLE_COLOR)]), clicked,
+                     hover_bg=ACCENT_BG, tooltip=item.tooltip,
+                     padding=Padding(left=8, right=8, top=4, bottom=4), border_radius=6)
+
   return WindowDragArea(
     maximizable=True,
     content=Container(
@@ -127,6 +142,7 @@ def TitleBar(page, on_terminal=None, title="IA orches"):
               ),
               branch_chip,
               edit_chip,
+              *[extension_chip(item) for item in extensions.REGISTRY.titlebar],
             ],
           ),
           Row(

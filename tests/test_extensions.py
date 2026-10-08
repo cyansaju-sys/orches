@@ -140,3 +140,33 @@ def test_outdated_compares_catalog_hash(config, monkeypatch):
   assert extensions.outdated([{**catalog[0], "sha": "bbb"}]) == ["demo"]   # el repositorio cambió
   extensions.uninstall("demo")
   assert extensions.outdated(catalog) == []
+
+
+def _git(repo, *args):
+  import subprocess
+  subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *args], check=True,
+                 capture_output=True)
+
+
+def test_git_graph_lanes_with_branch_and_merge(tmp_path):
+  import sys
+  from pathlib import Path
+  sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extensions"))
+  from git_graph import graph
+  _git(tmp_path, "init", "-q", "-b", "main")
+  for name in ("a", "b"):
+    (tmp_path / name).write_text(name)
+    _git(tmp_path, "add", "."); _git(tmp_path, "commit", "-qm", name)
+  _git(tmp_path, "checkout", "-qb", "feature")
+  (tmp_path / "f").write_text("f"); _git(tmp_path, "add", "."); _git(tmp_path, "commit", "-qm", "f")
+  _git(tmp_path, "checkout", "-q", "main")
+  (tmp_path / "c").write_text("c"); _git(tmp_path, "add", "."); _git(tmp_path, "commit", "-qm", "c")
+  _git(tmp_path, "merge", "-q", "--no-ff", "feature", "-m", "merge")
+  commits = graph.log(tmp_path)
+  assert graph.layout(commits) == []                       # al llegar a la raíz no queda ningún carril abierto
+  assert [c.subject for c in commits][0] == "merge" and len(commits[0].parents) == 2
+  assert max(c.lane for c in commits) == 1 and commits[0].width >= 2     # la rama ocupa un segundo carril
+  assert {r[0] for r in commits[0].refs} >= {"HEAD", "main"}
+  assert graph.log(tmp_path / "nada") is None
+  info = graph.details(tmp_path, commits[0].hash)
+  assert info["message"] == "merge"

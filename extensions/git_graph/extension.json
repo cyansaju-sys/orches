@@ -1,0 +1,8 @@
+{
+  "id": "git_graph",
+  "name": "Git Graph",
+  "version": "1.0.0",
+  "description": "Historial del proyecto como grafo de ramas, con etiquetas y detalles de cada commit",
+  "icon": "icon.svg",
+  "main": "main.py"
+}

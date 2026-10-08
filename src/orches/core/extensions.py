@@ -15,6 +15,7 @@ API que recibe `activate(api)`:
 
   api.page, api.id, api.dir                    ventana, id y carpeta de la extensión
   api.add_sidebar_view(build, title=None)      pestaña en la barra lateral; build(page) -> control
+  api.add_titlebar_button(label, on_click, tooltip=None)   botón en la barra de título (con el ícono de la extensión)
   api.add_editor_toolbar(suffixes, build)      franja sobre los archivos con esas extensiones;
                                                build(page, doc) -> control, con doc.path y doc.get_text()
   api.open_document(title, icon, make, key=None, crumbs=None, path=None)   abre una pestaña del editor
@@ -78,6 +79,14 @@ class Toolbar:
 
 
 @dataclass
+class TitlebarItem:
+  extension: Extension
+  label: str
+  on_click: object
+  tooltip: str
+
+
+@dataclass
 class Completions:
   extension: Extension
   languages: tuple
@@ -90,6 +99,7 @@ class Registry:
   sidebar_views: list = field(default_factory=list)
   toolbars: list = field(default_factory=list)
   completions: list = field(default_factory=list)
+  titlebar: list = field(default_factory=list)
   errors: list = field(default_factory=list)      # [(id, mensaje)] de las que no pudieron cargarse
 
   def completions_for(self, language):
@@ -246,6 +256,10 @@ class Api:
                        quotes, ignore_case, tuple(rules))
     syntax.register_language(name, lang, suffixes, colors, title)
 
+  def add_titlebar_button(self, label, on_click, tooltip=None):
+    """Botón en la barra de título, junto a «Terminal», con el ícono de la extensión; `on_click()` sin argumentos."""
+    REGISTRY.titlebar.append(TitlebarItem(self.extension, label, on_click, tooltip or label))
+
   def add_completions(self, languages, provide):
     """Sugerencias propias para esos lenguajes (nombres de `add_language`). `provide(text, cursor, path)` devuelve
     una lista de `orches.core.completion.Suggestion`, o [] si no aplica donde está el cursor."""
@@ -278,6 +292,7 @@ def load_all(page, host):
   REGISTRY.sidebar_views.clear()
   REGISTRY.toolbars.clear()
   REGISTRY.completions.clear()
+  REGISTRY.titlebar.clear()
   REGISTRY.errors.clear()
   install_bundled()
   folders = sorted(p for p in root().iterdir() if p.is_dir() and not p.name.startswith(".")) if root().is_dir() else []
