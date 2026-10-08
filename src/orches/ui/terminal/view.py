@@ -201,7 +201,7 @@ class TerminalView:
   def _build_lines(self):
     self._lines = [
       Text(no_wrap=True, font_family=FONT, size=FONT_SIZE, color=DEFAULT_FG,
-           style=TextStyle(height=LINE_HEIGHT))
+           style=TextStyle(height=LINE_HEIGHT, letter_spacing=0))
       for _ in range(self.rows)
     ]
     self.column.controls = self._lines

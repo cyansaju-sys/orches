@@ -20,7 +20,7 @@ HOVER = ACCENT_BG
 
 
 def FilesView(page, open_file=None):
-  state = {"root": None, "expanded": set(), "status": {}}
+  state = {"root": None, "expanded": set(), "status": {}, "cursor": None, "focused": False, "rows": []}
   tree = Column(spacing=0, scroll=ScrollMode.AUTO, expand=True)
   title = Text("Ningún proyecto", size=11, color=MUTED, no_wrap=True, overflow=TextOverflow.ELLIPSIS)
 
@@ -30,6 +30,17 @@ def FilesView(page, open_file=None):
     else:
       state["expanded"].add(path)
     render()
+
+  def click(path):
+    """Clic en una fila: queda seleccionada y las flechas del teclado pasan a moverse por el árbol."""
+    state["cursor"] = path
+    if path.is_dir():
+      toggle(path)
+    else:
+      render()
+      if open_file:
+        open_file(path)
+    state["focused"] = True   # después de abrir: abrir un archivo enfoca el editor y quita el foco al árbol
 
   def git_code(path):
     """Estado de git del archivo o carpeta (M, A, U, R, D, C) o None."""
@@ -55,8 +66,9 @@ def FilesView(page, open_file=None):
           *badge,
         ],
       ),
-      (lambda e, p=path: toggle(p)) if is_dir else (lambda e, p=path: open_file(p) if open_file else None),
+      lambda e, p=path: click(p),
       hover_bg=HOVER,
+      bgcolor=ACCENT_BG if path == state["cursor"] and state["focused"] else None,
       tooltip=str(path),
       opacity=DIM_OPACITY if ignored else 1,
       padding=Padding(left=6 + depth * 12, right=4, top=3, bottom=3),
@@ -68,12 +80,14 @@ def FilesView(page, open_file=None):
     ignored = ignored_paths(state["root"], children)
     for child in children:
       out.append(item(child, depth, child in ignored))
+      state["rows"].append(child)
       if child.is_dir() and child in state["expanded"]:
         build(child, depth + 1, out)
 
   def render(update=True):
     root = state["root"]
     controls = []
+    state["rows"] = []
     if root is None:
       controls.append(Text("Abre un proyecto para ver su contenido", size=11, color=MUTED))
     else:
@@ -84,6 +98,54 @@ def FilesView(page, open_file=None):
     tree.controls = controls
     if update:
       tree.update()
+
+  def handle_key(e):
+    """Flechas sobre el árbol: ↑↓ mueven la selección, → abre la carpeta, ← la cierra o sube, Enter abre."""
+    if not state["focused"] or state["root"] is None:
+      return False
+    rows, cur = state["rows"], state["cursor"]
+    if e.ctrl or e.alt or e.key not in ("Arrow Up", "Arrow Down", "Arrow Left", "Arrow Right", "Enter", "Escape"):
+      return False
+    if e.key == "Escape":
+      blur()
+      return True
+    if not rows:
+      return True
+    i = rows.index(cur) if cur in rows else -1
+    if e.key == "Arrow Down":
+      state["cursor"] = rows[min(i + 1, len(rows) - 1)]
+    elif e.key == "Arrow Up":
+      state["cursor"] = rows[max(i - 1, 0)]
+    elif cur is None:
+      state["cursor"] = rows[0]
+    elif e.key == "Arrow Right":
+      if cur.is_dir() and cur not in state["expanded"]:
+        state["expanded"].add(cur)
+      elif cur.is_dir() and i + 1 < len(rows) and rows[i + 1].parent == cur:
+        state["cursor"] = rows[i + 1]
+    elif e.key == "Arrow Left":
+      if cur.is_dir() and cur in state["expanded"]:
+        state["expanded"].discard(cur)
+      elif cur.parent in rows:
+        state["cursor"] = cur.parent
+    elif e.key == "Enter":
+      if cur.is_dir():
+        toggle(cur)
+      elif open_file:
+        open_file(cur)
+        state["focused"] = True
+        render()
+      return True
+    render()
+    return True
+
+  def blur():
+    if state["focused"]:
+      state["focused"] = False
+      try:
+        render()
+      except RuntimeError:
+        pass  # la vista no está en pantalla
 
   async def watch_git():
     """Cada pocos segundos revisa git y repinta el árbol si cambió algo."""
@@ -140,7 +202,7 @@ def FilesView(page, open_file=None):
   # el nombre del proyecto va con un botón para abrir otro cuando quieras (antes solo se podía al inicio)
   change_button = IconAction(Icons.FOLDER_OPEN, choose, size=16, color=MUTED, hover_color=ACCENT, hover_bg=ACCENT_BG,
                              width=26, height=26, tooltip="Abrir otro proyecto")
-  return Column(
+  view = Column(
     expand=True,
     spacing=4,
     controls=[
@@ -150,3 +212,7 @@ def FilesView(page, open_file=None):
       tree,
     ],
   )
+  view.handle_key = handle_key
+  view.blur = blur
+  view.is_focused = lambda: state["focused"]
+  return view

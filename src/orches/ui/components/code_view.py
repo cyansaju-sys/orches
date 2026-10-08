@@ -29,7 +29,7 @@ def code_view(text, language="sql", marks=None, all_added=False, on_scroll=None)
     kind = "added" if all_added else marks.get(n)
     gutter = TextSpan(MARK_GLYPHS[kind] if kind else " ", style=TextStyle(color=MARK_COLORS[kind])) if kind else TextSpan(" ")
     rows.append(Text(spans=[gutter, TextSpan(f"{n:>{width}}  ", style=muted), *spans(tokens)], font_family=FONT,
-                     size=FONT_SIZE, no_wrap=True, color=COLORS["plain"], style=TextStyle(height=1.35)))
+                     size=FONT_SIZE, no_wrap=True, color=COLORS["plain"], style=TextStyle(height=1.35, letter_spacing=0)))
   longest = max((len(l) for l in text.splitlines()), default=0) + gutter_chars(len(lines)) + 2
   wide = max(400, int(longest * CHAR_WIDTH) + 24)          # ancho de la línea más larga: scroll horizontal
   return Row(scroll=ScrollMode.AUTO, expand=True, vertical_alignment=CrossAxisAlignment.STRETCH, controls=[

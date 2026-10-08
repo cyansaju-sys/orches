@@ -351,3 +351,16 @@ def test_aceptar_una_sugerencia_reemplaza_la_palabra_y_conserva_el_resto():
 def test_sql_sugiere_en_mayusculas_si_escribes_en_mayusculas():
   s = completion.suggestions("SEL", 3, keywords=["SELECT", "SET"], case_insensitive=True)
   assert [x.label for x in s][0] == "SELECT"
+
+
+def test_marcas_de_git_en_el_margen(repo):
+  archivo = repo / "f.txt"
+  archivo.write_text("a\nb\nc\nd\ne\nf\n")
+  run(repo, "add", ".")
+  run(repo, "commit", "-qm", "f")
+  archivo.write_text("a\nB2\nc\ne\nf\nnueva1\nnueva2\n")
+  assert git.diff_marks(archivo) == ({2: "modified", 4: "deleted", 6: "added", 7: "added"}, False)
+  nuevo = repo / "nuevo.txt"
+  nuevo.write_text("x\n")
+  assert git.diff_marks(nuevo) == ({}, True)                 # sin seguimiento: todo se marca como añadido
+  assert git.diff_marks(repo / "no_existe.txt") == ({}, False)

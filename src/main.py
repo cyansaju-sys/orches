@@ -16,6 +16,8 @@ def main(page: ft.Page):
   sidebar = Sidebar(page, workspace.open_agent, workspace.open_document)
   workspace.bind("tab", sidebar.select_tab)                    # atajos de teclado que tocan la barra lateral
   workspace.bind("toggle_sidebar", sidebar.toggle_sidebar)
+  workspace.bind("files_key", sidebar.files_key)
+  workspace.bind("files_blur", sidebar.files_blur)
 
   page.add(
     TitleBar(page, workspace.toggle_terminal),

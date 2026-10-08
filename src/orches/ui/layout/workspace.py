@@ -20,11 +20,15 @@ from orches.ui.components.resize import resize_handle_height
 from orches.ui.theme import ACCENT, ACCENT_BG, ACCENT_DIM, BORDER_COLOR, border_all
 from orches.ui.dialogs.agent_picker import AgentPicker
 from orches.ui.components.clickable import IconAction, Clickable
+from orches.core.git import status_map
 from orches.ui.components.modal import modal_open, set_typing, show_modal, typing_open
+from orches.ui.components.resize import resize_handle
+from orches.ui.layout.editor_area import EditorArea
 from orches.ui.components.permissions import toggle_edit
 from orches.ui.dialogs.shortcuts import open_shortcuts
 from orches.ui.terminal.view import TerminalView, FONT, FONT_FILE
 
+EDITOR_WIDTH = 560
 SHELL_HEIGHT = 260
 SHELL_MIN = 80
 MUTED = "#6B7088"
@@ -37,32 +41,6 @@ ORCHES_TOOLS = ["mcp__orches__list_agents", "mcp__orches__delegate_task",
 # cómo arrancar cada agente con una tarea inicial (el resto la recibe escrita cuando ya está listo)
 PROMPT_ARGS = {"claude": lambda text: [text], "opencode": lambda text: ["--prompt", text]}
 BUSY_SECONDS = 4      # sin salida durante este tiempo = el agente ya no está trabajando
-
-
-class DocumentView:
-  """Contenido que no es una terminal (p. ej. el código de un objeto de la base) dentro de un panel."""
-
-  def __init__(self, control):
-    self.control = control
-    self.on_focus = None
-
-  def close(self):
-    pass
-
-  def set_focus(self, focused):
-    pass
-
-  def send_key(self, e):
-    pass
-
-  def write_text(self, text):
-    pass
-
-  def paste(self, text):
-    pass
-
-  def idle_for(self):
-    return 999.0
 
 
 def Workspace(page):
@@ -82,7 +60,7 @@ def Workspace(page):
   shell = {"pane": None}  # terminal inferior (o None)
   state = {
     "active": None, "picker": None, "mods": (False, False, False),
-    "text": "", "field_focus": False, "text_at": 0.0,
+    "text": "", "field_focus": False, "text_at": 0.0, "editor_focus": False,
   }
   clipboard = Clipboard()
   page.services.append(clipboard)
@@ -131,6 +109,27 @@ def Workspace(page):
     clip_behavior=ClipBehavior.HARD_EDGE,
   )
 
+  # --- zona de documentos: pestañas a la izquierda de los agentes -----------------------------------
+  def editor_focused():
+    """El usuario usó el editor: las teclas dejan de ir a las terminales hasta que pulse una."""
+    state["active"] = None
+    state["editor_focus"] = True
+    refresh()
+
+  def editor_shown():
+    editor_box.visible = editor_handle.visible = True
+    page.update()
+
+  def editor_hidden():
+    editor_box.visible = editor_handle.visible = False
+    state["editor_focus"] = False
+    page.update()
+
+  editor = EditorArea(page, editor_focused, editor_hidden, editor_shown)
+  editor_box = Container(content=editor, width=EDITOR_WIDTH, visible=False)
+  editor_handle = resize_handle(editor_box, 280, 1600)
+  editor_handle.visible = False
+
   def max_shell_height():
     # deja siempre algo de espacio para los agentes
     return max(SHELL_MIN, (page.window.height or 800) - 200)
@@ -153,8 +152,7 @@ def Workspace(page):
       p["label"].color = TEXT if active else MUTED
       if "base_title" in p:
         agents = agent_panes()
-        p["label"].value = (("● " if p.get("dirty") else "")
-                            + p["base_title"] + (" · líder" if len(agents) > 1 and p is agents[0] else ""))
+        p["label"].value = p["base_title"] + (" · líder" if len(agents) > 1 and p is agents[0] else "")
     # cuadrícula: 1-2 paneles en una fila, 3-4 en 2x2, 5-9 en 3 columnas, etc.
     cols = math.ceil(math.sqrt(len(panes))) if len(panes) > 2 else len(panes)
     rows = [panes[i:i + cols] for i in range(0, len(panes), cols)] if panes else []
@@ -173,22 +171,11 @@ def Workspace(page):
     shell_area.content = shell["pane"]["box"] if shell["pane"] else None
     page.update()
 
-  def activate(pane):
-    """Marca el panel como activo sin quitarle el foco al control que lo tiene (p. ej. un editor)."""
-    if state["active"] is not pane:
-      state["active"] = pane
-      refresh()
-
-  def set_dirty(pane, dirty):
-    pane["dirty"] = dirty
-    pane["label"].value = ("● " if dirty else "") + pane["base_title"]
-    try:
-      pane["label"].update()
-    except RuntimeError:
-      pass
-
   def select(pane):
     set_typing(False)   # clic en una terminal: el teclado vuelve a ser suyo
+    if hooks.get("files_blur"):
+      hooks["files_blur"]()
+    state["editor_focus"] = False
     refocus()
     if state["active"] is not pane:
       state["active"] = pane
@@ -223,22 +210,6 @@ def Workspace(page):
     return pane
 
   def close_agent(pane):
-    if pane.get("dirty"):          # un documento con cambios sin guardar no se cierra en silencio
-      control = pane["view"].control
-
-      async def save_and_close():
-        await control.save_async()
-        if not pane.get("dirty"):
-          close_now(pane)
-
-      close = show_modal(page, AlertDialog(
-        modal=False, bgcolor="#11141D", shape=RoundedRectangleBorder(radius=10),
-        title=Text("Cambios sin guardar", size=14),
-        content=Text(f"«{pane['base_title']}» tiene cambios sin guardar.", size=12, color=MUTED),
-        actions=[TextButton("Cancelar", on_click=lambda e: close()),
-                 TextButton("Descartar", on_click=lambda e: (close(), close_now(pane))),
-                 TextButton("Guardar y cerrar", on_click=lambda e: (close(), page.run_task(save_and_close)))]))
-      return
     close_now(pane)
 
   def close_now(pane):
@@ -368,24 +339,12 @@ def Workspace(page):
     return {"agent_id": agent_id, "busy": idle < BUSY_SECONDS, "idle_seconds": round(idle, 1),
             "text": pane["view"].screen_text(max(5, min(lines, 400)))}
 
-  def open_document(title, icon, make, key=None):
-    """Abre un documento (archivo, objeto de la base...) en un panel. `make()` crea su contenido.
+  def open_document(title, icon, make, key=None, crumbs=None, path=None):
+    """Abre un documento (archivo, objeto de la base...) en una pestaña del editor. `make()` crea su contenido.
 
-    Con `key`, si ese documento ya está abierto solo se le da el foco en vez de abrirlo otra vez.
+    Con `key`, si ese documento ya está abierto solo se selecciona su pestaña.
     """
-    if key is not None:
-      existing = next((p for p in panes if p.get("doc_key") == key), None)
-      if existing:
-        select(existing)
-        return
-    control = make()
-    pane = make_pane(title, icon, DocumentView(control), close_agent, expand=1)
-    pane["doc_key"] = key
-    control.focus_cb = lambda: activate(pane)                  # el editor se enfocó: este panel pasa a ser el activo
-    control.on_dirty = lambda dirty: set_dirty(pane, dirty)
-    panes.append(pane)
-    state["active"] = pane
-    refresh()
+    editor.open(title, icon, make, key=key, crumbs_list=crumbs, path=path)
 
   def close_shell(pane):
     pane["view"].close()
@@ -459,15 +418,17 @@ def Workspace(page):
     return state["field_focus"] and len(e.key) == 1 and not (e.ctrl and not e.alt)
 
   def active_document():
-    """Control del documento activo si es editable (tiene `save`), o None."""
-    pane = state["active"]
-    control = getattr(pane["view"], "control", None) if pane else None
-    return control if pane and "agent" not in pane and hasattr(control, "save") else None
+    """Control del documento activo si es editable (tiene `save`) y el editor tiene el foco, o None."""
+    control = editor.active_control() if state["editor_focus"] else None
+    return control if control is not None and hasattr(control, "save") else None
 
   hooks = {}          # funciones que conecta main (p. ej. cambiar de pestaña de la barra lateral)
   TABS = {"E": "files", "A": "agents", "G": "git", "D": "db", "X": "mcp", "U": "ai"}
 
   def cycle_panes(step):
+    if state["editor_focus"] and len(editor.docs) > 1:      # con el editor enfocado se cambia de pestaña
+      editor.cycle(step)
+      return
     order = list(panes)
     if not order:
       return
@@ -476,6 +437,9 @@ def Workspace(page):
     select(order[(index + step) % len(order)])
 
   def close_active():
+    if state["editor_focus"] and editor.docs:               # con el editor enfocado se cierra su pestaña
+      editor.close_active()
+      return
     pane = state["active"]
     if pane:
       (close_shell if pane is shell["pane"] else close_agent)(pane)
@@ -518,6 +482,9 @@ def Workspace(page):
         return
       if doc and typing_open() and hasattr(doc, "handle_suggest_key") and doc.handle_suggest_key(e):
         return                                          # ↑↓ Tab Esc eligen o cierran las sugerencias
+      if doc and typing_open() and e.key == "Escape" and hasattr(doc, "exit_edit"):
+        doc.exit_edit()                                 # Esc sale del editor y vuelve a la vista con colores
+        return
       if doc and typing_open() and e.ctrl and not e.shift and e.key == "Space" and hasattr(doc, "trigger_suggest"):
         doc.trigger_suggest()                           # Ctrl+Espacio: pedir sugerencias
         return
@@ -525,6 +492,8 @@ def Workspace(page):
         doc.insert_tab(e.shift)
         return
     if modal_open() or typing_open():   # diálogo o campo de texto abierto: las teclas son suyas
+      return
+    if hooks.get("files_key") and hooks["files_key"](e):   # flechas sobre el árbol de archivos
       return
     if state["picker"]:        # con la paleta abierta, las teclas no van a la terminal
       state["picker"].handle_key(e)
@@ -567,8 +536,23 @@ def Workspace(page):
     expand=True,
     spacing=0,
     horizontal_alignment=CrossAxisAlignment.STRETCH,
-    controls=[agents_area, shell_handle, shell_area],
+    controls=[Row(expand=True, spacing=0, vertical_alignment=CrossAxisAlignment.STRETCH,
+                  controls=[editor_box, editor_handle, agents_area]), shell_handle, shell_area],
   )
+  async def watch_status():
+    """Cada pocos segundos pone la letra de git (M, U...) en las pestañas de archivos del proyecto."""
+    while True:
+      await asyncio.sleep(3)
+      root = settings.get("project")
+      if root and editor.docs:
+        try:
+          status = await asyncio.to_thread(status_map, root)
+          editor.update_status(status, root)
+        except Exception:
+          pass
+
+  page.run_task(watch_status)
+
   control.open_agent = open_agent
   control.bind = lambda name, fn: hooks.__setitem__(name, fn)
   control.open_document = open_document

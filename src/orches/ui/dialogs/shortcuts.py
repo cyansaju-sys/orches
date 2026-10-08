@@ -12,7 +12,7 @@ TEXT = "#E6E8EF"
 SECTIONS = (
   ("Archivos", (
     ("Ctrl + S", "Guardar el archivo abierto"),
-    ("Ctrl + W", "Cerrar el archivo abierto"),
+    ("Ctrl + W", "Cerrar la pestaña del archivo"),
     ("Ctrl + Shift + L", "Permitir o bloquear la edición de archivos"),
     ("Tab / Shift + Tab", "Sangría al editar"),
     ("Ctrl + Espacio", "Pedir sugerencias de autocompletado"),
@@ -22,7 +22,7 @@ SECTIONS = (
     ("Ctrl + Shift + N", "Abrir un agente"),
     ("Ctrl + Shift + T", "Mostrar u ocultar la terminal"),
     ("Ctrl + Shift + W", "Cerrar el panel activo"),
-    ("Ctrl + Av Pág / Re Pág", "Panel siguiente / anterior"),
+    ("Ctrl + Av Pág / Re Pág", "Pestaña o panel siguiente / anterior"),
   )),
   ("Barra lateral", (
     ("Ctrl + Shift + B", "Mostrar u ocultar la barra lateral"),

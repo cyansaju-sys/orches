@@ -6,16 +6,21 @@ from pathlib import Path
 from flet import (
   AlertDialog, Container, Column, Row, Text, Icon, Icons, Image, Markdown, MarkdownExtensionSet, Padding, FontWeight,
   CrossAxisAlignment, MainAxisAlignment, ProgressRing, SnackBar, ScrollMode, BoxFit, TextField, TextButton,
-  TextStyle, TextSelection, RoundedRectangleBorder, NoInputBorder, Stack,
+  TextStyle, TextSelection, RoundedRectangleBorder, NoInputBorder, Stack, GestureDetector, MouseCursor, Colors,
+  TextSpan,
 )
 from orches.core import completion
+from orches.core.git import diff_marks
 from orches.ui.components.clickable import Clickable
 from orches.ui.components.clipboard import copy_text
-from orches.ui.components.code_view import code_view
+from orches.ui.components.code_view import (
+  CHAR_WIDTH, FONT_SIZE, LINE_HEIGHT, MARK_COLORS, MARK_GLYPHS, code_view, gutter_chars,
+)
 from orches.ui.components.modal import set_typing, show_modal
 from orches.ui.components.permissions import edit_enabled, subscribe
-from orches.ui.syntax import COLORS, LANGS, language_for
+from orches.ui.syntax import COLORS, LANGS, highlight, language_for, spans
 from orches.ui.terminal.view import FONT
+from orches.ui.views.sql_runner import SqlToolbar
 from orches.ui.theme import ACCENT, ACCENT_BG, BORDER_COLOR, border_all
 
 MUTED = "#6B7088"
@@ -25,6 +30,9 @@ WARN = "#E2C08D"
 CARD = "#11141D"
 MAX_BYTES = 1_000_000         # más de esto se muestra solo el principio (y no se edita)
 MAX_EDIT_BYTES = 500_000      # el editor de texto de la interfaz aguanta archivos medianos, no enormes
+MAX_COLOR_BYTES = 150_000     # hasta aquí el editor colorea mientras escribes; más grande: editor simple sin colores
+OVERLAY_DY = float(os.environ.get("ORCHES_OVERLAY_DY", "-4"))   # el TextField dibuja el texto ~4 px más abajo que un Text: el coloreado se sube para que coincida
+POLL_SECONDS = 2              # cada cuánto se mira si el archivo cambió en el disco
 TAB = "    "                  # lo que inserta la tecla Tab al editar
 IMAGES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico"}
 MARKDOWN = {".md", ".markdown"}
@@ -103,29 +111,24 @@ def _chip(text, color=ACCENT):
 
 
 def FileViewer(page, path):
-  """Contenido de un archivo en un panel: código con colores, Markdown, imágenes o aviso si es binario.
+  """Contenido de un archivo en una pestaña: se abre ya editable y con colores en las palabras reservadas.
 
-  Los archivos de texto se pueden editar (botón Editar) y guardar con Ctrl+S.
+  - Texto editable: editor con colores (el texto coloreado va debajo de un cuadro de texto transparente).
+  - Solo lectura (bloqueado, muy grande, no UTF-8...): código con números de línea y marcas de git.
+  - Imágenes y binarios: se muestran o se avisa.
   """
   path = Path(path)
   language = language_for(path)
-  is_markdown = path.suffix.lower() in MARKDOWN
-  state = {"data": FileData("text"), "text": "", "preview": is_markdown, "editing": False, "dirty": False,
-           "selection": (0, 0), "sugg": [], "sel": 0, "start": 0, "ticket": 0}
+  state = {"data": FileData("text"), "text": "", "dirty": False, "selection": (0, 0), "sugg": [], "sel": 0,
+           "start": 0, "ticket": 0, "paint": 0, "marks": {}, "all_added": False, "view_w": 700, "painted_lines": -1}
   holder = Container(expand=True, content=Column(expand=True, alignment=MainAxisAlignment.CENTER,
                                                   horizontal_alignment=CrossAxisAlignment.CENTER, controls=[
     ProgressRing(width=22, height=22, stroke_width=2, color=ACCENT), Text(f"Abriendo {path.name}…", size=11, color=MUTED)]))
-  editor = {"field": None, "popup": None, "stack": None}
-  bar_box = Container()
-  body_box = Container(expand=True)
-  frame = Column(expand=True, spacing=0, controls=[bar_box, body_box])
+  sql_bar = []     # la franja del ▶ se crea una vez y se reutiliza en cada repintado
+  editor = {"field": None, "stack": None, "popup": None, "overlay": None, "gutter": None, "wide": None, "colors": False}
 
   def toast(message):
     page.show_dialog(SnackBar(Text(message)))
-
-  def button(icon, label, on_click, color=MUTED):
-    return Clickable(Row(spacing=4, controls=[Icon(icon, size=14, color=color), Text(label, size=11, color=color)]),
-                     on_click, hover_bg=ACCENT_BG, padding=Padding(left=8, right=8, top=4, bottom=4), border_radius=6)
 
   def confirm(title, message, accept_label, on_accept):
     close = show_modal(page, AlertDialog(
@@ -134,69 +137,128 @@ def FileViewer(page, path):
       actions=[TextButton("Cancelar", on_click=lambda e: close()),
                TextButton(accept_label, on_click=lambda e: (close(), on_accept()))]))
 
-  # --- aviso al panel de que hay cambios sin guardar -----------------------------------------------
   def set_dirty(value):
     state["dirty"] = value
     hook = getattr(holder, "on_dirty", None)
     if hook:
       hook(value)
 
-  async def copy():
-    await copy_text(page, state["text"])
-    toast("Copiado")
-
-  # --- barra de herramientas -----------------------------------------------------------------------
-  def toolbar():
+  def use_editor():
     data = state["data"]
-    kind_label = {"image": "Imagen", "binary": "Binario"}.get(data.kind) or LANGUAGE_NAMES.get(language, "Texto")
-    chips = [_chip(kind_label), Text(human_size(data.size), size=10, color=MUTED)]
-    if state["dirty"]:
-      chips.append(_chip("● sin guardar", WARN))
-    if data.kind == "text" and data.editable and not edit_enabled() and not state["editing"]:
-      chips.append(_chip("Edición bloqueada", MUTED))
-    if data.truncated:
-      chips.append(_chip("Solo el primer MB · solo lectura", WARN))
-    elif data.kind == "text" and not data.utf8:
-      chips.append(_chip("No es UTF-8 · solo lectura", WARN))
-    elif data.kind == "text" and not data.editable:
-      chips.append(_chip("Muy grande para editar · solo lectura", WARN))
-    actions = []
-    can_edit = data.editable and edit_enabled()
-    if data.kind == "text":
-      if state["dirty"]:
-        actions.append(button(Icons.SAVE, "Guardar", lambda e: page.run_task(save), ACCENT))
-      if state["editing"]:
-        actions.append(button(Icons.VISIBILITY, "Vista previa" if is_markdown else "Con colores", lambda e: show_read(True)))
-      else:
-        if can_edit:
-          actions.append(button(Icons.EDIT, "Editar", lambda e: start_editing()))
-        if is_markdown:
-          actions.append(button(Icons.CODE if state["preview"] else Icons.ARTICLE,
-                                "Ver código" if state["preview"] else "Vista previa", lambda e: toggle_preview()))
-      if state["dirty"]:
-        actions.append(button(Icons.UNDO, "Descartar", lambda e: discard()))
-      actions.append(button(Icons.CONTENT_COPY, "Copiar", lambda e: page.run_task(copy)))
-    if not state["editing"]:
-      actions.append(button(Icons.REFRESH, "Recargar", lambda e: page.run_task(load)))
-    return Container(padding=Padding(left=10, right=6, top=6, bottom=6), content=Row(
-      wrap=True, run_spacing=4, alignment=MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=CrossAxisAlignment.CENTER,
-      controls=[Row(spacing=6, controls=chips), Row(spacing=0, controls=actions)]))
+    return data.kind == "text" and data.editable and edit_enabled()
 
-  # --- contenido -------------------------------------------------------------------------------------
+  # --- editor con colores -------------------------------------------------------------------------------
+  # El texto coloreado (un Text con fragmentos) se dibuja debajo de un TextField con el texto transparente: se ve el
+  # color y se escribe en el TextField. Los dos usan la misma fuente, el mismo alto de línea y el mismo ancho, y el
+  # ancho es tan grande como la línea más larga, así que ninguna línea se parte y todo queda alineado.
+  FIELD_PAD = Padding(left=8, right=8, top=6, bottom=40)
+  TEXT_STYLE = TextStyle(font_family=FONT, size=FONT_SIZE, height=1.35)
+
+  def content_width(text):
+    longest = max((len(l) for l in text.split("\n")), default=0)
+    return max(state["view_w"] - 80, int((longest + 4) * CHAR_WIDTH) + 60)
+
+  def colored_spans(text):
+    out = []
+    for i, tokens in enumerate(highlight(text, language)):
+      if i:
+        out.append(TextSpan("\n"))
+      out.extend(spans(tokens, decorate=False))
+    return out
+
+  def gutter_spans(text):
+    count = text.count("\n") + 1
+    width = len(str(count))
+    muted = TextStyle(color=MUTED)
+    out = []
+    for n in range(1, count + 1):
+      kind = "added" if state["all_added"] else state["marks"].get(n)
+      if n > 1:
+        out.append(TextSpan("\n"))
+      out.append(TextSpan(MARK_GLYPHS[kind] if kind else " ", style=TextStyle(color=MARK_COLORS[kind]) if kind else None))
+      out.append(TextSpan(f"{n:>{width}} ", style=muted))
+    return out, gutter_chars(count) - 1
+
   def make_editor():
+    colors = len(state["text"].encode("utf-8")) <= MAX_COLOR_BYTES
+    editor["colors"] = colors
+    width = content_width(state["text"])
+    visible_lines = max(20, int(700 / (FONT_SIZE * 1.35)))
     field = TextField(
-      value=state["text"], multiline=True, expand=True, border=NoInputBorder(), cursor_color=ACCENT,
-      text_style=TextStyle(font_family=FONT, size=12, height=1.35, color=COLORS["plain"]),
-      content_padding=Padding(left=12, right=12, top=8, bottom=12), selection_color=ACCENT_BG,
-      on_change=on_edit, on_focus=on_editor_focus, on_blur=lambda e: set_typing(False),
-      on_selection_change=on_selection)
-    popup = Container(visible=False, bottom=14, right=14, width=300, bgcolor=CARD, border_radius=8,
+      value=state["text"], multiline=True, min_lines=visible_lines, width=width, border=NoInputBorder(),
+      cursor_color=ACCENT, content_padding=FIELD_PAD, selection_color=ACCENT_BG,
+      text_style=TextStyle(font_family=FONT, size=FONT_SIZE, height=1.35, letter_spacing=0,
+                           color=Colors.TRANSPARENT if colors else COLORS["plain"]),
+      on_change=on_edit, on_focus=on_editor_focus, on_blur=lambda e: set_typing(False), on_selection_change=on_selection)
+    popup = Container(visible=False, bottom=14, right=18, width=300, bgcolor=CARD, border_radius=8,
                       border=border_all(color=ACCENT_BG), padding=Padding(left=4, right=4, top=4, bottom=4))
-    editor.update(field=field, popup=popup, stack=Stack(expand=True, controls=[field, popup]))
+    editor.update(field=field, popup=popup)
     state["sugg"] = []
+    if not colors:                                  # archivo grande: editor simple, ocupa todo
+      field.expand, field.width = True, None
+      editor.update(stack=Stack(expand=True, controls=[field, popup]), overlay=None, gutter=None, wide=None)
+      return field
+    overlay = Text(spans=colored_spans(state["text"]), font_family=FONT, size=FONT_SIZE, no_wrap=True, style=TextStyle(height=1.35, letter_spacing=0),
+                   color=COLORS["plain"])
+    wide = Container(width=width, content=Stack(controls=[
+      Container(left=0, top=0, width=width, padding=Padding(left=8, right=8, top=6 + OVERLAY_DY, bottom=0), content=overlay), field]))
+    g_spans, g_chars = gutter_spans(state["text"])
+    gutter = Text(spans=g_spans, font_family=FONT, size=FONT_SIZE, no_wrap=True, style=TextStyle(height=1.35, letter_spacing=0), color=MUTED)
+    gutter_box = Container(width=int((g_chars + 1) * CHAR_WIDTH) + 14, padding=Padding(left=6, top=6 + OVERLAY_DY, bottom=40), content=gutter)
+    scroll = Column(scroll=ScrollMode.AUTO, expand=True, controls=[Row(
+      spacing=0, vertical_alignment=CrossAxisAlignment.START, controls=[
+        gutter_box, Container(expand=True, content=Row(scroll=ScrollMode.AUTO, controls=[wide]))])])
+    editor.update(overlay=overlay, gutter=gutter, gutter_box=gutter_box, wide=wide,
+                  stack=Container(expand=True, on_size_change=on_viewport,
+                                  content=Stack(expand=True, controls=[scroll, popup])))
+    state["painted_lines"] = state["text"].count("\n") + 1
     return field
 
-  # --- sugerencias de autocompletado ---------------------------------------------------------------------
+  def on_viewport(e):
+    if abs(e.width - state["view_w"]) > 4:
+      state["view_w"] = e.width
+      if editor["colors"] and editor["field"]:
+        fit_width()
+
+  def fit_width():
+    """Ajusta el ancho del editor a la línea más larga (o al panel si es más ancho)."""
+    field, wide, overlay = editor["field"], editor["wide"], editor["overlay"]
+    if not (field and wide):
+      return
+    width = content_width(state["text"])
+    if width != field.width:
+      field.width = wide.width = width
+      wide.content.controls[0].width = width
+      for part in (field, wide):
+        try:
+          part.update()
+        except RuntimeError:
+          pass
+
+  async def repaint(ticket):
+    """Vuelve a colorear tras escribir (se agrupan las pulsaciones rápidas)."""
+    await asyncio.sleep(0.08)
+    if ticket != state["paint"] or not editor["colors"] or not editor["overlay"]:
+      return
+    text = state["text"]
+    editor["overlay"].spans = colored_spans(text)
+    lines = text.count("\n") + 1
+    if lines != state["painted_lines"]:             # cambió el número de líneas: se rehacen los números del margen
+      g_spans, g_chars = gutter_spans(text)
+      editor["gutter"].spans = g_spans
+      editor["gutter_box"].width = int((g_chars + 1) * CHAR_WIDTH) + 14
+      state["painted_lines"] = lines
+      try:
+        editor["gutter_box"].update()
+      except RuntimeError:
+        pass
+    fit_width()
+    try:
+      editor["overlay"].update()
+    except RuntimeError:
+      pass
+
+  # --- sugerencias de autocompletado ------------------------------------------------------------------------
   KIND_ICONS = {"keyword": Icons.KEY, "type": Icons.DATA_OBJECT, "word": Icons.TEXT_FIELDS}
   KIND_NAMES = {"keyword": "palabra clave", "type": "tipo", "word": "en este archivo"}
 
@@ -236,7 +298,7 @@ def FileViewer(page, path):
     state["ticket"] += 1
     ticket = state["ticket"]
     await asyncio.sleep(0.06)                     # espera a que llegue la posición del cursor y agrupa pulsaciones rápidas
-    if ticket != state["ticket"] or not state["editing"]:
+    if ticket != state["ticket"] or not editor["field"]:
       return
     text, cursor = state["text"], state["selection"][1]
     lang = LANGS[language]
@@ -263,9 +325,7 @@ def FileViewer(page, path):
     field.update()
     state["sugg"] = []
     render_popup()
-    if not state["dirty"]:
-      set_dirty(True)
-      refresh_bar()
+    changed()
 
     async def back():            # el Tab (o el clic) pudo mover el foco: se devuelve al editor
       try:
@@ -279,8 +339,7 @@ def FileViewer(page, path):
     if not state["sugg"]:
       return False
     if e.key in ("Arrow Down", "Arrow Up"):
-      step = 1 if e.key == "Arrow Down" else -1
-      state["sel"] = (state["sel"] + step) % len(state["sugg"])
+      state["sel"] = (state["sel"] + (1 if e.key == "Arrow Down" else -1)) % len(state["sugg"])
       render_popup()
     elif e.key == "Tab" and not e.shift:
       accept()
@@ -296,12 +355,30 @@ def FileViewer(page, path):
     if hook:
       hook()
 
+  def changed():
+    """El texto cambió (escribiendo, aceptando una sugerencia o con Tab): recolorea y marca «sin guardar»."""
+    state["paint"] += 1                # contador propio: el de las sugerencias no debe cancelar el repintado
+    page.run_task(repaint, state["paint"])
+    if not state["dirty"]:
+      set_dirty(True)
+
   def on_edit(e):
     state["text"] = e.control.value or ""
     page.run_task(update_suggestions)
-    if not state["dirty"]:
-      set_dirty(True)
-      refresh_bar()             # aparece «● sin guardar» sin tocar el editor (conserva el foco)
+    changed()
+
+  # --- contenido ------------------------------------------------------------------------------------------------
+  def notice():
+    """Franja fina solo cuando el archivo no se puede editar (en un archivo normal no hay ninguna barra)."""
+    data = state["data"]
+    if data.kind != "text" or use_editor():
+      return None
+    reason = ("Solo el primer MB · solo lectura" if data.truncated else
+              "No es UTF-8 · solo lectura" if not data.utf8 else
+              "Muy grande para editar · solo lectura" if not data.editable else
+              "Edición bloqueada (Ctrl+Shift+L para permitirla)")
+    return Container(padding=Padding(left=12, right=12, top=5, bottom=5), bgcolor="#151925",
+                     content=Text(reason, size=10, color=WARN))
 
   def body():
     data = state["data"]
@@ -311,71 +388,34 @@ def FileViewer(page, path):
       return Column(expand=True, alignment=MainAxisAlignment.CENTER, horizontal_alignment=CrossAxisAlignment.CENTER, controls=[
         Icon(Icons.DATA_OBJECT, size=30, color=MUTED),
         Text("Archivo binario: no se puede mostrar como texto", size=12, color=MUTED)])
-    if state["editing"]:
+    if use_editor():
       if not editor["field"]:
         make_editor()
       return editor["stack"]
-    current = state["text"].replace("\t", "    ")           # lo que hay ahora, también si aún no se guardó
-    if is_markdown and state["preview"]:
-      return Column(expand=True, scroll=ScrollMode.AUTO, controls=[Container(padding=Padding(left=14, right=14, top=4, bottom=16),
-        content=Markdown(current, selectable=True, extension_set=MarkdownExtensionSet.GITHUB_WEB))])
-    return code_view(current, language)
+    editor.update(field=None, stack=None, overlay=None, gutter=None, wide=None, popup=None)
+    return code_view(state["text"].replace("\t", "    "), language, state["marks"], state["all_added"])
 
-  def refresh_bar():
-    bar_box.content = toolbar()
-    try:
-      bar_box.update()
-    except RuntimeError:
-      pass
-
-  def refresh_body():
-    body_box.content = body()
-    try:
-      body_box.update()
-    except RuntimeError:
-      pass
+  def toolbar():
+    """Archivos .sql: botón ▶ para ejecutarlos o compilarlos en una conexión de la base."""
+    if path.suffix.lower() != ".sql" or state["data"].kind != "text":
+      return None
+    if not sql_bar:
+      sql_bar.append(SqlToolbar(page, lambda: state["text"]))
+    return sql_bar[0]
 
   def show():
-    if holder.content is not frame:      # primera vez: se reemplaza el «Abriendo…» por barra + cuerpo
-      holder.content = frame
-      try:
-        holder.update()
-      except RuntimeError:
-        pass
-    refresh_bar()
-    refresh_body()
+    column = Column(expand=True, spacing=0, controls=[c for c in (toolbar(), notice(), body()) if c is not None])
+    holder.content = column
+    try:
+      holder.update()
+    except RuntimeError:
+      pass
 
-  def toggle_preview():
-    state["preview"] = not state["preview"]
-    show()
-
-  # --- edición -------------------------------------------------------------------------------------------
-  def start_editing():
-    state["editing"] = True
-    make_editor()                            # con el texto actual (puede traer cambios sin guardar)
-    show()
-
-  def show_read(preview_markdown=False):
-    """Pasa a la vista con colores. Los cambios sin guardar se conservan."""
-    state["editing"] = False
-    set_typing(False)                 # el editor desaparece: puede que no avise de que perdió el foco
-    if is_markdown:
-      state["preview"] = preview_markdown
-    editor.update(field=None, popup=None, stack=None)
-    state["sugg"] = []
-    show()
-
-  def discard():
-    def revert():
-      state["text"] = state["data"].text
-      set_dirty(False)
-      if state["editing"]:
-        make_editor()
-      else:
-        editor.update(field=None, popup=None, stack=None)
-      show()
-    confirm("¿Descartar los cambios?", f"Se perderá lo que cambiaste en {path.name} desde el último guardado.",
-            "Descartar", revert)
+  # --- guardar --------------------------------------------------------------------------------------------------
+  async def refresh_marks():
+    """Marcas de git del margen (líneas añadidas, modificadas o borradas)."""
+    marks, all_added = await asyncio.to_thread(diff_marks, path)
+    state["marks"], state["all_added"] = marks, all_added
 
   async def save(overwrite=False):
     if not state["dirty"]:
@@ -397,20 +437,27 @@ def FileViewer(page, path):
     state["data"].mtime_ns = mtime
     state["data"].size = len(state["text"].encode("utf-8"))
     set_dirty(False)
-    refresh_bar()
+    await refresh_marks()
+    if editor["gutter"]:                               # el margen refleja lo recién guardado
+      g_spans, _ = gutter_spans(state["text"])
+      editor["gutter"].spans = g_spans
+      try:
+        editor["gutter"].update()
+      except RuntimeError:
+        pass
     toast(f"Guardado {path.name}")
 
   def insert_tab(shift=False):
     """Tab dentro del editor: Flutter lo usaría para saltar de campo, así que se inserta aquí."""
     field = editor["field"]
-    if not (state["editing"] and field):
+    if not field:
       return
     start, end = sorted(state["selection"])
     text = state["text"]
     if shift:                   # Shift+Tab: quita hasta una sangría al inicio de la línea
       line_start = text.rfind("\n", 0, start) + 1
-      removed = len(text[line_start:line_start + len(TAB)]) - len(text[line_start:line_start + len(TAB)].lstrip(" "))
-      removed = min(removed, len(TAB))
+      chunk = text[line_start:line_start + len(TAB)]
+      removed = min(len(chunk) - len(chunk.lstrip(" ")), len(TAB))
       new, cursor = text[:line_start] + text[line_start + removed:], max(line_start, start - removed)
     else:
       new, cursor = text[:start] + TAB + text[end:], start + len(TAB)
@@ -418,9 +465,7 @@ def FileViewer(page, path):
     field.value = new
     field.selection = TextSelection(base_offset=cursor, extent_offset=cursor)
     field.update()
-    if not state["dirty"]:
-      set_dirty(True)
-      refresh_bar()
+    changed()
 
     async def back():          # el Tab ya movió el foco a otro control: se devuelve al editor
       try:
@@ -429,11 +474,8 @@ def FileViewer(page, path):
         pass
     page.run_task(back)
 
-  # --- carga ------------------------------------------------------------------------------------------------
-  async def load():
-    if state["dirty"]:
-      toast("Hay cambios sin guardar: guarda o descarta antes de recargar")
-      return
+  # --- carga y cambios externos ----------------------------------------------------------------------------------
+  async def load(silent=False):
     try:
       data = await asyncio.to_thread(read_file, path)
     except OSError as e:
@@ -444,32 +486,46 @@ def FileViewer(page, path):
       return
     state["data"] = data
     state["text"] = data.text
-    state["editing"] = data.kind == "text" and data.editable and edit_enabled()
-    if state["editing"]:
-      make_editor()
-    else:
-      editor.update(field=None, popup=None, stack=None)
+    state["sugg"] = []
+    editor.update(field=None, stack=None, overlay=None, gutter=None, wide=None, popup=None)
+    if data.kind == "text":
+      await refresh_marks()
+    show()
+
+  async def watch_disk():
+    """Si otra herramienta cambia el archivo y aquí no hay cambios sin guardar, se recarga solo."""
+    while True:
+      await asyncio.sleep(POLL_SECONDS)
+      if state["dirty"] or state["data"].kind == "image":
+        continue
+      try:
+        mtime = await asyncio.to_thread(lambda: path.stat().st_mtime_ns)
+      except OSError:
+        continue
+      if mtime != state["data"].mtime_ns:
+        try:
+          await load()
+        except RuntimeError:
+          return                        # el panel se cerró
+
+  def permission_changed(enabled):
+    """Se activó o bloqueó la edición para todos los archivos."""
+    if state["data"].kind != "text" or not state["data"].editable:
+      return
+    if not enabled and state["dirty"]:
+      return                            # con cambios sin guardar se sigue editando hasta guardar
+    editor.update(field=None, stack=None, overlay=None, gutter=None, wide=None, popup=None)
     show()
 
   holder.save = lambda: page.run_task(save)        # Ctrl+S (lo llama el área de trabajo)
   holder.save_async = save                         # «Guardar y cerrar»
   holder.insert_tab = insert_tab                   # Tab / Shift+Tab
   holder.is_dirty = lambda: state["dirty"]
+  holder.exit_edit = lambda: None                  # el archivo siempre está abierto para editar
   holder.handle_suggest_key = handle_suggest_key   # ↑↓ Tab Esc con el cuadro de sugerencias abierto
   holder.trigger_suggest = lambda: page.run_task(update_suggestions, True)   # Ctrl+Espacio
   holder.discard = lambda: set_dirty(False)
-  def permission_changed(enabled):
-    """Se activó o bloqueó la edición para todos los archivos."""
-    data = state["data"]
-    if data.kind != "text" or not data.editable:
-      return
-    if not enabled and state["editing"] and not state["dirty"]:
-      show_read()
-    elif enabled and not state["editing"]:
-      start_editing()
-    else:
-      refresh_bar()
-
   subscribe(permission_changed)
   page.run_task(load)
+  page.run_task(watch_disk)
   return holder

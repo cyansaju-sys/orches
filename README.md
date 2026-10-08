@@ -45,6 +45,7 @@ src/
       views/                 contenido de cada pestaña de la barra lateral
         files.py  agents.py  git.py  database.py  db_object.py  file_viewer.py  mcp.py  usage.py
       layout/
+        editor_area.py       pestañas de documentos y ruta de navegación
         titlebar.py          barra de título propia
         sidebar.py           barra lateral con las pestañas
         workspace.py         área de terminales, entrada de teclado y reparto de tareas
@@ -71,11 +72,20 @@ uv add oracledb keyring
 - `keyring` guarda la contraseña en el llavero del sistema, solo si el usuario marca «Guardar la contraseña».
   Nunca se escribe en `settings.json`.
 
-## Edición y atajos
+## Archivos, edición y atajos
 
-Los archivos de texto se abren ya editables (permiso global «Edición» de la barra de título; con
-`Ctrl+Shift+L` se bloquea y pasan a solo lectura). `Ctrl+S` guarda; `F1` muestra todos los atajos
-(archivos, paneles y pestañas de la barra lateral con `Ctrl+Shift+…`).
+Los archivos se abren como en VS Code: en **pestañas** a la izquierda de los agentes (ancho ajustable
+arrastrando el borde), con la ruta de navegación, el código con colores y números de línea, marcas de git en el
+margen (verde = añadido, azul = modificado, rojo = borrado) y la letra de git en cada pestaña.
+
+Se abren ya **editables y con colores** (palabras reservadas, cadenas, números, comentarios) y sin barra de
+botones: se escribe directamente, con sugerencias de autocompletado (`Ctrl+Espacio`) y `Ctrl+S` para guardar.
+Si otra herramienta cambia el archivo y aquí no hay cambios sin guardar, se recarga solo. El permiso global
+«Edición» de la barra de título (o `Ctrl+Shift+L`) los deja en solo lectura. `F1` muestra todos los atajos.
+
+*Cómo se colorea mientras escribes:* el texto coloreado va debajo de un cuadro de texto transparente. Los dos usan la
+misma fuente, alto de línea y ancho (sin partir líneas), y `ORCHES_OVERLAY_DY` ajusta el desplazamiento vertical si en
+algún sistema se desalineara.
 
 ## Reparto de tareas entre agentes
 

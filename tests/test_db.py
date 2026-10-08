@@ -191,3 +191,21 @@ def test_sid_arma_el_descriptor_y_los_errores_no_traen_ruido():
   assert "(SID=ORCL)" in sid.dsn and "(HOST=h)" in sid.dsn and sid.summary.endswith("(SID)")
   assert "CONNECTION_ID" not in _friendly(Exception("DPY-6005: cannot connect to database (CONNECTION_ID=abc==)."))
   assert "SID" in _friendly(Exception("DPY-6001: Service ORCL is not registered with the listener"))
+
+
+def test_esquemas_se_leen_de_all_users_y_los_objetos_propios_de_user_objects():
+  s = sesion(("FROM all_users", [("APPS",), ("AR",)]))
+  assert s.owners() == ["APPS", "AR"]
+  assert "all_objects" not in s.conn.log[0][0]                 # ALL_OBJECTS es enorme en un ERP
+  propio = sesion(("FROM user_objects", [("T1", "TABLE", "VALID", None)]))
+  propio.user = "INV"
+  assert [o.name for o in propio.objects("INV")] == ["T1"]
+  assert "user_objects" in propio.conn.log[0][0] and "owner" not in propio.conn.log[0][1]
+  ajeno = sesion(("FROM all_objects", [("T2", "TABLE", "VALID", None)]))
+  ajeno.user = "INV"
+  assert [o.name for o in ajeno.objects("HR")] == ["T2"] and ajeno.conn.log[0][1]["owner"] == "HR"
+
+
+def test_los_errores_de_tiempo_se_explican():
+  from orches.core.db.oracle import _friendly
+  assert "tardó demasiado" in _friendly(Exception("DPY-4024: call timeout of 90000 ms exceeded"))

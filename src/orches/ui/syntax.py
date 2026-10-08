@@ -173,10 +173,15 @@ def highlight(text, language="sql"):
   return lines
 
 
-def spans(tokens):
-  """Fragmentos de Flet para una línea ya tokenizada."""
+def spans(tokens, decorate=True):
+  """Fragmentos de Flet para una línea ya tokenizada.
+
+  Con `decorate=False` solo se usa el color (sin negritas ni cursiva): así el texto coloreado ocupa
+  exactamente lo mismo que el del editor que va encima.
+  """
   return [
-    TextSpan(text, style=TextStyle(color=COLORS[kind], italic=kind == "comment" or None,
-                                   weight=FontWeight.W_600 if kind == "keyword" else None))
+    TextSpan(text, style=TextStyle(color=COLORS[kind],
+                                   italic=(kind == "comment" or None) if decorate else None,
+                                   weight=FontWeight.W_600 if decorate and kind == "keyword" else None))
     for text, kind in tokens
   ]

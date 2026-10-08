@@ -57,12 +57,13 @@ def Sidebar(page, on_agent, on_document=None):
     """Abre el código o los detalles de un objeto de la base en un panel del área de trabajo."""
     if on_document:
       on_document(f"{obj.name} · {SINGULAR.get(obj.type, obj.type.title())}", Icons.STORAGE,
-                  lambda: ObjectViewer(page, session, owner, obj), key=f"db:{owner}.{obj.type}.{obj.name}")
+                  lambda: ObjectViewer(page, session, owner, obj), key=f"db:{owner}.{obj.type}.{obj.name}",
+                  crumbs=[session.profile.name if session.profile else "Base de datos", owner, SINGULAR.get(obj.type, obj.type.title()), obj.name])
 
   def open_file(path):
     """Abre el contenido de un archivo en un panel del área de trabajo."""
     if on_document:
-      on_document(path.name, icon_for(path), lambda: FileViewer(page, path), key=f"file:{path}")   # su ícono de Material Icon Theme
+      on_document(path.name, icon_for(path), lambda: FileViewer(page, path), key=f"file:{path}", path=path)   # su ícono de Material Icon Theme
 
   views = {
     "files": FilesView(page, open_file),
@@ -130,6 +131,13 @@ def Sidebar(page, on_agent, on_document=None):
     row.visible = not row.visible
     row.update()
 
+  def files_key(e):
+    """Flechas del teclado sobre el árbol de archivos (solo si está en pantalla y con el foco)."""
+    files = views["files"]
+    return row.visible and body.content is files and files.handle_key(e)
+
+  row.files_key = files_key
+  row.files_blur = views["files"].blur
   row.select_tab = select_tab
   row.toggle_sidebar = toggle_sidebar
   return row
