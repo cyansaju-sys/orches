@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "@xterm/xterm/css/xterm.css";
+
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("/fonts/DejaVuSansMono.ttf") format("truetype");
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Symbols Nerd Font Mono";     /* íconos de los prompts (powerlevel10k, starship...) */
+  src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+  font-display: block;
+}
+
+/* Mismos colores que la versión anterior; el acento es morado. */
+@theme {
+  --color-bg: #07080c;
+  --color-bar: #0a0c12;
+  --color-surface: #0d0f16;
+  --color-panel: #11141d;
+  --color-raised: #151925;
+  --color-line: #2a2f3d;
+  --color-accent: #a78bfa;
+  --color-accent-bg: #2e2447;
+  --color-accent-dim: #4b3f72;
+  --color-muted: #6b7088;
+  --color-text: #e6e8ef;
+  --color-ok: #7ee0a1;
+  --color-warn: #e2c08d;
+  --color-danger: #ff6b81;
+  --color-git-m: #e2c08d;
+  --color-git-a: #73c991;
+  --color-git-d: #c74e39;
+  --color-git-c: #e4676b;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: "DejaVu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --animate-toast-in: toast-in 0.18s ease-out;
+  --animate-fade-in: fade-in 0.12s ease-out;
+  --animate-pop-in: pop-in 0.14s ease-out;
+}
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 13px;
+  overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none;
+}
+/* en la capa base: las utilidades de Tailwind (bg-*, text-*) deben poder ganarles; fuera de ella las anulaban */
+@layer base {
+  button { cursor: pointer; }
+  button:disabled { cursor: default; }
+  input, textarea { user-select: text; }
+}
+.selectable, .cm-editor, .xterm { user-select: text; }
+.drag { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
+
+/* barras de desplazamiento finas */
+* { scrollbar-width: thin; scrollbar-color: #2a2f3d transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #2a2f3d; border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* el aro de enfoque es para teclado en botones y listas; los campos de texto marcan su enfoque de otra forma */
+*:focus-visible:not(input, textarea) { outline: 1px solid var(--color-accent); outline-offset: -1px; }
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible { outline: none; }
+::selection { background: var(--color-accent-bg); }
+
+/* CodeMirror y xterm ocupan todo su contenedor */
+.cm-editor { height: 100%; outline: none !important; }
+.cm-scroller { font-family: var(--font-mono) !important; }
+.xterm { padding: 6px 8px; height: 100%; }
+.xterm-viewport { background: transparent !important; }

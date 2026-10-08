@@ -1,27 +1,16 @@
-# Python
-__pycache__/
-*.py[cod]
+# Dependencias y compilados
+node_modules/
+out/
+dist/
+release/
+*.log
 
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Environments / secrets
+# Entornos / secretos
 .env
+.env.*
 
-# Tool caches
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-
-# Flet
-.flet/
-build/
-
-# IDE
+# Editores y sistema
 .idea/
 .vscode/
-
-# macOS
 .DS_Store
+release/

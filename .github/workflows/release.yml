@@ -1,8 +1,7 @@
-# Al subir un tag v* (p. ej. v0.1.1): corre las pruebas, compila los ejecutables y crea la release de GitHub con
-#   - Orches-<tag>-windows.zip       (Orches.exe, sin necesidad de Python)
-#   - Orches-<tag>-linux-x86_64.tar.gz  (binario sin necesidad de Python ni uv; install.sh lo usa si está)
-#   - install.sh                     (instalador de Linux)
-# Si el binario de Linux falla al compilar, la release sale igual y install.sh instala desde el código con uv.
+# Al subir un tag v* (p. ej. v0.2.0): comprueba tipos y pruebas, empaqueta el AppImage de Linux y crea la release de GitHub con
+#   - Orches-<versión>-x86_64.AppImage   (la app; se actualiza sola desde las releases)
+#   - latest-linux.yml                   (lo que lee el actualizador de la app para saber que hay una versión nueva)
+#   - install.sh                         (instalador de una línea para Linux)
 name: Release
 
 on:
@@ -10,79 +9,37 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write      # crear la release y subir los archivos
 
 jobs:
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Dependencias y pruebas
-        run: |
-          uv sync
-          uv run pytest -q
-
-      # Compila con Flet (Flutter + Python empaquetado). El resultado queda en build/windows/.
-      - name: Compilar el .exe
-        run: uv run flet build windows --yes --product Orches --artifact Orches --no-rich-output
-
-      - name: Empaquetar
-        shell: pwsh
-        run: Compress-Archive -Path build/windows/* -DestinationPath "Orches-${{ github.ref_name }}-windows.zip"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Orches-windows
-          path: Orches-${{ github.ref_name }}-windows.zip
-
   linux:
-    runs-on: ubuntu-22.04          # una glibc antigua: el binario corre también en distribuciones más viejas
-    continue-on-error: true        # si falla, la release sale sin él y el instalador usa el código con uv
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Dependencias de compilación de Flutter
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
-
-      - name: Dependencias
-        run: uv sync
-
-      - name: Compilar el binario
-        env:
-          CFLAGS: -Wno-incompatible-pointer-types      # el código C del plugin jni no compila con un clang nuevo sin esto
-        run: uv run flet build linux --yes --product Orches --artifact Orches --no-rich-output
-
-      - name: Empaquetar
-        run: |
-          tar -C build/linux -czf "Orches-${{ github.ref_name }}-linux-x86_64.tar.gz" .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Orches-linux
-          path: Orches-${{ github.ref_name }}-linux-x86_64.tar.gz
-
-  release:
-    needs: [windows, linux]
-    if: ${{ !cancelled() && needs.windows.result == 'success' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write      # crear la release y subir los archivos
+    runs-on: ubuntu-22.04          # una glibc antigua: el AppImage corre también en distribuciones más viejas
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          pattern: Orches-*
-          merge-multiple: true
+          node-version: 22
+          cache: npm
+
+      - name: La versión del tag debe ser la de package.json
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "El tag es $GITHUB_REF_NAME pero package.json dice $expected: el actualizador compararía mal."; exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Empaquetar el AppImage
+        run: npm run dist
 
       - name: Crear la release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" Orches-*.zip Orches-*.tar.gz install.sh \
-            --title "Orches ${{ github.ref_name }}" --generate-notes
+          gh release create "$GITHUB_REF_NAME" \
+            "release/Orches-${GITHUB_REF_NAME#v}-x86_64.AppImage" release/latest-linux.yml install.sh \
+            --title "Orches $GITHUB_REF_NAME" --generate-notes
