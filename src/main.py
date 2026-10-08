@@ -4,6 +4,9 @@ from orches.ui.layout.sidebar import Sidebar
 from orches.ui.layout.workspace import Workspace
 from orches.ui.layout.titlebar import TitleBar
 
+APP = {}      # piezas de la ventana, para quien necesite manejarla desde fuera (p. ej. tools/capture_docs.py)
+
+
 def main(page: ft.Page):
   page.title = "IA orches"
   page.bgcolor = "#07080C"
@@ -20,7 +23,8 @@ def main(page: ft.Page):
   workspace.bind("files_key", sidebar.files_key)
   workspace.bind("files_blur", sidebar.files_blur)
 
-  page.add(
+  # el control Screenshot no cambia nada visible: permite sacar capturas de la ventana desde código
+  shot = ft.Screenshot(expand=True, content=ft.Column(expand=True, spacing=0, controls=[
     TitleBar(page, workspace.toggle_terminal),
     Container(
       padding=2,
@@ -35,7 +39,9 @@ def main(page: ft.Page):
         spacing=0,
       ),
     ),
-  )
+  ]))
+  page.add(shot)
+  APP.update(page=page, sidebar=sidebar, workspace=workspace, shot=shot)
   page.overlay.append(workspace.input_widget)
 
 

@@ -1,0 +1,7 @@
+{
+  "id": "hola",
+  "name": "Hola",
+  "version": "1.0.0",
+  "description": "Ejemplo mínimo: un botón en la barra de título que muestra un aviso y una franja sobre los .txt",
+  "main": "main.py"
+}

@@ -18,7 +18,7 @@ WARN = "#E2C08D"
 
 def ExtensionsView(page, on_updates=None):
   """Extensiones instaladas, con botón para añadir las tuyas (.zip) y quitarlas."""
-  state = {"outdated": [], "changed": False, "loaded": {e.id for e in extensions.REGISTRY.extensions}}
+  state = {"outdated": [], "changed": False}
   listing = Column(spacing=6, scroll=ScrollMode.AUTO, expand=True)
 
   def toast(message):
@@ -39,8 +39,9 @@ def ExtensionsView(page, on_updates=None):
     errors = dict(extensions.REGISTRY.errors)
     problem = errors.get(ext.dir.name)
     glyph = Image(src=ext.icon.read_bytes(), width=24, height=24) if ext.icon else Icon(Icons.EXTENSION, size=22, color=ACCENT)
+    loaded = {e.id for e in extensions.REGISTRY.extensions}      # se lee al pintar: las extensiones cargan después de crear la vista
     status = (Text(problem, size=10, color=ERROR) if problem else
-              Text("Instalada: reinicia para activarla", size=10, color=WARN) if ext.id not in state["loaded"] else None)
+              Text("Instalada: reinicia para activarla", size=10, color=WARN) if ext.id not in loaded else None)
     return Container(
       padding=Padding(left=10, right=6, top=8, bottom=8), border=border_all(color=BORDER_COLOR), border_radius=8,
       content=Row(vertical_alignment=CrossAxisAlignment.START, spacing=10, controls=[
@@ -161,4 +162,5 @@ def ExtensionsView(page, on_updates=None):
     Container(content=online, padding=Padding(right=6, bottom=6)),
   ])
   view.check = check
+  view.on_enter = lambda: render()      # al abrir la pestaña se vuelve a leer lo instalado
   return view

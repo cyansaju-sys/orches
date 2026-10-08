@@ -191,3 +191,20 @@ def test_git_graph_operations_and_conflict_state(tmp_path):
   assert ok and graph.current_branch(tmp_path) == "nueva"
   assert graph.run(tmp_path, "tag", "v1", "HEAD")[0]
   assert not graph.run(tmp_path, "checkout", "no-existe")[0]
+
+
+def test_documentation_example_extension_works(config):
+  """La extensión de docs/ejemplo_extension/ (la de la guía) se instala, carga y aporta lo que dice la guía."""
+  from pathlib import Path
+  from types import SimpleNamespace
+  from unittest.mock import MagicMock
+  src = Path(__file__).resolve().parents[1] / "docs" / "ejemplo_extension"
+  zip_path = config / "hola.zip"
+  with zipfile.ZipFile(zip_path, "w") as z:
+    for f in ("extension.json", "main.py"):
+      z.write(src / f, f)
+  extensions.install_zip(zip_path)
+  registry = extensions.load_all(MagicMock(), {})
+  assert not registry.errors and registry.titlebar[0].label == "Hola"
+  bar = registry.toolbars_for("notas.txt")[0].build(None, SimpleNamespace(path=Path("notas.txt")))
+  assert "notas.txt" in bar.content.value

@@ -16,7 +16,8 @@ SECTIONS = (
     ("Ctrl + Shift + L", "Permitir o bloquear la edición de archivos"),
     ("Tab / Shift + Tab", "Sangría al editar"),
     ("Ctrl + Espacio", "Pedir sugerencias de autocompletado"),
-    ("↑ ↓ · Tab · Esc", "Elegir, aceptar o cerrar una sugerencia"),
+    ("↑ ↓ · Enter o Tab · Esc", "Elegir, aceptar o cerrar una sugerencia"),
+    ("↑ ↓ ← → · Enter · Esc", "Moverse por el árbol de archivos (tras pulsar uno)"),
   )),
   ("Paneles", (
     ("Ctrl + Shift + N", "Abrir un agente"),
