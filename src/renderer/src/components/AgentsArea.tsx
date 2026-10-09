@@ -1,5 +1,7 @@
 import { clsx } from 'clsx'
-import { MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
+import { useState } from 'react'
+import { Menu } from './Menu'
+import { MdAdd, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
 import { AgentIcon } from './AgentIcon'
 import { useStore, type Pane } from '@/store'
 import { Kbd } from './ui'
@@ -101,13 +103,64 @@ export function AgentsArea() {
   )
 }
 
-/** La terminal es una sección aparte (con su propio borde), debajo del editor y los agentes, a todo el ancho. */
+/** El panel de terminales (como el de VS Code): barra de acciones arriba a la derecha y, con varias, la lista de terminales al costado. */
 export function TerminalSection() {
-  const shell = useStore((s) => s.shell)!
+  const shells = useStore((s) => s.shells)
+  const active = useStore((s) => s.shellActive)
+  const max = useStore((s) => s.shellMax)
   const height = useStore((s) => s.shellHeight)
+  const set = useStore((s) => s.set)
+  const addShell = useStore((s) => s.addShell)
+  const closePane = useStore((s) => s.closePane)
+  const closeShells = useStore((s) => s.closeShells)
+  const [menu, setMenu] = useState<{ anchor: DOMRect; kind: 'new' | 'more' } | null>(null)
+  const open = (kind: 'new' | 'more') => (e: React.MouseEvent<HTMLButtonElement>): void => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setMenu({ kind, anchor: new DOMRect(r.left, r.bottom, 200, 0) })
+  }
+  const activePane = useStore((s) => s.activePane)
   return (
-    <div style={{ height }} className="min-h-[140px] shrink-0 overflow-hidden rounded-lg border border-line bg-surface">
-      <PaneBox pane={shell} />
+    <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center justify-between px-2.5 py-1">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Terminal</span>
+          <div className="flex items-center gap-0.5">
+            <button title="Nuevo terminal" onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
+            <button title="Más opciones de nuevo terminal" onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
+            <button title="Más acciones" onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button>
+            <button title={max ? 'Restaurar tamaño' : 'Maximizar panel'} onClick={() => set({ shellMax: !max })} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
+              {max ? <MdFullscreenExit size={15} /> : <MdFullscreen size={15} />}
+            </button>
+            <button title="Cerrar el panel (cierra todos los terminales)" onClick={closeShells} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
+          </div>
+        </div>
+        <div className="relative min-h-0 flex-1">
+          {shells.map((p) => (
+            <div key={p.id} className={clsx('absolute inset-0 flex flex-col', p.id !== active && 'invisible pointer-events-none')}
+              onMouseDown={() => set({ shellActive: p.id, activePane: p.id, focus: 'pane' })}>
+              <TerminalPane pane={p} active={p.id === active && activePane === p.id} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {shells.length > 1 && (
+        <div className="flex w-[140px] shrink-0 flex-col gap-px border-l border-line p-1 pt-2">
+          {shells.map((p) => (
+            <div key={p.id} onClick={() => set({ shellActive: p.id, activePane: p.id, focus: 'pane' })}
+              className={clsx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors', p.id === active ? 'bg-accent-bg text-text' : 'text-muted hover:bg-accent-bg')}>
+              <MdTerminal size={14} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{p.title}</span>
+              <button title="Cerrar este terminal" onClick={(e) => { e.stopPropagation(); closePane(p.id) }}
+                className="grid size-4 shrink-0 place-items-center rounded opacity-0 transition-colors hover:bg-line group-hover:opacity-100"><MdClose size={12} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+      {menu && (
+        <Menu width={200} anchor={menu.anchor} onClose={() => setMenu(null)} items={menu.kind === 'new'
+          ? [{ label: 'Nuevo terminal', icon: <MdAdd size={15} />, onClick: () => void addShell() }]
+          : [{ label: 'Cerrar todos los terminales', icon: <MdClose size={15} />, onClick: closeShells, danger: true }]} />
+      )}
     </div>
   )
 }

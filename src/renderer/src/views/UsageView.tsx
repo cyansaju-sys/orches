@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdDeleteOutline, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow } from 'react-icons/md'
+import { MdDeleteOutline, MdDeleteSweep, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow } from 'react-icons/md'
 import type { AgentUsage, LimitInfo, SessionInfo, UsageData } from '@shared/types'
 import { AgentIcon } from '@/components/AgentIcon'
 import { Menu } from '@/components/Menu'
@@ -94,6 +94,7 @@ export function UsageView() {
   const [menu, setMenu] = useState<{ session: SessionInfo; anchor: DOMRect } | null>(null)
   const [renaming, setRenaming] = useState<SessionInfo | null>(null)
   const [deleting, setDeleting] = useState<SessionInfo | null>(null)
+  const [clearing, setClearing] = useState(false)
   const [now, setNow] = useState(Date.now())
 
   const load = useCallback(async (fetchLimits: boolean) => {
@@ -126,6 +127,12 @@ export function UsageView() {
       <Section title="Historial" id="history" detail={project ? basename(project) : ''} folded={!!folded.history} onToggle={toggle}>
         {!project && <p className="px-1 text-[11px] text-muted">Abre un proyecto para ver su historial</p>}
         {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">Sin sesiones en este proyecto</p>}
+        {project && data.history.length > 0 && (
+          <button onClick={() => setClearing(true)} title="Borrar todas las sesiones de este proyecto"
+            className="flex items-center gap-1.5 self-end rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:bg-danger/10 hover:text-danger">
+            <MdDeleteSweep size={14} /> Borrar historial
+          </button>
+        )}
         <ul className="flex flex-col gap-0.5">
           {data.history.slice(0, 12).map((s) => {
             const can = resumeArgs(s.command, s.id) !== null
@@ -154,6 +161,25 @@ export function UsageView() {
         ]} />
       )}
       {renaming && <RenameDialog session={renaming} current={title(renaming)} onClose={() => setRenaming(null)} onSaved={() => void load(false)} />}
+      {clearing && (
+        <Modal onClose={() => setClearing(false)} width={420} title="¿Borrar el historial?">
+          <div className="px-4 pb-4">
+            <p className="text-[12px] leading-relaxed text-muted">Se borrarán las {data.history.length} sesiones de IA de este proyecto (de todos los agentes que lo permiten). No se puede deshacer.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setClearing(false)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
+              <button onClick={() => {
+                setClearing(false)
+                void (async () => {
+                  let failed = 0
+                  for (const s of data.history) { const r = await window.api.usage.remove(s); if (!r.ok) failed++ }
+                  toast(failed ? `Historial borrado; ${failed} sesiones no se pudieron borrar` : 'Historial borrado', failed ? 'error' : 'ok')
+                  void load(false)
+                })()
+              }} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">Borrar todo</button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {deleting && (
         <Modal onClose={() => setDeleting(null)} width={400} title="¿Borrar esta sesión?">
           <div className="px-4 pb-4">

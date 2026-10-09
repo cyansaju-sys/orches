@@ -48,6 +48,8 @@ const api: Api = {
   },
   orchestra: {
     newId: () => ipcRenderer.invoke('orchestra:newId'),
+    tasks: () => ipcRenderer.invoke('orchestra:tasks'),
+    clearTasks: () => ipcRenderer.invoke('orchestra:tasks-clear'),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),
     onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb)
   },

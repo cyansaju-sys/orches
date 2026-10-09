@@ -50,6 +50,15 @@ export function buildLaunch(command: string, entry: McpEntry | null, prompt: str
   return { args: given, env: {} }
 }
 
+/** Deja solo letras y números: así el texto se reconoce aunque la pantalla lo parta en líneas o lo rodee de bordes. */
+const squash = (t: string): string => t.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase()
+
+/** ¿Aparece el comienzo de la tarea en la pantalla del agente? (si no, no la recibió) */
+export function taskShown(screen: string, task: string): boolean {
+  const head = squash(task).slice(0, 30)
+  return head.length === 0 || squash(screen).includes(head)
+}
+
 /** «opencode v2.0.21» -> 2. Si no se puede leer se asume la versión actual (2). */
 export function parseMajor(output: string): number {
   const m = /(\d+)\.\d+/.exec(output)

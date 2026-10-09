@@ -11,22 +11,22 @@ import type { AddressInfo } from 'node:net'
 
 export const PROTOCOL = '2025-03-26'
 
-const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de programación en paralelo, cada uno con un modelo distinto. \
-Puedes repartir trabajo con estas herramientas:
-- list_agents: agentes abiertos y disponibles, con su modelo y nivel (basic, standard, advanced).
-- delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre (en su propio panel) con la tarea. \
-Puedes pedir un agente del mismo tipo que tú.
-- wait_agent / read_agent_output: espera y lee lo que respondió.
-Para repartir llama a delegate_task con "difficulty" (easy, medium o hard) y deja que la app asigne: revisa la lista de agentes, comprueba su \
-capacidad y su límite de uso y elige el adecuado. Criterio: tareas fáciles o mecánicas (renombrar, texto, boilerplate, tests simples, búsquedas) a agentes \
-de nivel basic o standard; lo difícil (arquitectura, bugs sutiles, cambios que tocan muchas partes) hazlo tú o pásalo a uno \
-advanced. Cada tarea debe ser autosuficiente: indica archivos, objetivo y criterio de terminado. Evita que dos agentes editen \
-los mismos archivos a la vez. Revisa siempre el resultado antes de darlo por bueno.`
+const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de programación en paralelo, cada uno con su propio modelo. Herramientas:
+- list_agents: agentes abiertos e instalados, con modelo actual, nivel (basic, standard, advanced), límite de uso y modelos que ofrece cada uno (available_models).
+- delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre en su propio panel. Con "model" eliges el modelo exacto.
+- read_agent_output / wait_agent: lee la pantalla de un agente o espera a que termine.
+
+Para repartir, llama a delegate_task con "difficulty" (easy, medium o hard) y la app asigna según capacidad y límite de uso. Lo fácil o mecánico \
+(renombrar, texto, boilerplate, tests simples, búsquedas) va a agentes basic o standard; lo difícil (arquitectura, bugs sutiles, cambios amplios) \
+hazlo tú o pásalo a uno advanced. Para elegir modelo usa available_models sin inventar nombres; si viene vacío, busca en la web el comando con el que \
+ese agente lista sus modelos y ejecútalo. Cada tarea debe ser autosuficiente (archivos, objetivo, criterio de terminado) y sin que dos agentes editen \
+los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Orches]»: sigue con lo tuyo y lee el resultado con read_agent_output \
+(wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.`
 
 export const TOOLS = [
   {
     name: 'list_agents',
-    description: 'Lista los agentes abiertos (con id, modelo, nivel y si están ocupados) y los instalados que se pueden abrir.',
+    description: 'Lista los agentes abiertos (con id, modelo, nivel y si están ocupados) y los instalados que se pueden abrir, ambos con la lista de modelos que ofrece cada agente (available_models) para elegir a quién asignar cada tarea.',
     inputSchema: { type: 'object', properties: {} }
   },
   {
@@ -40,6 +40,7 @@ export const TOOLS = [
       properties: {
         agent: { type: 'string', description: 'Id de un agente abierto, nombre de uno instalado o "auto" (con difficulty) para que la app elija.' },
         difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'], description: 'Dificultad de la tarea: easy (mecánica), medium o hard (arquitectura, bugs sutiles).' },
+        model: { type: 'string', description: 'Modelo concreto con el que debe trabajar el agente (uno de available_models de list_agents). Si el agente ya abierto usa otro, la app abre una instancia nueva con ese modelo. No todos los agentes lo permiten: la app te lo dice.' },
         force: { type: 'boolean', description: 'Mantener el agente pedido aunque no tenga capacidad suficiente.' },
         task: { type: 'string', description: 'Instrucción completa y autosuficiente.' },
         new_instance: { type: 'boolean', description: 'Abrir uno nuevo aunque ya haya uno libre.' }
@@ -49,7 +50,7 @@ export const TOOLS = [
   },
   {
     name: 'wait_agent',
-    description: 'Espera a que un agente termine (sin salida durante `quiet_seconds`) y devuelve las últimas líneas de su pantalla.',
+    description: 'Espera a que un agente termine (sin salida durante `quiet_seconds`) y devuelve las últimas líneas de su pantalla. Úsala solo si no puedes avanzar sin ese resultado: la app te avisa cuando un agente termina.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -77,8 +78,10 @@ export interface AgentOutput { agent_id: string; busy: boolean; idle_seconds: nu
 /** Lo que la app ofrece al servidor. */
 export interface Host {
   listAgents(caller: string): unknown | Promise<unknown>
-  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean }): Promise<{ ok: boolean; info: unknown }>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
   output(agentId: string, lines: number): AgentOutput | null
+  /** wait_agent ya entregó el resultado de este agente: no hace falta avisar al líder. */
+  reported?(agentId: string): void
 }
 
 interface RpcMessage { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> }
@@ -168,7 +171,7 @@ export class Orchestra {
       const difficulty = args.difficulty === undefined ? undefined : String(args.difficulty)
       if (!task || (!args.agent && !difficulty)) return text('Faltan `task` y `agent` (o `difficulty` para que la app elija).', true)
       if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) return text('`difficulty` debe ser easy, medium o hard.', true)
-      const { ok, info } = await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force) })
+      const { ok, info } = await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), model: args.model === undefined ? undefined : String(args.model).trim() || undefined })
       return text(info, !ok)
     }
     if (name === 'read_agent_output') {
@@ -187,7 +190,7 @@ export class Orchestra {
     for (;;) {
       const out = this.host.output(id, Number(args.lines) || 80)
       if (!out) return text('No existe ese agente.', true)
-      if (out.idle_seconds >= quiet) return text({ ...out, finished: true })
+      if (out.idle_seconds >= quiet) { this.host.reported?.(id); return text({ ...out, finished: true }) }
       if (Date.now() >= deadline) return text({ ...out, finished: false, note: 'Se agotó la espera; el agente sigue trabajando.' })
       await sleep(500)
     }

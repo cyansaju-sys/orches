@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { MdAccountTree, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
+import { MdAccountTree, MdAdd, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useStore } from '@/store'
 import { Chip, IconButton } from './ui'
+import { Menu } from './Menu'
 
 /** Botón de actualización: solo aparece cuando hay una release nueva (o mientras se descarga). */
 function UpdateButton() {
@@ -37,13 +38,15 @@ function UpdateButton() {
 
 export function TitleBar() {
   const git = useStore((s) => s.git)
-  const shell = useStore((s) => s.shell)
+  const shell = useStore((s) => s.shells.length > 0)
   const editEnabled = useStore((s) => s.editEnabled)
   const set = useStore((s) => s.set)
   const setEdit = useStore((s) => s.setEdit)
   const toggleShell = useStore((s) => s.toggleShell)
+  const addShell = useStore((s) => s.addShell)
   const openGraph = useStore((s) => s.openGraph)
 
+  const [termMenu, setTermMenu] = useState<DOMRect | null>(null)
   const [version, setVersion] = useState('')
   useEffect(() => { void window.api.update.version().then(setVersion) }, [])
   useEffect(() => window.api.window.onMaximized((maximized) => set({ maximized })), [set])
@@ -52,7 +55,7 @@ export function TitleBar() {
     <div className="drag flex h-[34px] shrink-0 items-center justify-between bg-bg pl-3 pr-1" onDoubleClick={() => window.api.window.toggleMaximize()}>
       <div className="flex items-center gap-3">
         <span className="text-[12px] font-medium text-muted">Orches{version && <button onClick={() => set({ modal: 'news', newsSince: null })} title="Ver las novedades de esta versión" className="no-drag ml-1.5 text-[10px] font-normal opacity-60 transition-opacity hover:text-accent hover:opacity-100">v{version}</button>}</span>
-        <Chip icon={<MdTerminal size={14} />} label="Terminal" active={!!shell} onClick={() => void toggleShell()} title="Abrir o cerrar la terminal (Ctrl+Shift+T)" />
+        <Chip icon={<MdTerminal size={14} />} label="Terminal" active={shell} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTermMenu(new DOMRect(r.left, r.bottom, 220, 0)) }} title="Terminal (Ctrl+Shift+T)" />
         {git?.isRepo && (
           <Chip
             icon={<MdCallSplit size={14} />}
@@ -77,6 +80,12 @@ export function TitleBar() {
         <IconButton title="Cerrar" danger onClick={() => window.api.window.close()}><MdClose size={16} /></IconButton>
       </div>
       <MdKeyboardArrowDown className="hidden" />
+      {termMenu && (
+        <Menu width={220} anchor={termMenu} onClose={() => setTermMenu(null)} items={[
+          { label: 'Nuevo terminal', icon: <MdAdd size={15} />, onClick: () => void addShell() },
+          { label: shell ? 'Cerrar todos los terminales' : 'Abrir terminal', icon: <MdTerminal size={15} />, onClick: () => void toggleShell() }
+        ]} />
+      )}
     </div>
   )
 }
