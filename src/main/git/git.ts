@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { dirname, basename } from 'node:path'
-import type { GitBranch, GitCommit, GitMarks, GitOp, GitStatus } from '../shared/types'
-import { extendedPath } from './shellpath'
+import type { GitBranch, GitCommit, GitMarks, GitOp, GitStatus } from '../../shared/types'
+import { extendedPath } from '../shellpath'
 
 interface Result { ok: boolean; out: string }
 

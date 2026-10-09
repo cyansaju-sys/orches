@@ -1,6 +1,8 @@
 /** Cómo arrancar cada agente conectado al reparto de tareas (argumentos y variables de entorno). */
 
 export interface McpEntry { type: 'http'; url: string; headers: Record<string, string> }
+/** Contexto del proyecto: el texto y el archivo donde vive. */
+export interface ProjectContext { text: string; file: string }
 export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
 
 // herramientas del servidor «orches» que Claude Code puede usar sin pedir permiso cada vez
@@ -11,6 +13,9 @@ export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
   agy: (t) => ['--prompt-interactive', t]            // Antigravity: ejecuta la tarea y sigue en modo interactivo
 }
 
+/** OpenCode lee las instrucciones adicionales de la clave `instructions` (rutas de archivos). */
+const instructions = (context?: ProjectContext): { instructions?: string[] } => (context ? { instructions: [context.file] } : {})
+
 /**
  * OpenCode 2.x atiende a todos sus clientes desde UN servicio en segundo plano compartido: la configuración que se le pasa
  * a un proceso por variable de entorno se pierde si el servicio ya estaba corriendo, y la que consigue entrar queda para
@@ -18,25 +23,30 @@ export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
  * privado: la configuración (con el id de ese panel) se aplica solo a él y no deja nada atrás.
  * La 1.x no tiene servicio compartido ni ese flag, y declara los servidores directamente bajo `mcp`.
  */
-export function opencodeLaunch(entry: McpEntry, first: string[], given: string[], major: number): Launch {
+export function opencodeLaunch(entry: McpEntry | null, first: string[], given: string[], major: number, context?: ProjectContext): Launch {
+  if (!entry) {         // sin servidor de reparto de tareas: solo el contexto del proyecto
+    return { args: [...first, ...given], env: context ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(instructions(context)) } : {} }
+  }
   const remote = { type: 'remote', url: entry.url, headers: entry.headers }
   if (major >= 2) {
-    const config = { mcp: { servers: { orches: remote } }, permission: { 'orches_*': 'allow' } }   // sin preguntar en cada llamada
+    const config = { mcp: { servers: { orches: remote } }, permission: { 'orches_*': 'allow' }, ...instructions(context) }   // sin preguntar en cada llamada
     return { args: ['--standalone', ...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) } }
   }
-  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: { orches: remote } }) } }
+  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: { orches: remote }, ...instructions(context) }) } }
 }
 
 /** La tarea inicial va primero: --mcp-config acepta varios valores y se la comería. */
-export function claudeLaunch(entry: McpEntry, first: string[], given: string[]): Launch {
-  return { args: [...first, ...given, '--mcp-config', JSON.stringify({ mcpServers: { orches: entry } }), '--allowedTools', ...ORCHES_TOOLS], env: {} }
+export function claudeLaunch(entry: McpEntry | null, first: string[], given: string[], context?: ProjectContext): Launch {
+  const system = context ? ['--append-system-prompt', context.text] : []
+  if (!entry) return { args: [...first, ...given, ...system], env: {} }
+  return { args: [...first, ...given, ...system, '--mcp-config', JSON.stringify({ mcpServers: { orches: entry } }), '--allowedTools', ...ORCHES_TOOLS], env: {} }
 }
 
-export function buildLaunch(command: string, entry: McpEntry, prompt: string | undefined, given: string[], opencodeMajor: number): Launch {
+export function buildLaunch(command: string, entry: McpEntry | null, prompt: string | undefined, given: string[], opencodeMajor: number, context?: ProjectContext): Launch {
   const task = prompt?.trim()
   const first = task && PROMPT_ARGS[command] ? PROMPT_ARGS[command](task) : []
-  if (command === 'claude') return claudeLaunch(entry, first, given)
-  if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor)
+  if (command === 'claude') return claudeLaunch(entry, first, given, context)
+  if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context)
   return { args: given, env: {} }
 }
 

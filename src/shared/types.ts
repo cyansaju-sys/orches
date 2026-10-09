@@ -79,6 +79,12 @@ export type Settings = Record<string, unknown>
 export interface Api {
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   dialog: { chooseFolder(start?: string): Promise<string | null> }
+  ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
+  context: {
+    ensure(project: string): Promise<string>
+    generate(project: string): Promise<McpResult & { text?: string; agent?: string }>
+    onAgent(cb: (name: string) => void): () => void
+  }
   fs: {
     list(dir: string): Promise<DirEntry[]>
     read(path: string): Promise<FileData>

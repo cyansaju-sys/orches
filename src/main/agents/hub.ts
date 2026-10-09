@@ -1,15 +1,17 @@
 /** Une el servidor MCP con los agentes abiertos: lista, reparte tareas, abre paneles y lee pantallas. */
 import type { BrowserWindow } from 'electron'
-import type { OpenPane } from '../shared/types'
+import type { OpenPane } from '../../shared/types'
 import { execFileSync } from 'node:child_process'
 import { detectAgents } from './agents'
 import { capableFor, exhausted, isDifficulty, capable, pickAgent, type Candidate, type Difficulty } from './assign'
+import { readContext } from '../context/context'
+import { projectRoot } from '../context/projectRoot'
 import { buildLaunch, parseMajor, PROMPT_ARGS } from './launch'
 import { currentModel, tier } from './models'
 import { Orchestra, type AgentOutput, type Host } from './orchestra'
 import * as pty from './pty'
-import { getSetting } from './settings'
-import { claudeLimits } from './usage'
+import { getSetting } from '../settings'
+import { claudeLimits } from '../usage/usage'
 
 const BUSY_SECONDS = 4       // sin salida durante este tiempo = el agente ya no está trabajando
 let orchestra: Orchestra | null = null
@@ -148,16 +150,24 @@ const host: Host = {
 /** Arranca el servidor de reparto de tareas (se desactiva con `"orchestration": false` en los ajustes). */
 export async function startHub(window: () => BrowserWindow | null): Promise<void> {
   getWindow = window
-  if (getSetting('orchestration') === false) return
-  try { orchestra = await new Orchestra(host).start() } catch { return }       // sin servidor local la app funciona igual
+  // el gancho va siempre: sin servidor de reparto de tareas los agentes siguen recibiendo el contexto del proyecto
   pty.setLaunchHook((opts): pty.Launch => {
-    const entry = orchestra!.configFor(opts.id)
+    const entry = orchestra?.configFor(opts.id) ?? null
     const prompt = opts.prompt?.trim()
-    const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2)
+    const context = opts.cwd ? readContext(projectRoot(opts.cwd, knownProjects())) ?? undefined : undefined
+    const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2, context)
     // los agentes que no aceptan la tarea como argumento la reciben escrita cuando su interfaz está lista
     const after = prompt && !PROMPT_ARGS[opts.command] ? () => deliverLater(opts.id, prompt) : undefined
     return { ...launch, after }
   })
+  if (getSetting('orchestration') === false) return
+  try { orchestra = await new Orchestra(host).start() } catch { /* sin servidor local la app funciona igual */ }
+}
+
+/** Proyecto abierto y los del historial: sirven para saber a cuál pertenece la carpeta de un agente. */
+function knownProjects(): string[] {
+  const recent = getSetting('recent_projects')
+  return [getSetting('project'), ...(Array.isArray(recent) ? recent : [])].filter((p): p is string => typeof p === 'string' && !!p)
 }
 
 let majorCache: number | null = null

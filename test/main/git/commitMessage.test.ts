@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPrompt, cleanMessage, headlessArgs, heuristicMessage } from '../../src/main/commitMessage'
+import { buildPrompt, cleanMessage, headlessArgs, heuristicMessage } from '../../../src/main/git/commitMessage'
 
 describe('mensaje de commit con un agente', () => {
   it('limpia comillas, bloques de código y charla previa', () => {

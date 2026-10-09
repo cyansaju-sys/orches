@@ -1,9 +1,9 @@
 /** Mensaje de commit (Conventional Commits) redactado por un agente en modo no interactivo. */
 import { execFile } from 'node:child_process'
-import type { AgentInfo, McpResult } from '../shared/types'
-import { detectAgents } from './agents'
+import type { AgentInfo, McpResult } from '../../shared/types'
+import { detectAgents } from '../agents/agents'
 import * as git from './git'
-import { extendedPath } from './shellpath'
+import { extendedPath } from '../shellpath'
 
 const MAX_DIFF = 24_000          // el agente no necesita ver todo: con esto basta para resumir el cambio
 const TYPES = 'feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
@@ -43,9 +43,9 @@ export function cleanMessage(raw: string): string | null {
   return lines[start].trim().replace(/\.$/, '')                  // solo el título: el mensaje se mantiene corto
 }
 
-const ask = (agent: AgentInfo, args: string[], cwd: string): Promise<string | null> =>
+export const ask = (agent: AgentInfo, args: string[], cwd: string, signal?: AbortSignal): Promise<string | null> =>
   new Promise((done) => {
-    execFile(agent.path, args, { cwd, timeout: 90_000, encoding: 'utf8', maxBuffer: 2_000_000, env: { ...process.env, PATH: extendedPath() } },
+    execFile(agent.path, args, { cwd, timeout: 90_000, encoding: 'utf8', maxBuffer: 2_000_000, signal, env: { ...process.env, PATH: extendedPath() } },
       (err, stdout) => done(err ? null : stdout)).stdin?.end()
   })
 
@@ -96,7 +96,7 @@ export function heuristicMessage(files: FileChange[]): string | null {
 }
 
 /** Pide el mensaje al primer agente instalado que lo consiga. */
-export async function suggestCommit(root: string, onAgent: (name: string) => void = () => undefined): Promise<McpResult & { agent?: string }> {
+export async function suggestCommit(root: string, onAgent: (name: string) => void = () => undefined, signal?: AbortSignal): Promise<McpResult & { agent?: string }> {
   const { diff, recent } = await git.changesForMessage(root)
   if (!diff.trim()) return { ok: false, message: 'No hay cambios preparados: prepara los archivos que quieras incluir' }
   const installed = detectAgents()
@@ -107,7 +107,8 @@ export async function suggestCommit(root: string, onAgent: (name: string) => voi
     if (!agent) continue
     tried++
     onAgent(agent.name)
-    const out = await ask(agent, headlessArgs(command, prompt)!, root)
+    const out = await ask(agent, headlessArgs(command, prompt)!, root, signal)
+    if (signal?.aborted) return { ok: false, message: '' }               // cancelado: sin mensaje de error
     const message = out ? cleanMessage(out) : null
     if (message) return { ok: true, message, agent: agent.name }
   }

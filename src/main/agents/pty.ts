@@ -5,8 +5,8 @@ import type { WebContents } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { Terminal as Headless } from '@xterm/headless'
-import type { PtyOptions } from '../shared/types'
-import { extendedPath, which } from './shellpath'
+import type { PtyOptions } from '../../shared/types'
+import { extendedPath, which } from '../shellpath'
 
 const SESSION_VARS = [
   'CLAUDECODE', 'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSION_ID', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SESSION_ATTENDED',

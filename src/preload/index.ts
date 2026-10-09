@@ -22,6 +22,11 @@ const api: Api = {
     branches: (r) => ipcRenderer.invoke('git:branches', r), checkout: (r, n, rem) => ipcRenderer.invoke('git:checkout', r, n, rem),
     createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
   },
+  ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
+  context: {
+    ensure: (project) => ipcRenderer.invoke('context:ensure', project), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    onAgent: (cb) => subscribe<[string]>('context:agent', cb)
+  },
   agents: {
     detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell'),
     candidates: () => ipcRenderer.invoke('agents:candidates'),

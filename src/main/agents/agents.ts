@@ -1,9 +1,9 @@
 import { accessSync, constants, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, delimiter, isAbsolute, join } from 'node:path'
-import type { AgentCandidate, AgentInfo, McpResult } from '../shared/types'
-import { getSetting, setSetting } from './settings'
-import { extendedPath, which } from './shellpath'
+import type { AgentCandidate, AgentInfo, McpResult } from '../../shared/types'
+import { getSetting, setSetting } from '../settings'
+import { extendedPath, which } from '../shellpath'
 
 // nombre visible -> ejecutable. Los que no estén aquí se añaden como «agente propio» (ver addCustomAgent).
 export const KNOWN: Array<[string, string]> = [

@@ -1,18 +1,20 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'node:path'
-import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents'
-import { suggestCommit } from './commitMessage'
+import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents/agents'
+import { ensureContext } from './context/context'
+import { generateContext } from './context/contextGen'
+import { suggestCommit } from './git/commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
-import * as git from './git'
-import * as pty from './pty'
+import * as git from './git/git'
+import * as pty from './agents/pty'
 import { getSetting, setSetting } from './settings'
 import type { GitOp, PtyOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
-import { collectUsage, deleteSession, renameSession, sessionNames } from './usage'
+import { collectUsage, deleteSession, renameSession, sessionNames } from './usage/usage'
 import { runSelfTest } from './selftest'
-import { newId, startHub, stopHub } from './hub'
+import { newId, startHub, stopHub } from './agents/hub'
 
 if (process.argv.includes('--orches-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -36,6 +38,15 @@ function createWindow(): void {
   else win.loadFile(join(__dirname, '../renderer/index.html'))
 }
 
+/** Tareas de IA en curso (mensaje de commit, contexto): se pueden cancelar al salir de su apartado. */
+const tasks = new Map<'commit' | 'context', AbortController>()
+async function withTask<T>(kind: 'commit' | 'context', run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  tasks.get(kind)?.abort()
+  const controller = new AbortController()
+  tasks.set(kind, controller)
+  try { return await run(controller.signal) } finally { if (tasks.get(kind) === controller) tasks.delete(kind) }
+}
+
 function registerIpc(): void {
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))
@@ -43,6 +54,9 @@ function registerIpc(): void {
     const res = await dialog.showOpenDialog(win!, { properties: ['openDirectory'], defaultPath: start, title: 'Abrir proyecto' })
     return res.canceled ? null : res.filePaths[0]
   })
+  ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
+  ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
+  ipcMain.handle('context:ensure', (_e, project: string) => ensureContext(project))
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
   ipcMain.handle('fs:read', (_e, path: string) => readFileData(path))
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
@@ -68,7 +82,7 @@ function registerIpc(): void {
   ipcMain.handle('git:log', (_e, root: string, limit: number) => git.log(root, limit))
   ipcMain.handle('git:pull', (_e, root: string) => git.pull(root))
   ipcMain.handle('git:fetch', (_e, root: string) => git.fetch(root))
-  ipcMain.handle('git:suggestCommit', (e, root: string) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name)))
+  ipcMain.handle('git:suggestCommit', (e, root: string) => withTask('commit', (signal) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name), signal)))
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
 
   ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))

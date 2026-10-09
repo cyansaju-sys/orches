@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { joinSummary, numstatPath, opArgs, validBranchName } from '../../src/main/git'
+import { joinSummary, numstatPath, opArgs, validBranchName } from '../../../src/main/git/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 

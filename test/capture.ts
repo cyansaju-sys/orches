@@ -3,7 +3,7 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, type BrowserWindow } from 'electron'
-import * as pty from '../src/main/pty'
+import * as pty from '../src/main/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -31,7 +31,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
   }
-  await open('src/main/git.ts')
+  await open('src/main/git/git.ts')
   await snap('01-archivos-y-editor', 1800)
   await open('docs/demo/Contador.tsx')
   await snap('02-sintaxis-tsx')

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/components/AgentsArea'
-import { AgentPicker, AddAgentDialog, BranchPicker, ShortcutsDialog } from '@/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, NewsDialog, ShortcutsDialog } from '@/components/Dialogs'
 import { EditorArea, saveDoc } from '@/components/EditorArea'
 import { Sidebar, TABS } from '@/components/Sidebar'
 import { Toasts } from '@/components/Toasts'
@@ -31,7 +31,14 @@ export function App() {
       await loadIconTheme()
       const project = (await window.api.settings.get('project')) as string | undefined
       const edit = await window.api.settings.get('edit_enabled')
-      useStore.setState({ project: project ?? null, editEnabled: edit === undefined ? true : Boolean(edit) })
+      const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
+      const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
+      useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
+      // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
+      const current = await window.api.update.version()
+      const seen = (await window.api.settings.get('last_seen_version')) as string | undefined
+      if (seen && seen !== current) useStore.setState({ modal: 'news', newsSince: seen })
+      void window.api.settings.set('last_seen_version', current)
       setReady(true)
     })()
   }, [])
@@ -109,16 +116,24 @@ export function App() {
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
       <div className="flex min-h-0 flex-1 p-1.5 pt-0.5">
-        {s.sidebarOpen && (<><Sidebar /><Resizer onDrag={dragSidebar} /></>)}
+        <Sidebar />
+        {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1">
-            {s.docs.length > 0 && (
+            {s.docs.length > 0 && s.panes.length === 0 ? (
+              // sin agentes abiertos, el editor ocupa el espacio de «Elegir agente»
+              <div className="flex min-w-[260px] flex-1 flex-col"><EditorArea /></div>
+            ) : (
               <>
-                <div style={{ flexBasis: s.editorWidth }} className="flex min-w-[260px] shrink flex-col"><EditorArea /></div>
-                <Resizer onDrag={dragEditor} />
+                {s.docs.length > 0 && (
+                  <>
+                    <div style={{ flexBasis: s.editorWidth }} className="flex min-w-[260px] shrink flex-col"><EditorArea /></div>
+                    <Resizer onDrag={dragEditor} />
+                  </>
+                )}
+                <AgentsArea />
               </>
             )}
-            <AgentsArea />
           </div>
           {s.shell && (
             <>
@@ -131,6 +146,7 @@ export function App() {
       {s.modal === 'agents' && <AgentPicker />}
       {s.modal === 'addAgent' && <AddAgentDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
+      {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
       <Toasts />
     </div>

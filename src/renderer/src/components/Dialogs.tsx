@@ -2,10 +2,12 @@ import { clsx } from 'clsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdCallSplit, MdCloudQueue, MdSearch, MdTerminal } from 'react-icons/md'
 import type { AgentCandidate, GitBranch } from '@shared/types'
+import { newSince, parseChangelog } from '@/lib/changelog'
 import { refreshGit } from '@/lib/gitSync'
 import { SECTIONS } from '@/lib/shortcuts'
 import { useStore } from '@/store'
 import { AgentIcon } from './AgentIcon'
+import changelogText from '../../../../CHANGELOG.md?raw'
 import { Kbd, Modal } from './ui'
 
 /** Coincidencia difusa: «clk» encuentra «Claude». */
@@ -268,6 +270,41 @@ export function ShortcutsDialog() {
             ))}
           </section>
         ))}
+      </div>
+    </Modal>
+  )
+}
+
+/** Estructura mínima de **negrita** en las frases del changelog. */
+const bold = (text: string): React.ReactNode[] =>
+  text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i} className="font-semibold text-text">{part}</strong> : part))
+
+/** Novedades de la versión instalada (o de todas las que se saltó el usuario). */
+export function NewsDialog() {
+  const set = useStore((s) => s.set)
+  const since = useStore((s) => s.newsSince)
+  const [version, setVersion] = useState('')
+  useEffect(() => { void window.api.update.version().then(setVersion) }, [])
+  const all = useMemo(() => parseChangelog(changelogText), [])
+  const shown = useMemo(() => {
+    if (!version) return []
+    const list = since ? newSince(all, since, version) : all.filter((e) => e.version === version)
+    return list.length ? list : all.slice(0, 1)
+  }, [all, since, version])
+  return (
+    <Modal onClose={() => set({ modal: null })} width={520} title={`Novedades${version ? ` de v${version}` : ''}`}>
+      <div className="max-h-[60vh] overflow-y-auto px-5 pb-4">
+        {shown.map((entry) => (
+          <section key={entry.version} className="mt-1">
+            {shown.length > 1 && <h3 className="pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">v{entry.version}</h3>}
+            <ul className="flex flex-col gap-2">
+              {entry.items.map((item, i) => <li key={i} className="flex gap-2 text-[12px] leading-snug text-muted"><span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" /><span>{bold(item)}</span></li>)}
+            </ul>
+          </section>
+        ))}
+        <div className="mt-4 flex justify-end">
+          <button onClick={() => set({ modal: null })} className="rounded-md bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110">Entendido</button>
+        </div>
       </div>
     </Modal>
   )
