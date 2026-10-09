@@ -159,7 +159,7 @@ export function UsageView() {
           <div className="px-4 pb-4">
             <p className="text-[12px] leading-relaxed text-muted">«{title(deleting)}» se borrará del historial de {deleting.agent}. No se puede deshacer.</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleting(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
+              <button onClick={() => setDeleting(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
               <button onClick={() => { const s = deleting; setDeleting(null); void window.api.usage.remove(s).then((r) => { toast(r.ok ? 'Sesión borrada' : `No se pudo borrar: ${r.message}`, r.ok ? 'ok' : 'error'); void load(false) }) }}
                 className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">Borrar</button>
             </div>
@@ -177,11 +177,11 @@ function RenameDialog({ session, current, onClose, onSaved }: { session: Session
     <Modal onClose={onClose} width={420} title="Renombrar sesión">
       <div className="px-4 pb-4">
         <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save() }} spellCheck={false}
-          className="w-full rounded-lg bg-white/[0.05] px-3 py-2 text-[12px] caret-accent outline-none transition-colors focus:bg-white/[0.08]" />
+          className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors focus:border-accent/40 focus:bg-white/[0.045]" />
         <p className="mt-2 text-[10px] text-muted">Solo cambia el nombre que ves aquí; no toca los archivos del agente. Vacío vuelve al original.</p>
         <div className="mt-3 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
-          <button onClick={save} className="rounded-lg bg-accent/20 px-4 py-1.5 text-[12px] font-medium text-accent transition-colors hover:bg-accent/30">Guardar</button>
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
+          <button onClick={save} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110">Guardar</button>
         </div>
       </div>
     </Modal>

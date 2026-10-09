@@ -3,7 +3,10 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, type BrowserWindow } from 'electron'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import * as pty from '../src/main/pty'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -59,6 +62,37 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ modal: null }); ${store}.toggleShell()`)
     await snap('terminal-verificacion', 2500)
   }
+  if (process.env.ORCHES_CAPTURE_REAL) {              // agentes de verdad (gasta tokens): un líder arregla una función y delega las pruebas
+    const dir = mkdtempSync(join(tmpdir(), 'orches-demo-'))
+    mkdirSync(join(dir, 'src')); mkdirSync(join(dir, '.claude'))
+    writeFileSync(join(dir, 'package.json'), '{ "name": "demo-precios", "type": "module" }\n')
+    writeFileSync(join(dir, 'src/precio.js'), '// Precio final de un artículo con su impuesto (la tasa es un porcentaje, p. ej. 15)\nexport function conImpuesto(monto, tasa) {\n  return monto + tasa\n}\n')
+    // permisos solo de este proyecto de ejemplo: así ningún agente se queda esperando una confirmación
+    writeFileSync(join(dir, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Read', 'Edit', 'Write', 'mcp__orches', 'Bash(node:*)'] } }))
+    execFileSync('git', ['init', '-q'], { cwd: dir })
+    await run(`${store}.setProject(${JSON.stringify(dir)})`)
+    await run(`${store}.set({ docs: [], activeDoc: null, tab: 'agents', modal: null })`)
+    const task = 'En src/precio.js la función conImpuesto está mal: suma la tasa en vez de aplicar el porcentaje. Corrígela tú. ' +
+      'Después usa delegate_task con agent "claude", difficulty "easy" y new_instance true para pedirle a otro agente que escriba src/precio.test.js ' +
+      'con 3 pruebas usando node:test, espera su resultado con wait_agent y cuéntame en una frase cómo quedó. Sé breve.'
+    await run(`(async () => { const id = await window.api.orchestra.newId(); window.__orches.getState().addPane({ id, kind: 'agent', name: 'Claude Code', title: 'Claude Code · demo-precios', command: 'claude', args: [], cwd: ${JSON.stringify(dir)}, prompt: ${JSON.stringify(task)} }) })()`)
+    // la carpeta es nueva: Claude pregunta si se confía en ella (la opción marcada es «No»): se baja a «Sí» y se confirma
+    const answerTrust = (): void => {
+      for (const m of pty.agentSessions()) {
+        if (pty.screenText(m.id, 60).includes('I trust this folder')) { pty.write(m.id, '\x1b[B'); setTimeout(() => pty.write(m.id, '\r'), 400) }
+      }
+    }
+    let calm = 0
+    for (let i = 0; i < 120 && calm < 4; i++) {         // hasta que haya sub-agente y todos estén quietos (máx. ~4 min)
+      await sleep(2000)
+      answerTrust()
+      const open = pty.agentSessions()
+      calm = open.length >= 2 && open.every((m) => pty.idleFor(m.id) > 8) ? calm + 1 : 0
+    }
+    await snap('agentes-reales', 3000)
+    console.log('carpeta de ejemplo:', dir)
+    await run(`${store}.set({ panes: [], activePane: null })`)
+  }
   if (process.env.ORCHES_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
     await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
     await snap('14-actualizar-disponible', 500)
@@ -67,6 +101,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ update: { status: 'restarting', version: '0.2.1' } })`)
     await snap('16-actualizar-reiniciando', 400)
     await run(`${store}.set({ update: { status: 'idle' }, tab: 'files' })`)
+  }
+  if (process.env.ORCHES_CAPTURE_DIFF) {              // la comparación de cambios de un archivo modificado
+    await run(`${store}.set({ tab: 'git', modal: null })`)
+    await run(`${store}.openDiff(${JSON.stringify(join(project, process.env.ORCHES_CAPTURE_DIFF))}, false)`)
+    await snap('20-comparacion', 1200)
   }
   if (process.env.ORCHES_CAPTURE_GRAPH) {             // el grafo de git del proyecto abierto
     await run(`${store}.openGraph()`)

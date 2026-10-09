@@ -4,12 +4,12 @@ import { delimiter, join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const store: Record<string, unknown> = {}
-vi.mock('./settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
+vi.mock('../../src/main/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
 // `which` simulado: solo «encuentra» lo que cada prueba declara instalado
 const installed = new Map<string, string>()
-vi.mock('./shellpath', () => ({ which: (c: string) => installed.get(c) ?? null, extendedPath: () => '' }))
+vi.mock('../../src/main/shellpath', () => ({ which: (c: string) => installed.get(c) ?? null, extendedPath: () => '' }))
 
-import { addCustomAgent, candidateExecutables, customAgents, detectAgents, removeCustomAgent, resolveExecutable, splitCommand } from './agents'
+import { addCustomAgent, candidateExecutables, customAgents, detectAgents, removeCustomAgent, resolveExecutable, splitCommand } from '../../src/main/agents'
 
 const exe = (dir: string, name: string): string => {
   const path = join(dir, name)

@@ -190,7 +190,17 @@ export async function branches(root: string): Promise<GitBranch[]> {
 
 export const checkout = async (root: string, name: string, remote: boolean): Promise<string> =>
   flat(await run(root, remote ? ['checkout', '--track', name] : ['checkout', name]))
-export const createBranch = async (root: string, name: string): Promise<string> => flat(await run(root, ['checkout', '-b', name]))
+/** Nombre de rama que git acepta (sin espacios, «..», «-» al inicio ni terminar en «/» o «.lock»). */
+export const validBranchName = (name: string): boolean =>
+  /^(?!-)[A-Za-z0-9._/-]+$/.test(name) && !name.includes('..') && !name.includes('//') && !name.endsWith('/') && !name.endsWith('.') && !name.endsWith('.lock')
+
+/** Crea una rama (desde `base`, o desde donde estás) y, por defecto, se cambia a ella. */
+export async function createBranch(root: string, name: string, base?: string, switchTo = true): Promise<string> {
+  if (!validBranchName(name)) return 'Nombre de rama no válido'
+  if (base && !REF_NAME.test(base)) return 'Rama de origen no válida'
+  const from = base ? [base] : []
+  return flat(await run(root, switchTo ? ['checkout', '-b', name, ...from] : ['branch', name, ...from]))
+}
 
 /** Contenido de un archivo en HEAD (`rev` = 'HEAD') o en lo preparado (`rev` = 'index'); null si no existe ahí (archivo nuevo). */
 export async function show(root: string, rev: string, path: string): Promise<string | null> {

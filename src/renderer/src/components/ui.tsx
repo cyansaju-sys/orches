@@ -75,19 +75,19 @@ export function Modal({ onClose, children, width = 520, title }: { onClose: () =
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-black/60 pt-[11vh] backdrop-blur-sm" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-black/12 pt-[11vh] backdrop-blur-[1px]" onMouseDown={onClose}>
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ width }}
-        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0f121a]/50 backdrop-blur-xl shadow-[0_24px_70px_-12px_rgba(0,0,0,0.85)] ring-1 ring-accent/10"
+        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-xl border border-white/[0.06] bg-[#0e1118] shadow-[0_18px_50px_-18px_rgba(0,0,0,0.75)]"
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <h2 className="text-[14px] font-semibold">{title}</h2>
-            <IconButton onClick={onClose} title="Cerrar"><MdClose size={16} /></IconButton>
+          <div className="flex items-center justify-between px-5 pt-4">
+            <h2 className="text-[13px] font-medium tracking-[0.01em] text-text">{title}</h2>
+            <button onClick={onClose} title="Cerrar" className="-mr-1.5 grid size-6 place-items-center rounded-md text-muted/70 transition-colors hover:bg-white/[0.06] hover:text-text"><MdClose size={14} /></button>
           </div>
         )}
-        {title ? <div className="pt-4">{children}</div> : children}
+        {title ? <div className="pt-3.5">{children}</div> : children}
       </div>
     </div>
   )

@@ -231,12 +231,12 @@ function AskDialog({ ask, onClose, onOk }: { ask: Ask; onClose: () => void; onOk
             autoFocus value={value} spellCheck={false} placeholder="Nombre"
             onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
             onFocus={(e) => { if (initial) e.currentTarget.setSelectionRange(0, initial.lastIndexOf('.') > 0 ? initial.lastIndexOf('.') : initial.length) }}
-            className="w-full rounded-lg bg-white/[0.05] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/70 focus:bg-white/[0.08]"
+            className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]"
           />
         )}
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
-          <button autoFocus={del} onClick={submit} className={`rounded-lg px-4 py-1.5 text-[12px] font-medium transition-colors ${del ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-accent/20 text-accent hover:bg-accent/30'}`}>
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
+          <button autoFocus={del} onClick={submit} className={`rounded-lg px-4 py-1.5 text-[12px] font-medium transition-colors ${del ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-accent text-bg hover:brightness-110'}`}>
             {del ? 'Borrar' : 'Aceptar'}
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agentRef } from './agentRef'
+import { agentRef } from '../../src/renderer/src/lib/agentRef'
 
 describe('referencia a un archivo en el prompt del agente', () => {
   it('usa @ con los agentes que lo entienden', () => {

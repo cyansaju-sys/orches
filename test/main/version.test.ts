@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isNewer } from './version'
+import { isNewer } from '../../src/main/version'
 
 describe('versiones', () => {
   it.each([

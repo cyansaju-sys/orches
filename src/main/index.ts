@@ -1,14 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents'
-import { placeOnDisplay } from './placement'
 import { suggestCommit } from './commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
 import * as git from './git'
 import * as pty from './pty'
 import { getSetting, setSetting } from './settings'
 import type { GitOp, PtyOptions } from '../shared/types'
-import { runCapture } from './capture'
+import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './usage'
@@ -21,10 +20,8 @@ if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un A
 let win: BrowserWindow | null = null
 
 function createWindow(): void {
-  // se abre en la pantalla donde está el cursor (en el modo captura se deja la predeterminada)
-  const spot = process.env.ORCHES_CAPTURE ? {} : placeOnDisplay(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea, 1360, 860)
   win = new BrowserWindow({
-    width: 1360, height: 860, ...spot, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
+    width: 1360, height: 860, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
     title: 'Orches', icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true }
   })
@@ -64,7 +61,7 @@ function registerIpc(): void {
   ipcMain.handle('git:push', (_e, root: string) => git.push(root))
   ipcMain.handle('git:branches', (_e, root: string) => git.branches(root))
   ipcMain.handle('git:checkout', (_e, root: string, name: string, remote: boolean) => git.checkout(root, name, remote))
-  ipcMain.handle('git:createBranch', (_e, root: string, name: string) => git.createBranch(root, name))
+  ipcMain.handle('git:createBranch', (_e, root: string, name: string, base?: string, switchTo?: boolean) => git.createBranch(root, name, base, switchTo))
   ipcMain.handle('git:show', (_e, root: string, rev: string, path: string) => git.show(root, rev, path))
   ipcMain.handle('git:op', (_e, root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean) => git.commitOp(root, op, hash, arg, isMerge))
   ipcMain.handle('git:commitFiles', (_e, root: string, hash: string, parent: string | null) => git.commitFiles(root, hash, parent))
