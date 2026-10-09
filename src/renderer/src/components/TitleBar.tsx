@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { MdAccountTree, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useStore } from '@/store'
 import { Chip, IconButton } from './ui'
@@ -44,12 +44,14 @@ export function TitleBar() {
   const toggleShell = useStore((s) => s.toggleShell)
   const openGraph = useStore((s) => s.openGraph)
 
+  const [version, setVersion] = useState('')
+  useEffect(() => { void window.api.update.version().then(setVersion) }, [])
   useEffect(() => window.api.window.onMaximized((maximized) => set({ maximized })), [set])
 
   return (
     <div className="drag flex h-[34px] shrink-0 items-center justify-between bg-bg pl-3 pr-1" onDoubleClick={() => window.api.window.toggleMaximize()}>
       <div className="flex items-center gap-3">
-        <span className="text-[12px] font-medium text-muted">Orches</span>
+        <span className="text-[12px] font-medium text-muted">Orches{version && <button onClick={() => set({ modal: 'news', newsSince: null })} title="Ver las novedades de esta versión" className="no-drag ml-1.5 text-[10px] font-normal opacity-60 transition-opacity hover:text-accent hover:opacity-100">v{version}</button>}</span>
         <Chip icon={<MdTerminal size={14} />} label="Terminal" active={!!shell} onClick={() => void toggleShell()} title="Abrir o cerrar la terminal (Ctrl+Shift+T)" />
         {git?.isRepo && (
           <Chip

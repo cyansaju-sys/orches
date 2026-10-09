@@ -33,6 +33,9 @@ export function GitView() {
     if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
   }, [message, git?.isRepo])
 
+  // al salir del apartado se deja de redactar el mensaje
+  useEffect(() => () => { void window.api.ai.cancel('commit') }, [])
+
   if (!project) return <p className="px-3 py-2 text-[12px] text-muted">Abre un proyecto primero (pestaña Archivos)</p>
   if (!git?.isRepo) return <p className="px-3 py-2 text-[12px] text-muted">Esta carpeta no es un repositorio git</p>
 
@@ -56,7 +59,8 @@ export function GitView() {
     off()
     setWriting('')
     if (res.ok) { setMessage(res.message); setAuthor(res.agent ?? '') }
-    else toast(res.message, 'error')
+    else if (res.message) toast(res.message, 'error')
+    else toast('Se canceló el mensaje del commit', 'info')
   }
 
   const commit = async (): Promise<void> => {

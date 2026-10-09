@@ -75,7 +75,7 @@ export function Modal({ onClose, children, width = 520, title }: { onClose: () =
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-black/12 pt-[11vh] backdrop-blur-[1px]" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/12 backdrop-blur-[1px]" onMouseDown={onClose}>
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ width }}

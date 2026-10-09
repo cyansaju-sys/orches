@@ -4,9 +4,9 @@
  */
 import { app, type WebContents } from 'electron'
 import { join } from 'node:path'
-import { newId } from './hub'
-import * as pty from './pty'
-import { orchestraConfig } from './hub'
+import { newId } from './agents/hub'
+import * as pty from './agents/pty'
+import { orchestraConfig } from './agents/hub'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const sender = { send: () => undefined, isDestroyed: () => false } as unknown as WebContents

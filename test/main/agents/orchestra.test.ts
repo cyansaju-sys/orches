@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { Orchestra, TOOLS, type Host } from '../../src/main/orchestra'
+import { Orchestra, TOOLS, type Host } from '../../../src/main/agents/orchestra'
 
 const calls: unknown[][] = []
 const host: Host = {

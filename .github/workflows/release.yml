@@ -1,7 +1,8 @@
-# Al subir un tag v* (p. ej. v0.2.0): comprueba tipos y pruebas, empaqueta el AppImage de Linux y crea la release de GitHub con
-#   - Orches-<versión>-x86_64.AppImage   (la app; se actualiza sola desde las releases)
-#   - latest-linux.yml                   (lo que lee el actualizador de la app para saber que hay una versión nueva)
-#   - install.sh                         (instalador de una línea para Linux)
+# Al subir un tag v* (p. ej. v0.4.0): comprueba tipos y pruebas, empaqueta la app y crea la release de GitHub con
+#   Linux:    Orches-<versión>-x86_64.AppImage + latest-linux.yml + install.sh (instalador de una línea)
+#   Windows:  Orches-Setup-<versión>.exe + latest.yml (+ .blockmap)
+# Los archivos latest*.yml son lo que lee el actualizador de la app para saber que hay una versión nueva.
+# Si el build de Windows falla, la release de Linux sale igual (y se ve el fallo en Actions).
 name: Release
 
 on:
@@ -29,6 +30,11 @@ jobs:
             echo "El tag es $GITHUB_REF_NAME pero package.json dice $expected: el actualizador compararía mal."; exit 1
           fi
 
+      - name: CHANGELOG.md debe tener las novedades de esta versión
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          grep -qE "^## v?${v//./\\.}( |$)" CHANGELOG.md || { echo "Falta la sección '## $v' en CHANGELOG.md: es lo que verán los usuarios al actualizar."; exit 1; }
+
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -36,10 +42,58 @@ jobs:
       - name: Empaquetar el AppImage
         run: npm run dist
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            release/Orches-*-x86_64.AppImage
+            release/latest-linux.yml
+            install.sh
+
+  windows:
+    runs-on: windows-2022          # con Visual Studio 2022: el node-gyp de Electron aún no reconoce VS 2026 (el de windows-latest)
+    continue-on-error: true        # no debe impedir la release de Linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # node-gyp necesita Python para compilar node-pty y better-sqlite3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci                # compila node-pty y better-sqlite3 para Electron
+
+      - name: Empaquetar el instalador
+        run: npm run dist:win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            release/Orches-Setup-*.exe
+            release/Orches-Setup-*.exe.blockmap
+            release/latest.yml
+
+  release:
+    needs: [linux, windows]
+    if: ${{ !cancelled() && needs.linux.result == 'success' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+          merge-multiple: true     # Windows puede faltar si falló: no pasa nada
+
       - name: Crear la release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "release/Orches-${GITHUB_REF_NAME#v}-x86_64.AppImage" release/latest-linux.yml install.sh \
+          mapfile -t files < <(find dist-artifacts -type f)      # los artefactos conservan sus subcarpetas
+          printf '%s\n' "${files[@]}"
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" \
             --title "Orches $GITHUB_REF_NAME" --generate-notes

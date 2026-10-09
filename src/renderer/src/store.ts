@@ -2,9 +2,9 @@ import { create } from 'zustand'
 import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
 
-export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai'
+export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'context'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches'
+export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
@@ -17,6 +17,9 @@ export interface Toast { id: number; kind: ToastKind; message: string }
 
 interface State {
   project: string | null
+  recentProjects: string[]
+  /** Versión de la que se muestran las novedades (la instalada, o la que se acaba de actualizar). */
+  newsSince: string | null
   tab: SidebarTab
   sidebarOpen: boolean
   sidebarWidth: number
@@ -38,6 +41,7 @@ interface State {
 
   set: (patch: Partial<State>) => void
   setProject: (path: string | null) => void
+  removeRecentProject: (path: string) => void
   toast: (message: string, kind?: ToastKind) => void
   dismissToast: (id: number) => void
   openDoc: (path: string) => Promise<void>
@@ -69,13 +73,26 @@ const guessKind = (m: string): ToastKind => {
 }
 
 export const useStore = create<State>((set, get) => ({
-  project: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
+  project: null, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
   docs: [], activeDoc: null, panes: [], shell: null, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
   maximized: false, agents: [], update: { status: 'idle' },
 
   set: (patch) => set(patch),
 
-  setProject: (path) => { set({ project: path, git: null }); void window.api.settings.set('project', path) },
+  setProject: (path) => {
+    set({ project: path, git: null })
+    void window.api.settings.set('project', path)
+    if (!path) return
+    const recentProjects = [path, ...get().recentProjects.filter((p) => p !== path)].slice(0, 10)
+    set({ recentProjects })
+    void window.api.settings.set('recent_projects', recentProjects)
+  },
+
+  removeRecentProject: (path) => {
+    const recentProjects = get().recentProjects.filter((p) => p !== path)
+    set({ recentProjects })
+    void window.api.settings.set('recent_projects', recentProjects)
+  },
 
   toast: (message, kind) => {
     const id = toastId++

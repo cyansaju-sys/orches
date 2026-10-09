@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const store: Record<string, unknown> = {}
-vi.mock('../../src/main/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
+vi.mock('../../../src/main/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
 
-import { claudeLimits, claudeSessions, inProject, parseClaudeJsonl, renameSession, sessionKey, sessionNames } from '../../src/main/usage'
+import { claudeLimits, claudeSessions, inProject, parseClaudeJsonl, renameSession, sessionKey, sessionNames } from '../../../src/main/usage/usage'
 
 const HOUR = 3_600_000
 const msg = (id: string, ts: number, input: number, output: number, extra: object = {}): string => JSON.stringify({
@@ -93,17 +93,17 @@ describe('límites y nombres', () => {
 describe('agySessions', () => {
   it('sin base de datos devuelve null', async () => {
     vi.resetModules()
-    vi.doMock('../../src/main/agyDb', () => ({ readAgyConversations: () => null }))
-    const { agySessions } = await import('../../src/main/usage')
+    vi.doMock('../../../src/main/usage/agyDb', () => ({ readAgyConversations: () => null }))
+    const { agySessions } = await import('../../../src/main/usage/usage')
     expect(agySessions(Date.now())).toBeNull()
   })
   it('lee el historial sin tokens', async () => {
     vi.resetModules()
     const t = Date.now()
-    vi.doMock('../../src/main/agyDb', () => ({ readAgyConversations: () => [
+    vi.doMock('../../../src/main/usage/agyDb', () => ({ readAgyConversations: () => [
       { conversation_id: 'a', title: 'Hola', preview: '', step_count: 3, last_modified_time: t, workspace_uris: '["file:///tmp/mi%20proj"]' }
     ] }))
-    const { agySessions } = await import('../../src/main/usage')
+    const { agySessions } = await import('../../../src/main/usage/usage')
     const r = agySessions(t)!
     expect(r.sessions[0]).toMatchObject({ command: 'agy', title: 'Hola', cwd: '/tmp/mi proj', project: 'mi proj', tokens: 0 })
     expect(r.usage.note).toContain('Conversaciones: 1')

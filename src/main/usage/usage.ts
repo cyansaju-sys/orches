@@ -11,11 +11,11 @@ import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join, relative, isAbsolute } from 'node:path'
-import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../shared/types'
+import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../../shared/types'
 import { readAgyConversations } from './agyDb'
 import { readOpenCodeSessions } from './opencodeDb'
-import { getSetting, setSetting } from './settings'
-import { extendedPath } from './shellpath'
+import { getSetting, setSetting } from '../settings'
+import { extendedPath } from '../shellpath'
 
 export const WINDOW_HOURS = 5          // Claude reinicia el límite de sesión en ventanas de 5 horas
 const HOUR = 3_600_000

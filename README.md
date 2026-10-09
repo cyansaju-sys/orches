@@ -63,6 +63,12 @@ descarga la versión nueva, verifica su hash y la app se reinicia para aplicarla
 
 ![Botón de actualización](docs/img/actualizar.png)
 
+**Y te cuenta qué cambió.** La primera vez que abres la app tras actualizar sale un diálogo con las **novedades** de la versión (o de
+todas las que te saltaste). Salen de [CHANGELOG.md](CHANGELOG.md) y puedes volver a verlas pulsando el número de versión junto al
+nombre de la app.
+
+![Novedades de la versión](docs/img/novedades.png)
+
 > macOS llegará más adelante. El código de la versión anterior (Python) sigue en los tags `v0.1.x`.
 
 <br />
@@ -104,6 +110,13 @@ así que funciona aunque lances la app desde el menú. `Ctrl+Shift+T` abre una s
 
 ![Elegir agente](docs/img/elegir-agente.png)
 
+Sin agentes abiertos, ese espacio es la **pantalla de inicio**: el botón *Elegir agente*, los atajos básicos y tus **proyectos
+recientes** para volver a ellos con un clic (con *Abrir otro* para elegir una carpeta y una ✕ para quitar uno del historial). Si
+abres un archivo sin agentes, el editor ocupa todo el espacio. La barra lateral se pliega a solo iconos con `Ctrl+Shift+B`, y con
+doble clic en un icono.
+
+![Pantalla de inicio](docs/img/inicio.png)
+
 ### Reparto de tareas
 
 La app abre un servidor MCP local (solo `127.0.0.1`, con un token distinto en cada ejecución) y conecta a cada agente a él con las
@@ -117,6 +130,19 @@ tiene capacidad suficiente, se rechaza y se propone otro (`force` lo mantiene).
 
 Se desactiva con `"orchestration": false` en `~/.config/orches/settings.json`. OpenCode 2.x atiende a todos sus clientes desde un
 servicio compartido, así que a cada editor se le lanza con `--standalone`: su configuración no se mezcla con la de otros OpenCode.
+
+### Contexto del proyecto
+
+El apartado **Contexto** (`Ctrl+Shift+K`) guarda un texto sobre el proyecto —qué es, cómo se ejecuta, convenciones— que **leen los
+agentes que abras en él**: Claude Code lo recibe como parte de su prompt de sistema y OpenCode como archivo de instrucciones. Vive
+**fuera del repositorio**, en `<config>/orches/<proyecto>-<huella>/contexto.md`, y se guarda solo (o con *Guardar*). Funciona
+también si el agente se abre en una subcarpeta y sin el reparto de tareas.
+
+**Generar con IA** lo redacta un agente a partir de un resumen pequeño del proyecto (estructura, `package.json`, inicio del README,
+últimos commits), sin dejarle explorar, para gastar muy pocos tokens: con Claude usa el modelo pequeño `haiku`, y si ningún agente
+responde arma un borrador con reglas. Al cambiar de apartado se cancela.
+
+![Contexto del proyecto](docs/img/contexto.png)
 
 ### Servidores MCP
 
@@ -181,7 +207,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | `Ctrl+Shift+W` | Cerrar el editor activo |
 | `Ctrl+AvPág` / `Ctrl+RePág` | Editor siguiente / anterior |
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
-| `Ctrl+Shift+E` · `A` · `G` · `X` · `U` | Archivos · Agentes · Git · MCP · Consumo |
+| `Ctrl+Shift+E` · `A` · `G` · `K` · `X` · `U` | Archivos · Agentes · Git · Contexto · MCP · Consumo |
 
 
 <br />
@@ -201,7 +227,12 @@ Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `npm r
 
 ```
 src/
-  main/        proceso principal: ventana, terminales (node-pty), git, servidor MCP, MCP de los agentes, consumo, actualizador
+  main/        proceso principal
+    agents/      agentes: detección, terminales (node-pty), reparto de tareas (servidor MCP) y su arranque
+    git/         git y el mensaje de commit con IA
+    context/     contexto del proyecto y su generación
+    usage/       consumo e historial de cada agente
+                 (y aquí: ventana, MCP de los agentes, archivos, ajustes, actualizador)
   preload/     el puente seguro hacia la interfaz (window.api)
   renderer/    interfaz en React + Tailwind (componentes, vistas, estado con zustand)
   shared/      tipos compartidos
@@ -221,6 +252,7 @@ Todas por variable de entorno:
 |---|---|
 | `ORCHES_MCP_LOG=1` | Imprime cada petición que reciben los servidores MCP |
 | `ORCHES_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
+| `ORCHES_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
 | `ORCHES_CAPTURE_GRAPH=1` · `ORCHES_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
 | `ORCHES_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
 | `ORCHES_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
@@ -232,10 +264,10 @@ Todas por variable de entorno:
 
 <br />
 
-1. Sube `version` en `package.json` (p. ej. `1.0.2`) y haz commit.
+1. Sube `version` en `package.json` (p. ej. `1.0.2`), añade su sección `## 1.0.2` a `CHANGELOG.md` (lo que verán los usuarios) y haz commit.
 2. `git tag v1.0.2 && git push origin master v1.0.2`.
 
-GitHub Actions comprueba que el tag coincide con la versión, pasa tipos y pruebas, empaqueta el AppImage (Linux) y el instalador
+GitHub Actions comprueba que el tag coincide con la versión y que el changelog la menciona, pasa tipos y pruebas, empaqueta el AppImage (Linux) y el instalador
 (Windows) y crea la release con `Orches-X.Y.Z-x86_64.AppImage`, `latest-linux.yml`, `install.sh`, `Orches-Setup-X.Y.Z.exe` y
 `latest.yml` (lo que lee el actualizador). Si el build de Windows falla, la de Linux sale igual. Las instalaciones existentes ven el
 botón **Actualizar** al cabo de unos minutos.

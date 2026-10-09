@@ -1,6 +1,6 @@
 {
   "name": "orches",
-  "version": "0.3.1",
+  "version": "1.0.4",
   "description": "Panel de escritorio para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",
@@ -13,7 +13,8 @@
     "start": "electron-vite preview",
     "test": "vitest run",
     "postinstall": "electron-rebuild -f -w node-pty,better-sqlite3",
-    "dist": "npm run build && electron-builder --linux --publish never"
+    "dist": "npm run build && electron-builder --linux --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.0",
@@ -84,6 +85,18 @@
       "category": "Development",
       "synopsis": "Panel para trabajar con varios agentes de programación",
       "artifactName": "Orches-${version}-x86_64.AppImage"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "resources/icon.png",
+      "artifactName": "Orches-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
     },
     "publish": {
       "provider": "github",

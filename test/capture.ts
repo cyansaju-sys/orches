@@ -2,8 +2,8 @@
  * Modo captura: ORCHES_CAPTURE=<carpeta> abre la app con una configuración temporal, recorre las pantallas,
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
-import { app, type BrowserWindow } from 'electron'
-import * as pty from '../src/main/pty'
+import { app, screen, type BrowserWindow } from 'electron'
+import * as pty from '../src/main/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -22,7 +22,10 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   }
   const store = 'window.__orches.getState()'
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
-  win.setContentSize(1360, 860)
+  // en la pantalla integrada (si hay varias) y ocupando su área útil: las capturas salen siempre del mismo tamaño
+  const internal = screen.getAllDisplays().find((d) => d.internal)
+  if (internal) win.setBounds(internal.workArea)
+  else win.setContentSize(1360, 860)
   await sleep(1500)
   await run(`${store}.setProject(${JSON.stringify(project)})`)
   await run(`${store}.set({ tab: 'files' })`)
@@ -31,7 +34,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
   }
-  await open('src/main/git.ts')
+  await open('src/main/git/git.ts')
   await snap('01-archivos-y-editor', 1800)
   await open('docs/demo/Contador.tsx')
   await snap('02-sintaxis-tsx')
@@ -92,6 +95,17 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('agentes-reales', 3000)
     console.log('carpeta de ejemplo:', dir)
     await run(`${store}.set({ panes: [], activePane: null })`)
+  }
+  if (process.env.ORCHES_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
+    const sample = '# Orches\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+    await run(`window.api.context.ensure(${JSON.stringify(project)}).then((f) => window.api.fs.write(f, ${JSON.stringify(sample)}, false))`)
+    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/orches-docs'] })`)
+    await snap('21-contexto', 1500)
+    await run(`${store}.set({ tab: 'files' })`)
+    await snap('22-inicio', 800)
+    await run(`${store}.set({ modal: 'news', newsSince: null })`)
+    await snap('23-novedades', 800)
+    await run(`${store}.set({ modal: null })`)
   }
   if (process.env.ORCHES_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
     await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
