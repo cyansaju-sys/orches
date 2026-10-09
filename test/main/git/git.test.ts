@@ -1,5 +1,9 @@
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { joinSummary, numstatPath, opArgs, validBranchName } from '../../../src/main/git/git'
+import { joinSummary, numstatPath, opArgs, branches, checkoutDetached, status, validBranchName } from '../../../src/main/git/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
@@ -49,5 +53,45 @@ describe('nombres de rama', () => {
   it('acepta los habituales y rechaza los que git no admite', () => {
     for (const ok of ['feat/x', 'fix-1', 'release_1.2', 'a']) expect(validBranchName(ok)).toBe(true)
     for (const bad of ['', '-x', 'a b', 'a..b', 'a//b', 'x/', 'x.', 'x.lock', 'a~1', 'a:b']) expect(validBranchName(bad)).toBe(false)
+  })
+})
+
+describe('estado de un repositorio recién creado', () => {
+  it('se reconoce como repositorio aunque aún no tenga commits', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orches-git-'))
+    try {
+      execFileSync('git', ['-C', dir, 'init', '-q', '-b', 'main'])
+      writeFileSync(join(dir, '.gitignore'), 'tools\n')
+      const st = await status(dir)
+      expect(st.isRepo).toBe(true)
+      expect(st.branch).toBe('main')
+      expect(st.hasRemote).toBe(false)
+      expect(st.files.map((f) => f.path)).toEqual(['.gitignore'])
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+  it('una carpeta sin git no lo es', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orches-nogit-'))
+    try { expect((await status(dir)).isRepo).toBe(false) } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+})
+
+describe('ramas con su último commit', () => {
+  it('lista autor, hash y asunto, y permite colocarse sin crear rama', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'orches-branches-'))
+    const git = (...a: string[]): string => execFileSync('git', ['-C', dir, '-c', 'user.name=Ana', '-c', 'user.email=a@b.c', ...a], { encoding: 'utf8' })
+    try {
+      git('init', '-q', '-b', 'main')
+      writeFileSync(join(dir, 'a.txt'), 'x')
+      git('add', '.'); git('commit', '-q', '-m', 'feat: primero')
+      git('branch', 'otra')
+      const list = await branches(dir)
+      const main = list.find((b) => b.name === 'main')
+      expect(main).toMatchObject({ current: true, remote: false, author: 'Ana', subject: 'feat: primero' })
+      expect(main?.hash).toMatch(/^[0-9a-f]{7,}$/)
+      expect(main?.date).toBeGreaterThan(0)
+      expect(await checkoutDetached(dir, 'otra')).not.toMatch(/fatal|error/i)
+      expect((await branches(dir)).map((b) => b.name).sort()).toEqual(['main', 'otra'])      // HEAD suelto: no aparece «(HEAD detached…)» como rama
+      expect(await checkoutDetached(dir, '--x')).toBe('Referencia no válida')
+    } finally { rmSync(dir, { recursive: true, force: true }) }
   })
 })

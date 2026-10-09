@@ -6,7 +6,7 @@ import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
 import { layoutGraph, type GraphRow } from '@/lib/graphLayout'
 import { useStore } from '@/store'
 import { Menu, type MenuItem } from './Menu'
-import { Modal } from './ui'
+import { FIELD, Modal } from './ui'
 
 const COLORS = ['#8fa6c4', '#7ee0a1', '#e2c08d', '#ff8a9b', '#c792ea', '#4cc9b0', '#f0a674', '#82aaff']
 const STEP = 16, HEIGHT = 28, LIMIT = 400
@@ -209,7 +209,7 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
         <div className="flex flex-col gap-3 px-4 pb-4">
           <p className="text-[12px] text-muted">En el commit {SHORT(ask.commit)} · {ask.commit.subject}</p>
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit() }} spellCheck={false} placeholder={`Nombre de la ${label}`}
-            className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]" />
+            className={FIELD} />
           <div className="flex justify-end gap-2">{cancel}<button disabled={!valid || busy} onClick={submit} className={`${btn} bg-accent text-bg hover:brightness-110`}>Crear</button></div>
         </div>
       </Modal>

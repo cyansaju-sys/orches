@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MdAdd, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import type { McpAgent, McpScope, McpServer, McpSpec } from '@shared/types'
-import { Modal } from '@/components/ui'
+import { FIELD, Modal } from '@/components/ui'
 import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, SCOPE_LABELS, specFromServer, splitArgs } from '@/lib/mcp'
 import { useStore } from '@/store'
 
@@ -155,7 +155,7 @@ function Details({ server, all, installed, project, onClose, onChanged }: {
   )
 }
 
-const input = 'w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]'
+const input = FIELD
 
 function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgent[]; project: string | null; onClose: () => void; onDone: () => void }) {
   const toast = useStore((s) => s.toast)

@@ -16,6 +16,7 @@ export function GitView() {
   const openDiff = useStore((s) => s.openDiff)
   const set = useStore((s) => s.set)
   const [message, setMessage] = useState('')
+  const [phase, setPhase] = useState<'idle' | 'commit' | 'push' | 'pull' | 'done'>('idle')
   const [busy, setBusy] = useState(false)
   const area = useRef<HTMLTextAreaElement>(null)
   const [writing, setWriting] = useState('')            // agente que está redactando (vacío = ninguno)
@@ -33,6 +34,17 @@ export function GitView() {
     if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
   }, [message, git?.isRepo])
 
+  // cambios que llegan de fuera del botón (terminal, otro programa): se anima igual que al sincronizar aquí
+  const seen = useRef<{ project: string | null; remote: boolean; ahead: number; behind: number } | null>(null)
+  useEffect(() => {
+    if (!git?.isRepo) { seen.current = null; return }
+    const prev = seen.current
+    seen.current = { project, remote: git.hasRemote, ahead: git.ahead, behind: git.behind }
+    if (!prev || prev.project !== project || busy) return                   // primera lectura, otro proyecto o cambio hecho por el botón
+    const synced = git.hasRemote && ((prev.ahead > 0 && git.ahead === 0) || (prev.behind > 0 && git.behind === 0))
+    if (synced) { setPhase('done'); setTimeout(() => setPhase('idle'), 1400) }
+  }, [git?.isRepo, git?.hasRemote, git?.ahead, git?.behind, project])  // eslint-disable-line react-hooks/exhaustive-deps
+
   // al salir del apartado se deja de redactar el mensaje
   useEffect(() => () => { void window.api.ai.cancel('commit') }, [])
 
@@ -47,6 +59,15 @@ export function GitView() {
     if (error) toast(`${label}: ${error}`, 'error')
     return !error
   }
+  const hasMessage = message.trim().length > 0
+  // sin rama remota asociada no se sabe cuántos commits faltan: se ofrece subir en cuanto no queden cambios por confirmar
+  const canPush = git.ahead > 0 || (!git.hasUpstream && git.files.length === 0)
+  const action = !git.hasRemote ? { label: 'Commit', icon: 'commit', ready: hasMessage, count: 0, hint: 'No hay repositorio remoto: solo se puede hacer commit' }
+    : hasMessage ? { label: 'Commit', icon: 'commit', ready: true, count: 0, hint: 'Hace el commit; después podrás subirlo con Push' }
+    : git.hasUpstream && git.behind > 0 ? { label: 'Pull', icon: 'pull', ready: true, count: git.behind, hint: `Faltan ${git.behind} commits del remoto` }
+    : canPush ? { label: 'Push', icon: 'push', ready: true, count: git.ahead, hint: 'Sube los commits pendientes' }
+    : { label: 'Commit', icon: 'commit', ready: false, count: 0, hint: 'Escribe un mensaje para hacer commit' }
+  const iconKey = `${phase}-${action.icon}`
   const staged = git.files.filter((f) => f.index && f.index !== '?')
   const changes = git.files.filter((f) => f.work || f.index === '?')
 
@@ -63,12 +84,26 @@ export function GitView() {
     else toast('Se canceló el mensaje del commit', 'info')
   }
 
-  const commit = async (): Promise<void> => {
-    if (!message.trim()) { toast('Escribe el mensaje del commit', 'error'); return }
-    if (await run('Commit', () => window.api.git.commit(project, message.trim()))) { setMessage(''); setAuthor(''); toast('Commit hecho', 'ok') }
+  const flash = (): void => { setPhase('done'); setTimeout(() => setPhase('idle'), 1400) }
+  /** El botón único, un paso por pulsación: con mensaje hace commit; después pasa a «Push» (o «Pull» si faltan commits del remoto). */
+  const sync = async (): Promise<void> => {
+    if (busy) return
+    const text = message.trim()
+    if (text) {
+      setPhase('commit')
+      if (!(await run('Commit', () => window.api.git.commit(project, text)))) { setPhase('idle'); return }
+      setMessage(''); setAuthor('')
+      flash()          // el siguiente paso, subirlo, es otra pulsación: el botón pasa a «Push»
+    } else if (!git.hasRemote) toast('No hay repositorio remoto', 'error')
+    else if (git.hasUpstream && git.behind > 0) {
+      setPhase('pull')
+      if (await run('Pull', () => window.api.git.pull(project))) { flash() } else setPhase('idle')
+    } else if (canPush) {
+      setPhase('push')
+      if (await run('Push', () => window.api.git.push(project))) { flash() } else setPhase('idle')
+    } else toast('Escribe el mensaje del commit', 'error')
   }
-  const pull = async (): Promise<void> => { if (await run('Pull', () => window.api.git.pull(project))) toast('Cambios traídos', 'ok') }
-  const push = async (): Promise<void> => { if (await run('Push', () => window.api.git.push(project))) toast('Cambios subidos', 'ok') }
+  const commit = sync
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
@@ -99,7 +134,7 @@ export function GitView() {
           onChange={(e) => { setMessage(e.target.value); setAuthor('') }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void commit() } }}
           placeholder={writing ? `${writing} está redactando el mensaje…` : 'Mensaje de commit'}
-          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md border border-line bg-surface py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none transition-colors placeholder:text-muted focus:border-accent"
+          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md bg-white/[0.04] py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none placeholder:text-muted/70"
         />
         <button
           title="Generar el mensaje con un agente (Conventional Commits)" disabled={!!writing || busy} onClick={() => void suggest()}
@@ -117,20 +152,24 @@ export function GitView() {
           </span>
         </div>
       )}
-      <div className="flex gap-2">
-        <button disabled={busy} onClick={() => void commit()} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-raised py-1.5 text-[12px] font-medium transition-colors hover:bg-accent-bg disabled:opacity-50">
-          <MdCheck size={15} /> Commit
-        </button>
-        {git.hasUpstream && git.behind > 0 ? (
-          <button disabled={busy} onClick={() => void pull()} title={`Faltan ${git.behind} commits del remoto`} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-raised py-1.5 text-[12px] font-medium transition-colors hover:bg-accent-bg disabled:opacity-50">
-            <MdArrowDownward size={15} /> Pull <span className="text-accent">{git.behind}</span>
-          </button>
-        ) : (
-          <button disabled={busy} onClick={() => void push()} className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-raised py-1.5 text-[12px] font-medium transition-colors hover:bg-accent-bg disabled:opacity-50">
-            <MdArrowUpward size={15} /> Push{git.ahead > 0 && <span className="text-accent">{git.ahead}</span>}
-          </button>
-        )}
-      </div>
+      <button disabled={busy} onClick={() => void sync()} title={action.hint}
+        className={clsx('relative flex items-center justify-center gap-2 overflow-hidden rounded-md py-2 text-[12px] font-medium transition-colors disabled:cursor-default',
+          phase === 'done' ? 'bg-ok/20 text-ok' : action.ready ? 'bg-accent text-bg hover:brightness-110' : 'bg-raised text-muted hover:bg-accent-bg')}>
+        {busy && <span className="pointer-events-none absolute inset-0 animate-sweep bg-gradient-to-r from-transparent via-white/25 to-transparent" />}
+        <span className="relative flex items-center gap-2">
+          {/* el icono se vuelve a montar al cambiar (key), así entra con su animación */}
+          <span key={iconKey} className="grid size-4 animate-icon-swap place-items-center">
+            {phase === 'done' ? <MdCheck size={16} className="animate-check-pop" />
+              : phase === 'pull' ? <MdArrowDownward size={16} className="animate-bounce" />
+              : busy || action.icon === 'push' ? <MdArrowUpward size={16} className={busy ? 'animate-arrow-up' : ''} />
+              : action.icon === 'pull' ? <MdArrowDownward size={16} />
+              : <MdCheck size={16} />}
+          </span>
+          {phase === 'commit' ? 'Haciendo commit…' : phase === 'push' ? 'Subiendo…' : phase === 'pull' ? 'Trayendo…' : phase === 'done' ? 'Listo' : action.label}
+          {phase === 'idle' && action.count > 0 && <span className="rounded-full bg-black/20 px-1.5 text-[10px]">{action.count}</span>}
+        </span>
+      </button>
+      {!git.hasRemote && <p className="-mt-1 px-1 text-center text-[10px] text-muted">No hay repositorio remoto</p>}
       <button onClick={() => set({ modal: 'branches' })} className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-accent-bg">
         <MdCallSplit size={15} className="text-accent" />
         <span className="text-[13px] font-semibold">{git.branch}</span>

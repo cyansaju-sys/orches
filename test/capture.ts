@@ -48,6 +48,18 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await snap('06-elegir-agente')
   await run(`${store}.set({ modal: 'branches' })`)
   await snap('06b-ramas')
+  // explorador: el campo de nombre dentro del propio árbol
+  await run(`${store}.set({ modal: null, tab: 'files' })`)
+  await run(`document.querySelector('[title="Nueva carpeta"]')?.click()`)
+  await snap('06c-nueva-carpeta', 500)
+  await run(`document.activeElement?.blur()`)
+  // varias terminales: procesos `cat` (así no sale el prompt de tu shell) con un poco de texto escrito
+  await run(`${store}.set({ shells: [{ id: 's1', kind: 'shell', title: 'zsh', command: 'cat', args: [], cwd: ${JSON.stringify(project)} }, { id: 's2', kind: 'shell', title: 'node', command: 'cat', args: [], cwd: ${JSON.stringify(project)} }, { id: 's3', kind: 'shell', title: 'zsh', command: 'cat', args: [], cwd: ${JSON.stringify(project)} }], shellActive: 's2', activePane: 's2' })`)
+  await sleep(1800)
+  pty.write('s2', '$ npm run dev\r')
+  pty.write('s2', 'VITE v5 ready in 412 ms\r')
+  await snap('06d-terminales', 800)
+  await run(`${store}.closeShells()`)
   await run(`${store}.set({ modal: 'shortcuts' })`)
   await snap('07-atajos')
   await run(`${store}.set({ modal: null }); ${store}.toast('Commit hecho', 'ok'); ${store}.toast('No se pudo iniciar «claude»: comando no encontrado', 'error')`)

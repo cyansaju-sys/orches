@@ -13,6 +13,8 @@ export interface Pane {
   id: string; kind: 'agent' | 'shell'; title: string; command: string; args: string[]; cwd: string
   name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
 }
+/** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral y archivos abiertos. */
+interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null }
 export interface Toast { id: number; kind: ToastKind; message: string }
 
 interface State {
@@ -84,8 +86,28 @@ export const useStore = create<State>((set, get) => ({
   set: (patch) => set(patch),
 
   setProject: (path) => {
-    set({ project: path, git: null })
+    const prev = get().project
+    if (path === prev) return
+    const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
+    if (dirty.length && !window.confirm(`Hay ${dirty.length} archivo(s) con cambios sin guardar. ¿Cambiar de proyecto y descartarlos?`)) return
+    // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
+    const state = get()
+    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined).map((d) => d.path), activeDoc: state.activeDoc }
+    // se cierra todo: agentes, terminales y archivos
+    ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
+    set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })
     void window.api.settings.set('project', path)
+    void (async () => {
+      const configs = { ...(((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}) }
+      if (prev) configs[prev] = leaving
+      void window.api.settings.set('project_configs', configs)
+      const known = path ? configs[path] : undefined
+      if (!path || !known || get().project !== path) return       // proyecto nuevo: se queda limpio
+      set({ tab: known.tab })                                       // ya conocido: se recupera su configuración
+      for (const f of known.docs) await get().openDoc(f)
+      if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
+      set({ focus: 'tree' })
+    })()
     if (!path) return
     const recentProjects = [path, ...get().recentProjects.filter((p) => p !== path)].slice(0, 10)
     set({ recentProjects })

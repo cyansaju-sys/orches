@@ -24,9 +24,13 @@ export function statusCode(xy: string): string {
 }
 
 export async function status(root: string): Promise<GitStatus> {
-  const empty: GitStatus = { isRepo: false, branch: '', ahead: 0, behind: 0, hasUpstream: false, files: [] }
-  const branch = await run(root, ['rev-parse', '--abbrev-ref', 'HEAD'])
-  if (!branch.ok) return empty
+  const empty: GitStatus = { isRepo: false, branch: '', ahead: 0, behind: 0, hasUpstream: false, hasRemote: false, files: [] }
+  // symbolic-ref funciona también en un repositorio recién creado, sin ningún commit (rev-parse --abbrev-ref HEAD falla ahí)
+  let branch = await run(root, ['symbolic-ref', '--short', '-q', 'HEAD'])
+  if (!branch.ok) {
+    branch = await run(root, ['rev-parse', '--abbrev-ref', 'HEAD'])      // HEAD suelto: devuelve «HEAD»
+    if (!branch.ok) return empty
+  }
   const res = await run(root, ['status', '--porcelain=v1', '-z', '-uall'])
   const parts = res.out.split('\0').filter(Boolean)
   const files = []
@@ -39,7 +43,8 @@ export async function status(root: string): Promise<GitStatus> {
   }
   const sync = await run(root, ['rev-list', '--left-right', '--count', '@{u}...HEAD'])
   const [behind, ahead] = sync.ok ? sync.out.trim().split(/\s+/).map(Number) : [0, 0]
-  return { isRepo: true, branch: branch.out.trim(), ahead: ahead || 0, behind: behind || 0, hasUpstream: sync.ok, files }
+  const remotes = await run(root, ['remote'])
+  return { isRepo: true, hasRemote: remotes.ok && remotes.out.trim().length > 0, branch: branch.out.trim(), ahead: ahead || 0, behind: behind || 0, hasUpstream: sync.ok, files }
 }
 
 export async function ignored(root: string, paths: string[]): Promise<string[]> {
@@ -175,17 +180,23 @@ export async function push(root: string): Promise<string> {
 }
 
 export async function branches(root: string): Promise<GitBranch[]> {
-  const res = await run(root, ['branch', '-a', '--format=%(refname:short)\t%(HEAD)'])
+  const res = await run(root, ['branch', '-a', '--format=%(refname:short)\t%(HEAD)\t%(committerdate:unix)\t%(authorname)\t%(objectname:short)\t%(contents:subject)'])
   if (!res.ok) return []
   const seen = new Set<string>()
   const out: GitBranch[] = []
   for (const line of res.out.split('\n').filter(Boolean)) {
-    const [name, head] = line.split('\t')
-    if (!name || name.endsWith('/HEAD') || name === 'origin' || seen.has(name)) continue
+    const [name, head, date, author, hash, ...subject] = line.split('\t')
+    if (!name || name.startsWith('(') || name.endsWith('/HEAD') || name === 'origin' || seen.has(name)) continue
     seen.add(name)
-    out.push({ name, current: head === '*', remote: name.includes('/') && name.startsWith('origin/') })
+    out.push({ name, current: head === '*', remote: name.includes('/') && name.startsWith('origin/'), date: Number(date) * 1000 || undefined, author, hash, subject: subject.join('\t') })
   }
-  return out
+  return out.sort((a, b) => (b.date ?? 0) - (a.date ?? 0))      // lo más reciente primero
+}
+
+/** Se coloca en un commit o rama sin crear ninguna (HEAD suelto): para mirar o probar algo sin tocar ramas. */
+export async function checkoutDetached(root: string, ref: string): Promise<string> {
+  if (!REF_NAME.test(ref) || ref.includes('..')) return 'Referencia no válida'
+  return flat(await run(root, ['checkout', '--detach', ref]))
 }
 
 export const checkout = async (root: string, name: string, remote: boolean): Promise<string> =>

@@ -82,24 +82,36 @@ con colores, marcas de git en el margen (verde añadido, azul modificado, rojo b
 `Ctrl+S` para guardar y recarga automática si otra herramienta cambia el archivo. El permiso **Edición** de la barra de título
 (o `Ctrl+Shift+L`) los deja en solo lectura. Con el árbol enfocado se navega con las flechas.
 
+La cabecera del árbol tiene los botones **Nuevo archivo**, **Nueva carpeta**, **Actualizar**, **Contraer todo** y **Abrir otro
+proyecto**; también puedes pulsar en un espacio vacío del árbol para crear algo en la raíz. El nombre se escribe en el propio
+árbol, como en VS Code (`Enter` crea, `Esc` cancela).
+
+**Cada proyecto recuerda lo suyo.** Al cambiar de proyecto se cierran sus agentes, terminales y archivos (si hay cambios sin
+guardar, antes pregunta), y al volver a uno ya conocido se recupera la pestaña de la barra lateral y los archivos que tenías
+abiertos. Los **tooltips** son propios y muestran el atajo de teclado como tecla.
+
 Con **clic derecho** sobre un archivo o carpeta:
 
 | Acción | Qué hace |
 |---|---|
 | **Enviar al agente** | Escribe la ruta (`@ruta` en los agentes que la entienden) en el prompt del agente activo, sin pulsar Enter |
-| **Nuevo archivo / Nueva carpeta** | Los crea dentro de la carpeta; el archivo se abre en el editor |
+| **Nuevo archivo / Nueva carpeta** | Los crea dentro de la carpeta con el campo de nombre en el árbol; el archivo se abre en el editor |
 | **Renombrar** | Las pestañas abiertas siguen el cambio de nombre |
 | **Copiar ruta / ruta relativa** | Al portapapeles, sin avisos |
 | **Borrar** | Pide confirmación y lo manda a la **papelera** (se puede recuperar) |
 
 ![Archivos y editor](docs/img/archivos-y-editor.png)
 
+![Nueva carpeta con el nombre escrito en el árbol](docs/img/nueva-carpeta.png)
+
 ![JSX y TypeScript con colores](docs/img/sintaxis.png)
 
 ### Agentes y terminal
 
 `Ctrl+Shift+N` abre un agente de los instalados. Se buscan en el `PATH`, en el de tu shell de login y en las carpetas habituales,
-así que funciona aunque lances la app desde el menú. `Ctrl+Shift+T` abre una shell en el proyecto como sección aparte.
+así que funciona aunque lances la app desde el menú. `Ctrl+Shift+T` abre una shell en el proyecto como sección aparte, con varias terminales en una lista a la derecha.
+
+![Varias terminales](docs/img/terminales.png)
 
 - **Detecta los más habituales** —Claude Code, OpenCode, Codex, Gemini CLI, Aider, Cursor, Goose, Amp, Qwen Code, Copilot CLI,
   Droid, Kimi, Crush, Kilo, Cline, Plandex, Auggie, Forge, Mistral Vibe, Warp— con su logo.
@@ -166,9 +178,11 @@ retomar, renombrar o borrar una sesión. De **Antigravity** se lee el historial 
 - **Mensaje de commit con IA.** La ✨ del campo de commit le pide a un agente instalado un mensaje en
   [Conventional Commits](https://www.conventionalcommits.org), a partir de **lo que tienes preparado**, y lo deja en el campo para
   que lo revises. Se ve qué agente lo redacta. Si ninguno responde, se arma con reglas sencillas sobre los archivos tocados.
-- **Pull o Push** según toque: si faltan cambios del remoto, el botón pasa a *Pull* (solo avance simple, nunca une a ciegas).
-- **Ramas** (`Ctrl+Shift+G` o el chip de la barra de título): búsqueda, cambio de rama y **creación** de una nueva eligiendo la rama
-  de origen y si te cambias a ella.
+- **Un solo botón, un paso por pulsación.** Con mensaje hace *Commit*; después pasa a *Push* o, si faltan cambios del remoto, a
+  *Pull* (solo avance simple, nunca une a ciegas), con una animación del progreso. Sin repositorio remoto solo ofrece commit.
+- **Ramas** (`Ctrl+Shift+G` o el chip de la barra de título): un selector al estilo de VS Code con la fecha y el último commit de cada
+  rama, búsqueda, cambio de rama, **crear** una nueva (desde la actual o *a partir de…* otra) y *desproteger* para ir a una rama o
+  commit sin crear rama. Funciona también en un repositorio recién creado, sin commits.
 
 ![Selector de ramas](docs/img/ramas.png)
 
