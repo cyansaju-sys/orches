@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdContentCopy, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdSend } from 'react-icons/md'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MdContentCopy, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
 import { Menu } from '@/components/Menu'
-import { Modal } from '@/components/ui'
+import { FIELD, Modal } from '@/components/ui'
 import { GIT_COLOR } from '@/lib/gitSync'
 import { iconFor } from '@/lib/icons'
 import { basename, relative, toPosix } from '@/lib/paths'
@@ -30,9 +30,11 @@ export function FilesView() {
   const [ignored, setIgnored] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ entry: DirEntry; anchor: DOMRect } | null>(null)
+  const [rootMenu, setRootMenu] = useState<DOMRect | null>(null)      // clic en un espacio vacío: crear en la raíz del proyecto
   const toast = useStore((s) => s.toast)
   const [ask, setAsk] = useState<Ask | null>(null)
   const box = useRef<HTMLDivElement>(null)
+  const creating = ask?.kind === 'create' ? ask : null
 
   const load = useCallback(async (dir: string) => {
     const entries = await window.api.fs.list(dir)
@@ -86,6 +88,12 @@ export function FilesView() {
     set({ focus: 'tree' })
     if (row.entry.isDir) toggle(row.entry.path)
     else void openDoc(row.entry.path)
+  }
+
+  /** Crea dentro de `dir`: se abre la carpeta y el campo de nombre aparece en el propio árbol. */
+  const startCreate = (dir: string, isDir: boolean): void => {
+    if (dir !== project) { setExpanded((p) => new Set(p).add(dir)); void load(dir) }
+    setAsk({ kind: 'create', dir, isDir })
   }
 
   const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast('No se pudo copiar', 'error')) }
@@ -159,20 +167,31 @@ export function FilesView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-2 pb-1">
-        <span title={project} className="truncate pl-2 text-[11px] text-muted">{basename(project)}</span>
-        <button title="Abrir otro proyecto" onClick={() => void chooseProject(setProject)} className="grid size-[26px] place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
-          <MdFolderOpen size={16} />
-        </button>
+        <span title={project} className="truncate pl-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{basename(project)}</span>
+        <div className="flex items-center">
+          {[
+            { title: 'Nuevo archivo', icon: <MdNoteAdd size={16} />, onClick: () => startCreate(project, false) },
+            { title: 'Nueva carpeta', icon: <MdCreateNewFolder size={16} />, onClick: () => startCreate(project, true) },
+            { title: 'Actualizar', icon: <MdRefresh size={16} />, onClick: reload },
+            { title: 'Contraer todo', icon: <MdUnfoldLess size={16} />, onClick: () => setExpanded(new Set()) },
+            { title: 'Abrir otro proyecto', icon: <MdFolderOpen size={16} />, onClick: () => void chooseProject(setProject) }
+          ].map((b) => (
+            <button key={b.title} title={b.title} onClick={b.onClick} className="grid size-[26px] place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">{b.icon}</button>
+          ))}
+        </div>
       </div>
-      <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className="min-h-0 flex-1 overflow-y-auto px-1 pb-2 outline-none">
-        {rows.length === 0 && <p className="px-3 py-1 text-[11px] text-muted">Carpeta vacía</p>}
+      <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className="min-h-0 flex-1 overflow-y-auto px-1 pb-2 outline-none"
+        onClick={(e) => { if (e.target === e.currentTarget) setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) }}
+        onContextMenu={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) } }}>
+        {creating && creating.dir === project && <NameInput isDir={creating.isDir} depth={0} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} />}
+        {rows.length === 0 && !creating && <p className="px-3 py-1 text-[11px] text-muted">Carpeta vacía</p>}
         {rows.map((row) => {
           const { entry, depth } = row
           const code = status.get(toPosix(relative(project, entry.path)))
           const color = code ? (GIT_COLOR[code] ?? '#e6e8ef') : undefined
           return (
+            <Fragment key={entry.path}>
             <button
-              key={entry.path}
               title={entry.path}
               onClick={() => activate(row)}
               onContextMenu={(e) => {
@@ -191,21 +210,29 @@ export function FilesView() {
               <span className="min-w-0 flex-1 truncate" style={{ color }}>{entry.name}</span>
               {code && <span className={clsx('shrink-0 font-semibold', code === '●' ? 'text-[9px]' : 'text-[11px]')} style={{ color }}>{code}</span>}
             </button>
+            {creating && creating.dir === entry.path && <NameInput isDir={creating.isDir} depth={depth + 1} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} />}
+            </Fragment>
           )
         })}
       </div>
+      {rootMenu && (
+        <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
+          { label: 'Nuevo archivo', icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },
+          { label: 'Nueva carpeta', icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(project, true) }
+        ]} />
+      )}
       {menu && (
         <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
           { label: 'Enviar al agente', icon: <MdSend size={14} />, onClick: () => sendToAgent(menu.entry) },
-          { label: 'Nuevo archivo', icon: <MdNoteAdd size={14} />, onClick: () => setAsk({ kind: 'create', dir: menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), isDir: false }) },
-          { label: 'Nueva carpeta', icon: <MdCreateNewFolder size={14} />, onClick: () => setAsk({ kind: 'create', dir: menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), isDir: true }) },
+          { label: 'Nuevo archivo', icon: <MdNoteAdd size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), false) },
+          { label: 'Nueva carpeta', icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), true) },
           { label: 'Renombrar', icon: <MdDriveFileRenameOutline size={14} />, onClick: () => setAsk({ kind: 'rename', entry: menu.entry }) },
           { label: 'Copiar ruta', icon: <MdContentCopy size={14} />, onClick: () => copy(menu.entry.path) },
           { label: 'Copiar ruta relativa', icon: <MdLink size={14} />, onClick: () => copy(toPosix(relative(project, menu.entry.path))) },
           { label: 'Borrar', icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entry: menu.entry }) }
         ]} />
       )}
-      {ask && <AskDialog ask={ask} onClose={() => setAsk(null)} onOk={(v) => void confirmAsk(v)} />}
+      {ask && ask.kind !== 'create' && <AskDialog ask={ask} onClose={() => setAsk(null)} onOk={(v) => void confirmAsk(v)} />}
     </div>
   )
 }
@@ -231,7 +258,7 @@ function AskDialog({ ask, onClose, onOk }: { ask: Ask; onClose: () => void; onOk
             autoFocus value={value} spellCheck={false} placeholder="Nombre"
             onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
             onFocus={(e) => { if (initial) e.currentTarget.setSelectionRange(0, initial.lastIndexOf('.') > 0 ? initial.lastIndexOf('.') : initial.length) }}
-            className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]"
+            className={FIELD}
           />
         )}
         <div className="flex justify-end gap-2">
@@ -242,5 +269,26 @@ function AskDialog({ ask, onClose, onOk }: { ask: Ask; onClose: () => void; onOk
         </div>
       </div>
     </Modal>
+  )
+}
+
+/** Campo de nombre dentro del árbol (como en VS Code): Enter crea, Esc o salir del campo cancela. */
+function NameInput({ isDir, depth, onOk, onCancel }: { isDir: boolean; depth: number; onOk: (value: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  const ready = useRef(false)
+  // el foco se pide tras montar: el menú que lo abrió acaba de cerrarse y no debe cancelarlo
+  useEffect(() => { const t = setTimeout(() => { input.current?.focus(); ready.current = true }, 30); return () => clearTimeout(t) }, [])
+  return (
+    <div style={{ paddingLeft: 6 + depth * 12 }} className="flex items-center gap-1.5 py-[3px] pr-1.5">
+      <img src={iconFor(value || 'archivo', isDir, false)} alt="" className="size-4 shrink-0" draggable={false} />
+      <input
+        ref={input} value={value} spellCheck={false} placeholder={isDir ? 'Nombre de la carpeta' : 'Nombre del archivo'}
+        onChange={(e) => setValue(e.target.value)} onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && value.trim()) onOk(value.trim()); else if (e.key === 'Escape') onCancel() }}
+        onBlur={() => { if (ready.current) onCancel() }}
+        className="min-w-0 flex-1 rounded-[3px] bg-white/[0.08] px-1.5 py-[1px] text-[12px] caret-accent outline-none placeholder:text-muted/70"
+      />
+    </div>
   )
 }

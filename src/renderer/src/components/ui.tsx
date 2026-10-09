@@ -68,14 +68,15 @@ export function Resizer({ onDrag, direction = 'x' }: { onDrag: (delta: number, d
 }
 
 /** Diálogo modal centrado arriba, se cierra con Esc o al pulsar fuera. */
-export function Modal({ onClose, children, width = 520, title }: { onClose: () => void; children: ReactNode; width?: number; title?: string }) {
+/** `top`: se ancla arriba y al centro (como los selectores rápidos), en vez de centrarse en vertical. */
+export function Modal({ onClose, children, width = 520, title, top }: { onClose: () => void; children: ReactNode; width?: number; title?: string; top?: boolean }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/12 backdrop-blur-[1px]" onMouseDown={onClose}>
+    <div className={`fixed inset-0 z-50 flex animate-fade-in justify-center bg-black/12 backdrop-blur-[1px] ${top ? 'items-start pt-[9vh]' : 'items-center'}`} onMouseDown={onClose}>
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ width }}
@@ -96,3 +97,6 @@ export function Modal({ onClose, children, width = 520, title }: { onClose: () =
 export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="rounded-md border border-line px-2 py-0.5 font-mono text-[10px] text-accent">{children}</kbd>
 }
+
+/** Aspecto común de los campos de texto: fondo suave, sin borde ni resaltado de foco. */
+export const FIELD = 'w-full rounded-md bg-white/[0.04] px-3 py-2 text-[12px] caret-accent outline-none placeholder:text-muted/70'

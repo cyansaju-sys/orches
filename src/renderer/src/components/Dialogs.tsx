@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdCallSplit, MdCloudQueue, MdSearch, MdTerminal } from 'react-icons/md'
 import type { AgentCandidate, GitBranch } from '@shared/types'
 import { newSince, parseChangelog } from '@/lib/changelog'
+import { ago } from '@/lib/format'
 import { refreshGit } from '@/lib/gitSync'
 import { SECTIONS } from '@/lib/shortcuts'
 import { useStore } from '@/store'
 import { AgentIcon } from './AgentIcon'
 import changelogText from '../../../../CHANGELOG.md?raw'
-import { Kbd, Modal } from './ui'
+import { FIELD, Kbd, Modal } from './ui'
 
 /** Coincidencia difusa: «clk» encuentra «Claude». */
 const matches = (text: string, query: string): boolean => {
@@ -18,16 +19,20 @@ const matches = (text: string, query: string): boolean => {
   return true
 }
 
-/** Lista con buscador y teclado: ↑↓ eligen, Enter acepta. `group` agrupa con títulos; `footer` va bajo la lista. */
-function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group }: {
+/**
+ * Selector rápido (estilo de los de VS Code): barra de búsqueda sin borde de foco arriba y filas planas debajo. ↑↓ eligen, Enter acepta.
+ * `extra` son filas que no se filtran (acciones) y van primero; `group` separa con una línea y rotula a la derecha; `footer` va bajo la lista.
+ */
+function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group, extra }: {
   placeholder: string; items: T[]; label: (i: T) => string; render: (i: T, active: boolean) => React.ReactNode
   onPick: (i: T, query: string) => void; empty: string; footer?: (query: string) => React.ReactNode; group?: (i: T) => string
+  extra?: (query: string) => T[]
 }) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLUListElement>(null)
-  const shown = useMemo(() => items.filter((i) => matches(label(i), query)), [items, query])  // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => [...(extra?.(query.trim()) ?? []), ...items.filter((i) => matches(label(i), query))], [items, query, extra])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => input.current?.focus(), [])
   useEffect(() => setIndex(0), [query])
   useEffect(() => { list.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' }) }, [index, shown])
@@ -39,15 +44,14 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
   let lastGroup = ''
   return (
     <div>
-      <div className="p-3 pb-2">
-        <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-3.5 transition-colors focus-within:bg-white/[0.07]">
-          <MdSearch size={17} className={clsx('transition-colors', query ? 'text-accent' : 'text-muted')} />
+      <div className="p-1.5 pb-1">
+        <div className="flex items-center rounded-md bg-white/[0.04] px-2.5">
           <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={key} placeholder={placeholder}
-            spellCheck={false} className="h-10 flex-1 bg-transparent text-[13px] caret-accent outline-none placeholder:text-muted/80" />
-          {query && <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted">{shown.length}</span>}
+            spellCheck={false} className="h-8 flex-1 bg-transparent text-[13px] caret-accent outline-none placeholder:text-muted/80" />
+          {query && <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted">{shown.length}</span>}
         </div>
       </div>
-      <ul ref={list} className="max-h-[340px] overflow-y-auto px-2 pb-2">
+      <ul ref={list} className="max-h-[420px] overflow-y-auto pb-1">
         {shown.map((item, i) => {
           const g = group?.(item) ?? ''
           const heading = g && g !== lastGroup ? g : ''
@@ -55,11 +59,11 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
           const active = i === index
           return (
             <li key={label(item)}>
-              {heading && <div className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/80">{heading}</div>}
+              {heading && i > 0 && <div className="mx-0 my-1 border-t border-white/[0.08]" />}
               <button data-active={active} onMouseMove={() => setIndex(i)} onClick={() => onPick(item, query)}
-                className={clsx('relative flex w-full items-center gap-3 rounded-lg px-3 py-[7px] text-left text-[13px] transition-colors', active ? 'bg-accent/[0.16]' : 'hover:bg-white/[0.03]')}>
-                <span className={clsx('absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-accent transition-opacity', active ? 'opacity-100' : 'opacity-0')} />
+                className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-white/[0.04]')}>
                 {render(item, active)}
+                {heading && <span className="absolute right-3 top-1.5 text-[11px] text-muted/80">{heading}</span>}
               </button>
             </li>
           )
@@ -67,7 +71,7 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
         {shown.length === 0 && !footer && <li className="px-3 py-4 text-center text-[12px] text-muted">{empty}</li>}
       </ul>
       {footer?.(query)}
-      <div className="flex items-center gap-4 border-t border-white/[0.06] bg-black/20 px-4 py-2 text-[10px] text-muted">
+      <div className="flex items-center gap-4 border-t border-white/[0.06] bg-black/20 px-3 py-1.5 text-[10px] text-muted">
         <span><Kbd>↑↓</Kbd> navegar</span><span><Kbd>↵</Kbd> elegir</span><span><Kbd>esc</Kbd> cerrar</span>
       </div>
     </div>
@@ -89,7 +93,7 @@ export function AgentPicker() {
   const openAgent = useStore((s) => s.openAgent)
   useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })) }, [set])
   return (
-    <Modal onClose={() => set({ modal: null, focus: 'pane' })} width={480}>
+    <Modal onClose={() => set({ modal: null, focus: 'pane' })} width={560}>
       {!project ? (
         <p className="px-4 py-5 text-[12px] text-muted">Abre un proyecto primero (pestaña Archivos)</p>
       ) : (
@@ -108,7 +112,7 @@ export function AgentPicker() {
   )
 }
 
-const field = 'w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]'
+const field = FIELD
 
 /** Añadir un agente que la app no conoce: se escribe su comando o se elige uno de los ejecutables instalados. */
 export function AddAgentDialog() {
@@ -168,89 +172,112 @@ export function AddAgentDialog() {
   )
 }
 
+type BranchItem =
+  | { kind: 'new' } | { kind: 'newFrom' } | { kind: 'detach' } | { kind: 'create'; name: string }
+  | { kind: 'branch'; b: GitBranch }
+type Step = { step: 'list' } | { step: 'base'; detach: boolean } | { step: 'name'; base?: string; initial: string }
+
+/** Selector de ramas al estilo de VS Code: acciones arriba (crear, crear desde…, desproteger) y las ramas con su último commit. */
 export function BranchPicker() {
   const set = useStore((s) => s.set)
   const project = useStore((s) => s.project)!
   const toast = useStore((s) => s.toast)
   const [branches, setBranches] = useState<GitBranch[]>([])
-  const [creating, setCreating] = useState<string | null>(null)       // nombre inicial del formulario de «nueva rama»; null = lista
+  const [view, setView] = useState<Step>({ step: 'list' })
   useEffect(() => { void window.api.git.branches(project).then(setBranches) }, [project])
-  const done = async (error: string, ok: string): Promise<void> => {
+  const done = async (error: string): Promise<void> => {
     await refreshGit()
-    if (error) toast(error, 'error'); else { toast(ok, 'ok'); set({ modal: null }) }
+    if (error) toast(error, 'error'); else set({ modal: null })
   }
   const close = (): void => set({ modal: null })
-  if (creating !== null) {
+
+  if (view.step === 'name') {
     return (
-      <Modal onClose={close} width={460} title="Nueva rama">
-        <NewBranchForm initial={creating} branches={branches} project={project} onBack={() => setCreating(null)} onDone={done} />
+      <Modal onClose={close} width={560}>
+        <NameStep initial={view.initial} base={view.base} branches={branches} project={project} onBack={() => setView({ step: 'list' })} onDone={done} />
       </Modal>
     )
   }
+  const picking = view.step === 'base'
+  const row = (b: GitBranch, active: boolean): React.ReactNode => (
+    <>
+      {b.remote ? <MdCloudQueue size={16} className={clsx('mt-0.5 shrink-0', active ? 'text-accent' : 'text-muted')} /> : <MdCallSplit size={16} className={clsx('mt-0.5 shrink-0', active ? 'text-accent' : 'text-muted')} />}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span className={clsx('truncate', b.current && 'font-semibold')}>{b.name}</span>
+          {b.date && <span className="shrink-0 text-[11px] text-muted">{ago(b.date)}</span>}
+          {b.current && <Tag tone="accent">actual</Tag>}
+        </span>
+        <span className="mt-0.5 block truncate text-[11px] text-muted">{[b.author, b.hash, b.subject].filter(Boolean).join(' • ')}</span>
+      </span>
+    </>
+  )
+  const action = (icon: React.ReactNode, text: string): React.ReactNode => <><span className="mt-0.5 shrink-0 text-muted">{icon}</span><span>{text}</span></>
   return (
-    <Modal onClose={close} width={460}>
-      <Palette
-        placeholder="Busca una rama…" items={branches} label={(b) => b.name} empty=""
-        group={(b) => (b.remote ? 'Remotas' : 'Locales')}
-        render={(b, active) => (<><Chip active={active || b.current}>{b.remote ? <MdCloudQueue size={15} /> : <MdCallSplit size={15} />}</Chip>
-          <span className={clsx('flex-1 truncate', b.current && 'font-semibold')}>{b.name}</span>{b.current && <Tag tone="accent">actual</Tag>}</>)}
-        onPick={(b, query) => {
-          if (b) { if (!b.current) void window.api.git.checkout(project, b.name, b.remote).then((e) => done(e, `Ahora en «${b.name}»`)) }
-          else if (query.trim()) setCreating(query.trim())              // sin coincidencias: se ofrece crearla
+    <Modal onClose={close} width={560}>
+      <Palette<BranchItem>
+        placeholder={picking ? (view.detach ? 'Elige la rama o commit al que ir (sin crear rama)' : 'Elige la rama base de la nueva rama') : 'Selecciona una rama para cambiarte o escribe un nombre para crear una'}
+        items={branches.map((b) => ({ kind: 'branch' as const, b }))} empty="Ninguna rama coincide"
+        label={(i) => (i.kind === 'branch' ? i.b.name : i.kind === 'create' ? `Crear ${i.name}` : i.kind)}
+        group={(i) => (i.kind === 'branch' ? (i.b.remote ? 'ramas remotas' : 'ramas') : '')}
+        extra={(q) => {
+          if (picking) return []
+          if (q && !branches.some((b) => b.name === q)) return [{ kind: 'create', name: q.replace(/\s+/g, '-') }]
+          return [{ kind: 'new' }, { kind: 'newFrom' }, { kind: 'detach' }]
         }}
-        footer={(query) => (
-          <button onClick={() => setCreating(query.trim())}
-            className="mx-2 mb-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-3 py-2 text-left text-[12px] text-muted transition-colors hover:bg-white/[0.04] hover:text-accent">
-            <Chip active><MdAdd size={15} /></Chip>
-            {query.trim() && !branches.some((b) => b.name === query.trim()) ? <>Crear la rama «{query.trim()}»…</> : <>Nueva rama…</>}
-          </button>)}
+        render={(i, active) => {
+          if (i.kind === 'branch') return row(i.b, active)
+          if (i.kind === 'create') return action(<MdAdd size={16} />, `Crear la rama «${i.name}»`)
+          if (i.kind === 'new') return action(<MdAdd size={16} />, 'Crear nueva rama…')
+          if (i.kind === 'newFrom') return action(<MdAdd size={16} />, 'Crear nueva rama a partir de…')
+          return action(<MdCallSplit size={16} />, 'Desproteger desasociación…')
+        }}
+        onPick={(i, query) => {
+          if (!i) { if (query.trim() && !picking) setView({ step: 'name', initial: query.trim().replace(/\s+/g, '-') }); return }
+          if (i.kind === 'new') setView({ step: 'name', initial: '' })
+          else if (i.kind === 'create') setView({ step: 'name', initial: i.name })
+          else if (i.kind === 'newFrom') setView({ step: 'base', detach: false })
+          else if (i.kind === 'detach') setView({ step: 'base', detach: true })
+          else if (picking && view.detach) void window.api.git.checkoutDetached(project, i.b.name).then(done)
+          else if (picking) setView({ step: 'name', initial: '', base: i.b.name })
+          else if (!i.b.current) void window.api.git.checkout(project, i.b.name, i.b.remote).then(done)
+          else close()
+        }}
       />
     </Modal>
   )
 }
 
-/** Formulario de «nueva rama»: nombre, rama de origen y si te cambias a ella. */
-function NewBranchForm({ initial, branches, project, onBack, onDone }: {
-  initial: string; branches: GitBranch[]; project: string; onBack: () => void; onDone: (error: string, ok: string) => Promise<void>
+/** Último paso de «nueva rama»: solo el nombre (Enter crea y te cambia a ella; Esc cancela). */
+function NameStep({ initial, base, branches, project, onBack, onDone }: {
+  initial: string; base?: string; branches: GitBranch[]; project: string; onBack: () => void; onDone: (error: string) => Promise<void>
 }) {
-  const current = branches.find((b) => b.current)?.name ?? ''
-  const [name, setName] = useState(initial.replace(/\s+/g, '-'))
-  const [base, setBase] = useState(current)
-  const [switchTo, setSwitchTo] = useState(true)
+  const [name, setName] = useState(initial)
   const [busy, setBusy] = useState(false)
-  useEffect(() => { if (!base && current) setBase(current) }, [current, base])
   const valid = /^(?!-)[A-Za-z0-9._/-]+$/.test(name) && !name.includes('..') && !name.includes('//') && !/[/.]$/.test(name) && !name.endsWith('.lock')
   const taken = branches.some((b) => !b.remote && b.name === name)
+  const from = base ?? branches.find((b) => b.current)?.name ?? 'HEAD'
   const create = async (): Promise<void> => {
     if (!valid || taken || busy) return
     setBusy(true)
-    const error = await window.api.git.createBranch(project, name, base || undefined, switchTo)
+    const error = await window.api.git.createBranch(project, name, base, true)
     setBusy(false)
-    await onDone(error, switchTo ? `Rama «${name}» creada y activa` : `Rama «${name}» creada`)
+    await onDone(error)
   }
-  const field = 'w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]'
+  const problem = name && !valid ? 'Nombre no válido: sin espacios, «..», ni empezar con «-» ni terminar en «/» o «.»' : taken ? 'Ya existe una rama con ese nombre' : ''
   return (
-    <div className="flex flex-col gap-3 px-4 pb-4">
-      <div>
-        <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Nombre</div>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void create() }} spellCheck={false} placeholder="feat/mi-rama" className={field} />
-        {name && !valid && <p className="pt-1 text-[11px] text-danger">Nombre no válido: sin espacios, «..», ni empezar con «-» ni terminar en «/» o «.»</p>}
-        {taken && <p className="pt-1 text-[11px] text-danger">Ya existe una rama con ese nombre</p>}
+    <div>
+      <div className="p-1.5 pb-1">
+        <div className={clsx('flex items-center rounded-md border bg-white/[0.04] px-2.5', problem ? 'border-danger/70' : 'border-transparent')}>
+          <input autoFocus value={name} spellCheck={false} placeholder="Nombre de la rama nueva (feat/mi-rama)"
+            onChange={(e) => setName(e.target.value.replace(/\s+/g, '-'))}
+            onKeyDown={(e) => { if (e.key === 'Enter') void create(); else if (e.key === 'Escape') { e.stopPropagation(); onBack() } }}
+            className="h-8 flex-1 bg-transparent text-[13px] caret-accent outline-none placeholder:text-muted/80" />
+        </div>
       </div>
-      <div>
-        <div className="pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Crear desde</div>
-        <select value={base} onChange={(e) => setBase(e.target.value)} className={`${field} appearance-none`}>
-          {branches.map((b) => <option key={`${b.remote}${b.name}`} value={b.name} className="bg-[#0f121a]">{b.name}{b.current ? ' (actual)' : ''}{b.remote ? ' · remota' : ''}</option>)}
-        </select>
-      </div>
-      <label className="flex cursor-pointer items-center gap-2.5 text-[12px]">
-        <input type="checkbox" checked={switchTo} onChange={(e) => setSwitchTo(e.target.checked)} className="size-3.5 accent-[var(--color-accent)]" />
-        Cambiarme a la rama nueva
-      </label>
-      <div className="flex justify-end gap-2">
-        <button onClick={onBack} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Volver</button>
-        <button disabled={!valid || taken || busy} onClick={() => void create()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-50">{busy ? 'Creando…' : 'Crear rama'}</button>
-      </div>
+      <p className={clsx('px-3 pb-2 pt-1 text-[11px]', problem ? 'text-danger' : 'text-muted')}>
+        {problem || (busy ? 'Creando…' : <>Se creará desde <span className="text-text">{from}</span> y te cambiarás a ella. Pulsa Enter para confirmar o Esc para cancelar.</>)}
+      </p>
     </div>
   )
 }

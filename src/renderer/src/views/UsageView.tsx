@@ -4,7 +4,7 @@ import { MdDeleteOutline, MdDeleteSweep, MdEdit, MdKeyboardArrowDown, MdKeyboard
 import type { AgentUsage, LimitInfo, SessionInfo, UsageData } from '@shared/types'
 import { AgentIcon } from '@/components/AgentIcon'
 import { Menu } from '@/components/Menu'
-import { Modal } from '@/components/ui'
+import { FIELD, Modal } from '@/components/ui'
 import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
 import { basename } from '@/lib/paths'
 import { useStore } from '@/store'
@@ -203,7 +203,7 @@ function RenameDialog({ session, current, onClose, onSaved }: { session: Session
     <Modal onClose={onClose} width={420} title="Renombrar sesión">
       <div className="px-4 pb-4">
         <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save() }} spellCheck={false}
-          className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors focus:border-accent/40 focus:bg-white/[0.045]" />
+          className={FIELD} />
         <p className="mt-2 text-[10px] text-muted">Solo cambia el nombre que ves aquí; no toca los archivos del agente. Vacío vuelve al original.</p>
         <div className="mt-3 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>

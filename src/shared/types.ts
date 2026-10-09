@@ -13,8 +13,9 @@ export interface FileData {
 }
 
 export interface GitFile { path: string; index: string; work: string; code: string }
-export interface GitStatus { isRepo: boolean; branch: string; ahead: number; behind: number; hasUpstream: boolean; files: GitFile[] }
-export interface GitBranch { name: string; current: boolean; remote: boolean }
+export interface GitStatus { isRepo: boolean; branch: string; ahead: number; behind: number; hasUpstream: boolean; hasRemote: boolean; files: GitFile[] }
+/** Rama con su último commit (fecha en ms, autor, hash corto y asunto) para mostrarla en el selector. */
+export interface GitBranch { name: string; current: boolean; remote: boolean; date?: number; author?: string; hash?: string; subject?: string }
 export type GitMarks = Record<number, 'added' | 'modified' | 'deleted'>
 
 /** `custom`: lo añadió el usuario (no está en la lista conocida). `args`: argumentos fijos con los que se arranca. */
@@ -108,6 +109,7 @@ export interface Api {
     commit(root: string, message: string): Promise<string>
     push(root: string): Promise<string>
     branches(root: string): Promise<GitBranch[]>
+    checkoutDetached(root: string, ref: string): Promise<string>
     checkout(root: string, name: string, remote: boolean): Promise<string>
     createBranch(root: string, name: string, base?: string, switchTo?: boolean): Promise<string>
     marks(file: string): Promise<GitMarks>

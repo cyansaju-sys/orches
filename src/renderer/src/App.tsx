@@ -6,6 +6,7 @@ import { Sidebar, TABS } from '@/components/Sidebar'
 import { Toasts } from '@/components/Toasts'
 import { TitleBar } from '@/components/TitleBar'
 import { Resizer } from '@/components/ui'
+import { Tooltips } from '@/components/Tooltip'
 import { refreshGit } from '@/lib/gitSync'
 import { isGlobalShortcut } from '@/lib/shortcuts'
 import { loadIconTheme } from '@/lib/icons'
@@ -149,6 +150,7 @@ export function App() {
       {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
       <Toasts />
+      <Tooltips />
     </div>
   )
 }

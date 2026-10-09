@@ -74,6 +74,7 @@ function registerIpc(): void {
   ipcMain.handle('git:commit', (_e, root: string, message: string) => git.commit(root, message))
   ipcMain.handle('git:push', (_e, root: string) => git.push(root))
   ipcMain.handle('git:branches', (_e, root: string) => git.branches(root))
+  ipcMain.handle('git:checkout-detached', (_e, root: string, ref: string) => git.checkoutDetached(root, ref))
   ipcMain.handle('git:checkout', (_e, root: string, name: string, remote: boolean) => git.checkout(root, name, remote))
   ipcMain.handle('git:createBranch', (_e, root: string, name: string, base?: string, switchTo?: boolean) => git.createBranch(root, name, base, switchTo))
   ipcMain.handle('git:show', (_e, root: string, rev: string, path: string) => git.show(root, rev, path))

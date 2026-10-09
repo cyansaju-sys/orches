@@ -2,6 +2,17 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Orches las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.0.6
+
+- **Explorador más completo:** la cabecera del árbol tiene botones para nuevo archivo, nueva carpeta, actualizar, contraer todo y abrir otro proyecto. También puedes crear en la raíz pulsando un espacio vacío.
+- **Nombre dentro del árbol:** al crear un archivo o carpeta, el nombre se escribe en el propio árbol, como en VS Code (Enter crea, Esc cancela).
+- **Cada proyecto recuerda lo suyo:** al volver a un proyecto se recupera la pestaña de la barra lateral y los archivos que tenías abiertos. Al cambiar de proyecto se cierran agentes, terminales y archivos, y si hay cambios sin guardar te pregunta antes.
+- **Un solo botón en Git:** con mensaje hace Commit; después pasa a Push, o a Pull si faltan cambios del remoto, con una animación del progreso. Sin repositorio remoto solo ofrece commit.
+- **Selector de ramas nuevo:** al estilo de VS Code, con la fecha y el último commit de cada rama. Permite crear una rama, crearla a partir de otra y desproteger para ir a una rama o commit sin crear rama.
+- **Repositorios recién creados:** Git ya funciona en un repositorio sin ningún commit.
+- **Tooltips propios** que muestran el atajo de teclado como tecla.
+- **Campos de texto más limpios:** sin borde ni resaltado de foco, con el mismo aspecto en toda la app.
+
 ## 1.0.5
 
 - **Varias terminales:** el panel de terminal ahora admite varias a la vez, con barra de acciones (nueva, maximizar, cerrar) y una lista al costado. El chip «Terminal» de la barra de título abre un menú.

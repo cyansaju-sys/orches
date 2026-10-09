@@ -84,7 +84,7 @@ export function ContextView() {
       </div>
       <textarea value={text} onChange={(e) => change(e.target.value)} disabled={!file} spellCheck={false}
         placeholder="Qué es el proyecto, cómo se ejecuta, convenciones…"
-        className="min-h-0 flex-1 resize-none rounded-md border border-line bg-surface p-2.5 font-mono text-[12px] leading-relaxed text-text outline-none focus:border-accent" />
+        className="min-h-0 flex-1 resize-none rounded-md bg-white/[0.04] p-2.5 font-mono text-[12px] leading-relaxed text-text outline-none" />
       <div className="flex items-center justify-between px-1 text-[10px] text-muted">
         <span title={file ?? ''} className="min-w-0 truncate">{file ?? ''}</span>
         <span className="shrink-0">{state === 'saving' ? 'Guardando…' : state === 'saved' ? 'Guardado' : ''}</span>
