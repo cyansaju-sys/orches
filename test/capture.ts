@@ -93,6 +93,17 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     console.log('carpeta de ejemplo:', dir)
     await run(`${store}.set({ panes: [], activePane: null })`)
   }
+  if (process.env.ORCHES_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
+    const sample = '# Orches\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+    await run(`window.api.context.ensure(${JSON.stringify(project)}).then((f) => window.api.fs.write(f, ${JSON.stringify(sample)}, false))`)
+    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context' })`)
+    await snap('21-contexto', 1500)
+    await run(`${store}.set({ tab: 'files', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/orches-docs'] })`)
+    await snap('22-inicio', 800)
+    await run(`${store}.set({ modal: 'news', newsSince: null })`)
+    await snap('23-novedades', 800)
+    await run(`${store}.set({ modal: null })`)
+  }
   if (process.env.ORCHES_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
     await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
     await snap('14-actualizar-disponible', 500)

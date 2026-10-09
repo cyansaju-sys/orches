@@ -221,6 +221,7 @@ Todas por variable de entorno:
 |---|---|
 | `ORCHES_MCP_LOG=1` | Imprime cada petición que reciben los servidores MCP |
 | `ORCHES_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
+| `ORCHES_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
 | `ORCHES_CAPTURE_GRAPH=1` · `ORCHES_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
 | `ORCHES_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
 | `ORCHES_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
