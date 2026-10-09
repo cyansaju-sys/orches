@@ -18,7 +18,7 @@ function wire(): void {
   window.api.pty.onData((id, data) => terms.get(id)?.write(data))
   window.api.pty.onExit(({ id, code }) => {
     spawned.delete(id)
-    const pane = [...useStore.getState().panes, useStore.getState().shell].find((p) => p?.id === id)
+    const pane = [...useStore.getState().panes, ...useStore.getState().shells].find((p) => p.id === id)
     const name = pane?.command.split(/[\\/]/).pop() ?? 'El proceso'
     const toast = useStore.getState().toast
     if (code === 0) toast(`«${name}» terminó`, 'info')

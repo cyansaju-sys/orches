@@ -23,7 +23,7 @@ export function IconButton({ title, onClick, children, className, danger }: {
 
 /** Chip pulsable de la barra de título. */
 export function Chip({ icon, label, onClick, title, active }: {
-  icon: ReactNode; label: string; onClick?: () => void; title?: string; active?: boolean
+  icon: ReactNode; label: string; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void; title?: string; active?: boolean
 }) {
   return (
     <button

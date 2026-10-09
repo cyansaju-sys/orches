@@ -14,7 +14,7 @@ import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState 
 import * as mcp from './mcp'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './usage/usage'
 import { runSelfTest } from './selftest'
-import { newId, startHub, stopHub } from './agents/hub'
+import { clearTasks, newId, startHub, stopHub, taskList } from './agents/hub'
 
 if (process.argv.includes('--orches-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -97,6 +97,8 @@ function registerIpc(): void {
   ipcMain.handle('update:install', () => installUpdate())
   ipcMain.handle('update:version', () => app.getVersion())
   ipcMain.handle('orchestra:newId', () => newId())
+  ipcMain.handle('orchestra:tasks', () => taskList())
+  ipcMain.handle('orchestra:tasks-clear', () => clearTasks())
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
   ipcMain.handle('agents:candidates', () => candidateExecutables())

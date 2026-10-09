@@ -29,7 +29,9 @@ interface State {
   docs: Doc[]
   activeDoc: string | null
   panes: Pane[]
-  shell: Pane | null
+  shells: Pane[]
+  shellActive: string | null
+  shellMax: boolean
   activePane: string | null
   focus: Focus
   git: GitStatus | null
@@ -57,6 +59,8 @@ interface State {
   openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string }) => Promise<void>
   addPane: (pane: Pane) => void
   toggleShell: () => Promise<void>
+  addShell: () => Promise<void>
+  closeShells: () => void
   closePane: (id: string) => void
   setEdit: (enabled: boolean) => void
 }
@@ -74,7 +78,7 @@ const guessKind = (m: string): ToastKind => {
 
 export const useStore = create<State>((set, get) => ({
   project: null, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
-  docs: [], activeDoc: null, panes: [], shell: null, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
+  docs: [], activeDoc: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
   maximized: false, agents: [], update: { status: 'idle' },
 
   set: (patch) => set(patch),
@@ -178,19 +182,27 @@ export const useStore = create<State>((set, get) => ({
   /** Un agente pidió abrir otro (reparto de tareas): se añade su panel y la terminal inicia el proceso con la tarea. */
   addPane: (pane) => set((s) => (s.panes.some((p) => p.id === pane.id) ? s : { panes: [...s.panes, pane] })),
   toggleShell: async () => {
-    if (get().shell) { window.api.pty.kill(get().shell!.id); set({ shell: null, activePane: get().panes.at(-1)?.id ?? null }); return }
+    if (get().shells.length) get().closeShells()
+    else await get().addShell()
+  },
+  addShell: async () => {
     const project = get().project
-    const cwd = project ?? ''
     const command = await window.api.agents.shell()
     const id = `s${paneId++}`
-    set({ shell: { id, kind: 'shell', title: `Terminal · ${project ? basename(project) : '~'}`, command, args: [], cwd }, activePane: id, focus: 'pane' })
+    const title = command.split(/[\\/]/).pop()?.replace(/\.exe$/i, '') || 'terminal'
+    set((s) => ({ shells: [...s.shells, { id, kind: 'shell', title, command, args: [], cwd: project ?? '' }], shellActive: id, activePane: id, focus: 'pane' }))
+  },
+  closeShells: () => {
+    get().shells.forEach((sh) => window.api.pty.kill(sh.id))
+    set({ shells: [], shellActive: null, shellMax: false, activePane: get().panes.at(-1)?.id ?? null })
   },
   closePane: (id) => set((s) => {
     window.api.pty.kill(id)
     const panes = s.panes.filter((p) => p.id !== id)
-    const shell = s.shell?.id === id ? null : s.shell
-    const activePane = s.activePane === id ? (panes.at(-1)?.id ?? shell?.id ?? null) : s.activePane
-    return { panes, shell, activePane }
+    const shells = s.shells.filter((p) => p.id !== id)
+    const shellActive = s.shellActive === id ? (shells.at(-1)?.id ?? null) : s.shellActive
+    const activePane = s.activePane === id ? (shellActive ?? panes.at(-1)?.id ?? null) : s.activePane
+    return { panes, shells, shellActive, activePane, shellMax: shells.length ? s.shellMax : false }
   }),
 
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }

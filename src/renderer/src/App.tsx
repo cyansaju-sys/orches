@@ -89,7 +89,7 @@ export function App() {
       e.preventDefault(); e.stopPropagation()
       if (e.key === 'F1') { st.set({ modal: 'shortcuts' }); return }
       if (e.key === 'PageUp' || e.key === 'PageDown') {
-        const all = [...st.panes, ...(st.shell ? [st.shell] : [])]
+        const all = [...st.panes, ...st.shells]
         if (!all.length) return
         const i = all.findIndex((p) => p.id === st.activePane)
         st.set({ activePane: all[(i + (e.key === 'PageDown' ? 1 : -1) + all.length) % all.length].id, focus: 'pane' })
@@ -118,7 +118,7 @@ export function App() {
       <div className="flex min-h-0 flex-1 p-1.5 pt-0.5">
         <Sidebar />
         {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="flex min-h-0 flex-1">
             {s.docs.length > 0 && s.panes.length === 0 ? (
               // sin agentes abiertos, el editor ocupa el espacio de «Elegir agente»
@@ -135,9 +135,9 @@ export function App() {
               </>
             )}
           </div>
-          {s.shell && (
+          {s.shells.length > 0 && (
             <>
-              <Resizer direction="y" onDrag={dragShell} />
+              {!s.shellMax && <Resizer direction="y" onDrag={dragShell} />}
               <TerminalSection />
             </>
           )}

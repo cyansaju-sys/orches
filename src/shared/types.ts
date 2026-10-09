@@ -30,6 +30,12 @@ export interface PtyOptions {
 }
 /** Panel que un agente pide abrir (reparto de tareas): la interfaz lo crea y su terminal inicia el proceso. */
 export interface OpenPane { id: string; name: string; command: string; args?: string[]; cwd: string; prompt: string; parentId: string }
+/** Una tarea que un agente delegó a otro. `closed`: el panel del agente ya no existe. */
+export interface TaskInfo {
+  id: number; agentId: string; agent: string; callerId: string; caller: string
+  task: string; model: string | null; difficulty: string | null; startedAt: number; endedAt: number | null
+  status: 'working' | 'done' | 'closed'
+}
 export interface PtyExit { id: string; code: number | null; error?: string }
 
 export type McpScope = 'global' | 'project' | 'shared'
@@ -142,6 +148,8 @@ export interface Api {
   orchestra: {
     newId(): Promise<string>
     onOpenPane(cb: (pane: OpenPane) => void): () => void
+    tasks(): Promise<TaskInfo[]>
+    clearTasks(): Promise<void>
     onToast(cb: (message: string, kind: 'ok' | 'error' | 'info') => void): () => void
   }
   pty: {

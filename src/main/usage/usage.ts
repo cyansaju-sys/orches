@@ -12,7 +12,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, 
 import { homedir } from 'node:os'
 import { basename, join, relative, isAbsolute } from 'node:path'
 import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../../shared/types'
-import { readAgyConversations } from './agyDb'
+import { deleteAgyConversation, readAgyConversations } from './agyDb'
 import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from '../settings'
 import { extendedPath } from '../shellpath'
@@ -283,6 +283,10 @@ export function deleteSession(session: SessionInfo): Promise<McpResult> {
       }
     }
     return Promise.resolve(finish({ ok: removed, message: removed ? 'Borrada' : 'No se encontró el archivo de la sesión' }))
+  }
+  if (session.command === 'agy') {
+    const ok = deleteAgyConversation(session.id)
+    return Promise.resolve(finish({ ok, message: ok ? 'Borrada' : 'No se pudo borrar la conversación (¿Antigravity la tiene en uso?)' }))
   }
   if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: 'Este agente no permite borrar sesiones desde aquí' })
   return new Promise((done) => {
