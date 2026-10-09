@@ -97,7 +97,7 @@ export interface Api {
     push(root: string): Promise<string>
     branches(root: string): Promise<GitBranch[]>
     checkout(root: string, name: string, remote: boolean): Promise<string>
-    createBranch(root: string, name: string): Promise<string>
+    createBranch(root: string, name: string, base?: string, switchTo?: boolean): Promise<string>
     marks(file: string): Promise<GitMarks>
     op(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string>
     log(root: string, limit: number): Promise<GitCommit[]>

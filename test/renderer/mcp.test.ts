@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { McpServer } from '@shared/types'
-import { agentsMissing, mask, parsePairs, specFromServer, splitArgs } from './mcp'
+import { agentsMissing, mask, parsePairs, specFromServer, splitArgs } from '../../src/renderer/src/lib/mcp'
 
 const server = (patch: Partial<McpServer>): McpServer => ({ name: 'x', agent: 'claude', scope: 'global', kind: 'remote', target: '', config: {}, source: '', ...patch })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { joinSummary, numstatPath, opArgs } from './git'
+import { joinSummary, numstatPath, opArgs, validBranchName } from '../../src/main/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
@@ -42,5 +42,12 @@ describe('resumen de archivos de un commit', () => {
     expect(numstatPath('a/{b => c}/d.ts')).toBe('a/c/d.ts')
     expect(numstatPath('x.ts => y.ts')).toBe('y.ts')
     expect(numstatPath('plano.ts')).toBe('plano.ts')
+  })
+})
+
+describe('nombres de rama', () => {
+  it('acepta los habituales y rechaza los que git no admite', () => {
+    for (const ok of ['feat/x', 'fix-1', 'release_1.2', 'a']) expect(validBranchName(ok)).toBe(true)
+    for (const bad of ['', '-x', 'a b', 'a..b', 'a//b', 'x/', 'x.', 'x.lock', 'a~1', 'a:b']) expect(validBranchName(bad)).toBe(false)
   })
 })

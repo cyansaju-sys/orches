@@ -4,5 +4,5 @@
     "skipLibCheck": true, "esModuleInterop": true, "types": ["node"], "noEmit": false, "emitDeclarationOnly": true,
     "outDir": "./node_modules/.tmp/node", "paths": { "@shared/*": ["./src/shared/*"] }, "baseUrl": "."
   },
-  "include": ["electron.vite.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
+  "include": ["electron.vite.config.ts", "test/capture.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
 }

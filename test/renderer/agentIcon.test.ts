@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { agentColors, agentInitial, agentLogo, hash } from './agentIcon'
+import { agentColors, agentInitial, agentLogo, hash } from '../../src/renderer/src/lib/agentIcon'
 
 describe('colores del icono de un agente', () => {
   it('los agentes conocidos tienen su color, sin importar mayúsculas ni la ruta', () => {
@@ -38,7 +38,7 @@ describe('logos de los agentes', () => {
     expect(agentLogo('mi-agente-raro')).toBeNull()
   })
   it('cada logo apunta a un SVG que existe en public/icons/agents', () => {
-    const dir = join(__dirname, '../../public/icons/agents')
+    const dir = join(__dirname, '../../src/renderer/public/icons/agents')
     for (const id of ['claude', 'opencode', 'agy', 'codex', 'gemini', 'cursor-agent', 'goose', 'amp', 'kimi', 'kilo', 'cline', 'qwen', 'copilot', 'vibe']) {
       expect(existsSync(join(dir, `${agentLogo(id)!.file}.svg`)), id).toBe(true)
     }

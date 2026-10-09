@@ -86,7 +86,7 @@ export function McpView() {
           <div className="px-4 pb-4">
             <p className="text-[12px] leading-relaxed text-muted">«{removing.name}» se quitará de {AGENT_NAMES[removing.agent]} ({SCOPE_LABELS[removing.scope]}).</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setRemoving(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
+              <button onClick={() => setRemoving(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
               <button onClick={() => void remove(removing)} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">Quitar</button>
             </div>
           </div>
@@ -155,7 +155,7 @@ function Details({ server, all, installed, project, onClose, onChanged }: {
   )
 }
 
-const input = 'w-full rounded-lg bg-white/[0.05] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/70 focus:bg-white/[0.08]'
+const input = 'w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]'
 
 function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgent[]; project: string | null; onClose: () => void; onDone: () => void }) {
   const toast = useStore((s) => s.toast)
@@ -229,8 +229,8 @@ function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgen
         )}
         {error && <pre className="selectable whitespace-pre-wrap text-[11px] leading-snug text-danger">{error}</pre>}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
-          <button disabled={busy} onClick={() => void submit()} className="rounded-lg bg-accent/20 px-4 py-1.5 text-[12px] font-medium text-accent transition-colors hover:bg-accent/30 disabled:opacity-50">{busy ? 'Añadiendo…' : 'Añadir'}</button>
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
+          <button disabled={busy} onClick={() => void submit()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-50">{busy ? 'Añadiendo…' : 'Añadir'}</button>
         </div>
       </div>
     </Modal>

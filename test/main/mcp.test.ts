@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from './mcp'
+import { buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from '../../src/main/mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'orches-mcp-'))
 

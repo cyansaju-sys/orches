@@ -198,7 +198,7 @@ export function GitGraph() {
 function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onClose: () => void; onOk: (op: GitOp, commit: GitCommit, arg?: string, done?: string) => void }) {
   const [name, setName] = useState('')
   const btn = 'rounded-lg px-4 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-50'
-  const cancel = <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
+  const cancel = <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
 
   if (ask.kind === 'name') {
     const label = ask.op === 'tag' ? 'etiqueta' : 'rama'
@@ -209,8 +209,8 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
         <div className="flex flex-col gap-3 px-4 pb-4">
           <p className="text-[12px] text-muted">En el commit {SHORT(ask.commit)} · {ask.commit.subject}</p>
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit() }} spellCheck={false} placeholder={`Nombre de la ${label}`}
-            className="w-full rounded-lg bg-white/[0.05] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/70 focus:bg-white/[0.08]" />
-          <div className="flex justify-end gap-2">{cancel}<button disabled={!valid || busy} onClick={submit} className={`${btn} bg-accent/20 text-accent hover:bg-accent/30`}>Crear</button></div>
+            className="w-full rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-[12px] caret-accent outline-none transition-colors placeholder:text-muted/60 focus:border-accent/40 focus:bg-white/[0.045]" />
+          <div className="flex justify-end gap-2">{cancel}<button disabled={!valid || busy} onClick={submit} className={`${btn} bg-accent text-bg hover:brightness-110`}>Crear</button></div>
         </div>
       </Modal>
     )
@@ -237,7 +237,7 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
       <div className="flex flex-col gap-3 px-4 pb-4">
         <p className="text-[12px] leading-relaxed text-muted">{ask.text}</p>
         <div className="flex justify-end gap-2">{cancel}
-          <button autoFocus disabled={busy} onClick={() => onOk(ask.op, ask.commit, ask.arg, `${ask.title} hecho`)} className={`${btn} ${ask.danger ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-accent/20 text-accent hover:bg-accent/30'}`}>Aceptar</button>
+          <button autoFocus disabled={busy} onClick={() => onOk(ask.op, ask.commit, ask.arg, `${ask.title} hecho`)} className={`${btn} ${ask.danger ? 'bg-danger/20 text-danger hover:bg-danger/30' : 'bg-accent text-bg hover:brightness-110'}`}>Aceptar</button>
         </div>
       </div>
     </Modal>
@@ -246,7 +246,7 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
 
 function MergeDialog({ ask, busy, onClose, onOk }: { ask: Extract<Ask, { kind: 'merge' }>; busy: boolean; onClose: () => void; onOk: (op: GitOp, commit: GitCommit, arg?: string, done?: string) => void }) {
   const btn = 'rounded-lg px-4 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-50'
-  const cancel = <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.05]">Cancelar</button>
+  const cancel = <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
     const [noff, setNoff] = useState(true)
     const [squash, setSquash] = useState(false)
     const [nocommit, setNocommit] = useState(false)
@@ -267,7 +267,7 @@ function MergeDialog({ ask, busy, onClose, onOk }: { ask: Extract<Ask, { kind: '
             <Check on={nocommit} set={setNocommit} disabled={squash} label="No hacer commit" hint="--no-commit: une pero te deja revisar antes de confirmar" />
           </div>
           <div className="flex justify-end gap-2">{cancel}
-            <button autoFocus disabled={busy} onClick={() => onOk('merge', ask.commit, opts, squash || nocommit ? 'Cambios unidos: falta hacer el commit' : 'Merge hecho')} className={`${btn} bg-accent/20 text-accent hover:bg-accent/30`}>Sí, unir</button>
+            <button autoFocus disabled={busy} onClick={() => onOk('merge', ask.commit, opts, squash || nocommit ? 'Cambios unidos: falta hacer el commit' : 'Merge hecho')} className={`${btn} bg-accent text-bg hover:brightness-110`}>Sí, unir</button>
           </div>
         </div>
       </Modal>
