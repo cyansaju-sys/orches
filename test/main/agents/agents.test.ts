@@ -47,7 +47,7 @@ describe('detectar agentes', () => {
 
 describe('agentes propios', () => {
   it('se añade con su comando y argumentos, y luego aparece junto a los conocidos', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-agents-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-agents-'))
     const path = exe(dir, 'mi-agente')
     expect(addCustomAgent('Mi agente', `${path} --modo "muy rapido"`)).toEqual({ ok: true, message: 'Agente «Mi agente» añadido' })
     expect(customAgents()).toEqual([{ name: 'Mi agente', command: path, args: ['--modo', 'muy rapido'] }])
@@ -56,13 +56,13 @@ describe('agentes propios', () => {
     expect(customAgents()).toEqual([])
   })
   it('se puede escribir solo el nombre del programa si está en el PATH', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-agents-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-agents-'))
     installed.set('nuevo-ia', exe(dir, 'nuevo-ia'))
     expect(addCustomAgent('Nuevo', 'nuevo-ia').ok).toBe(true)
     expect(detectAgents()[0]).toMatchObject({ name: 'Nuevo', command: 'nuevo-ia', custom: true })
   })
   it('valida: comando vacío, nombre vacío, programa inexistente y repetidos', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-agents-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-agents-'))
     const path = exe(dir, 'ok')
     expect(addCustomAgent('X', '   ').message).toContain('comando')
     expect(addCustomAgent('  ', path).message).toContain('nombre')
@@ -81,7 +81,7 @@ describe('agentes propios', () => {
 
 describe('ejecutables instalados por el usuario', () => {
   it('lista los de las carpetas del usuario, sin los ya conocidos, sin archivos no ejecutables ni carpetas del sistema', () => {
-    const home = mkdtempSync(join(tmpdir(), 'orches-home-'))
+    const home = mkdtempSync(join(tmpdir(), 'tutti-home-'))
     const bin = join(home, '.local', 'bin')
     const cargo = join(home, '.cargo', 'bin')
     mkdirSync(bin, { recursive: true })
@@ -92,7 +92,7 @@ describe('ejecutables instalados por el usuario', () => {
     mkdirSync(join(bin, 'subcarpeta'))
     exe(cargo, 'otro')
     symlinkSync(join(bin, 'raro-agente'), join(bin, 'enlace'))      // los enlaces cuentan
-    const system = mkdtempSync(join(tmpdir(), 'orches-sys-'))
+    const system = mkdtempSync(join(tmpdir(), 'tutti-sys-'))
     exe(system, 'ls')                                        // fuera del home: es del sistema
     const found = candidateExecutables(home, [bin, cargo, system, ''].join(delimiter))
     expect(found.map((c) => c.name)).toEqual(['enlace', 'otro', 'raro-agente'])
@@ -101,7 +101,7 @@ describe('ejecutables instalados por el usuario', () => {
 
 describe('resolver un ejecutable', () => {
   it('ruta absoluta existente y ejecutable; si no, null', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-agents-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-agents-'))
     expect(resolveExecutable(exe(dir, 'a'))).toBe(join(dir, 'a'))
     writeFileSync(join(dir, 'b'), 'x')
     expect(resolveExecutable(join(dir, 'b'))).toBeNull()               // sin permiso de ejecución

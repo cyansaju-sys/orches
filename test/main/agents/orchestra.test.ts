@@ -29,7 +29,7 @@ describe('servidor MCP de reparto de tareas', () => {
   it('initialize, ping y la lista de herramientas', async () => {
     const { post } = await start()
     const init = await (await post(rpc('initialize', { protocolVersion: '2025-03-26' }))).json()
-    expect(init.result.serverInfo.name).toBe('orches')
+    expect(init.result.serverInfo.name).toBe('tutti')
     expect(init.result.instructions).toContain('delegate_task')
     expect(await (await post(rpc('ping'))).json()).toMatchObject({ result: {} })
     const tools = await (await post(rpc('tools/list'))).json()

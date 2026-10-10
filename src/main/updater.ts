@@ -6,7 +6,7 @@
  * - Instalador de Windows (NSIS): descarga el instalador nuevo (latest.yml), lo ejecuta en silencio y reinicia la app.
  * - Cualquier otra forma de ejecutarla (código, desarrollo): solo se avisa y el botón abre la página de la release.
  *
- * ORCHES_UPDATE_URL apunta a una carpeta con `latest-linux.yml` o `latest.yml` (pruebas) en lugar de GitHub.
+ * TUTTI_UPDATE_URL apunta a una carpeta con `latest-linux.yml` o `latest.yml` (pruebas) en lugar de GitHub.
  */
 import { app, shell, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
@@ -23,14 +23,14 @@ let timer: ReturnType<typeof setInterval> | undefined
 
 /** ¿Puede actualizarse sola? Solo un AppImage (Linux) o la app instalada en Windows; o la carpeta de pruebas. */
 export const canAutoUpdate = (): boolean =>
-  Boolean(process.env.ORCHES_UPDATE_URL) || (app.isPackaged && (process.platform === 'win32' || Boolean(process.env.APPIMAGE)))
+  Boolean(process.env.TUTTI_UPDATE_URL) || (app.isPackaged && (process.platform === 'win32' || Boolean(process.env.APPIMAGE)))
 
 function set(next: UpdateState): void { state = next; notify(next) }
 const releaseUrl = (version?: string): string => `https://github.com/${REPO}/releases${version ? `/tag/v${version}` : '/latest'}`
 
 /** Sin actualización automática: se consulta la última release de GitHub solo para avisar. */
 async function checkManually(): Promise<void> {
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'orches' }, signal: AbortSignal.timeout(10_000) })
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'tutti' }, signal: AbortSignal.timeout(10_000) })
   if (!res.ok) throw new Error(`GitHub respondió ${res.status}`)
   const tag = String(((await res.json()) as { tag_name?: string }).tag_name ?? '')
   const version = tag.replace(/^v/, '')
@@ -64,13 +64,13 @@ export function setupUpdater(window: () => BrowserWindow | null): void {
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowPrerelease = false
   autoUpdater.logger = null
-  if (process.env.ORCHES_UPDATE_URL) {
-    autoUpdater.setFeedURL({ provider: 'generic', url: process.env.ORCHES_UPDATE_URL })
+  if (process.env.TUTTI_UPDATE_URL) {
+    autoUpdater.setFeedURL({ provider: 'generic', url: process.env.TUTTI_UPDATE_URL })
     autoUpdater.forceDevUpdateConfig = true
   }
   autoUpdater.on('update-available', (info) => {
     set({ status: 'available', version: info.version, canInstall: true, url: releaseUrl(info.version) })
-    if (process.env.ORCHES_UPDATE_AUTOINSTALL) void installUpdate()          // solo para pruebas: pulsa «Actualizar» por ti
+    if (process.env.TUTTI_UPDATE_AUTOINSTALL) void installUpdate()          // solo para pruebas: pulsa «Actualizar» por ti
   })
   autoUpdater.on('update-not-available', () => set({ status: 'idle' }))
   autoUpdater.on('download-progress', (p) => { if (state.status === 'downloading') set({ ...state, percent: Math.round(p.percent) }) })

@@ -134,7 +134,7 @@ export function GitView() {
           onChange={(e) => { setMessage(e.target.value); setAuthor('') }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void commit() } }}
           placeholder={writing ? `${writing} está redactando el mensaje…` : 'Mensaje de commit'}
-          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md bg-white/[0.04] py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none placeholder:text-muted/70"
+          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md bg-ov/[0.04] py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none placeholder:text-muted/70"
         />
         <button
           title="Generar el mensaje con un agente (Conventional Commits)" disabled={!!writing || busy} onClick={() => void suggest()}
@@ -189,7 +189,7 @@ export function GitView() {
 }
 
 function Group({ id, title, children, action }: { id: string; title: string; children: React.ReactNode; action?: { title: string; run: () => void } }) {
-  const key = `orches.git.${id}.collapsed`
+  const key = `tutti.git.${id}.collapsed`
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
   const toggle = (): void => {
     setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })

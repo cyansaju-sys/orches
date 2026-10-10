@@ -69,7 +69,7 @@ export function ContextView() {
   return (
     <div className="flex h-full flex-col gap-2 px-2 pb-2">
       <p className="px-1 text-[11px] leading-snug text-muted">
-        Lo reciben los agentes que abras en este proyecto (Claude Code y OpenCode). Se guarda fuera del repositorio, en la configuración de Orches.
+        Lo reciben los agentes que abras en este proyecto (Claude Code y OpenCode). Se guarda fuera del repositorio, en la configuración de Tutti.
       </p>
       <div className="flex gap-2">
         <button onClick={() => void generate()} disabled={!file || !!writing}
@@ -84,7 +84,7 @@ export function ContextView() {
       </div>
       <textarea value={text} onChange={(e) => change(e.target.value)} disabled={!file} spellCheck={false}
         placeholder="Qué es el proyecto, cómo se ejecuta, convenciones…"
-        className="min-h-0 flex-1 resize-none rounded-md bg-white/[0.04] p-2.5 font-mono text-[12px] leading-relaxed text-text outline-none" />
+        className="min-h-0 flex-1 resize-none rounded-md bg-ov/[0.04] p-2.5 font-mono text-[12px] leading-relaxed text-text outline-none" />
       <div className="flex items-center justify-between px-1 text-[10px] text-muted">
         <span title={file ?? ''} className="min-w-0 truncate">{file ?? ''}</span>
         <span className="shrink-0">{state === 'saving' ? 'Guardando…' : state === 'saved' ? 'Guardado' : ''}</span>

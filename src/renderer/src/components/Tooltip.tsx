@@ -94,12 +94,12 @@ export function Tooltips() {
     <div
       ref={box} role="tooltip"
       style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
-      className="pointer-events-none fixed z-[70] flex max-w-[320px] animate-pop-in items-center gap-2 rounded-lg border border-white/[0.08] bg-[#0f121a] px-2.5 py-1.5 text-[11px] leading-snug text-text shadow-[0_8px_24px_-6px_rgba(0,0,0,0.8)]"
+      className="pointer-events-none fixed z-[70] flex max-w-[320px] animate-pop-in items-center gap-2 rounded-lg border border-ov/[0.08] bg-pop px-2.5 py-1.5 text-[11px] leading-snug text-text shadow-[0_8px_24px_-6px_rgba(0,0,0,0.8)]"
     >
       <span className="min-w-0 break-words [overflow-wrap:anywhere]">{label}</span>
       {keys.length > 0 && (
         <span className="flex shrink-0 items-center gap-0.5">
-          {keys.map((k) => <kbd key={k} className="rounded border border-white/[0.12] bg-white/[0.06] px-1 py-px font-mono text-[10px] text-muted">{k}</kbd>)}
+          {keys.map((k) => <kbd key={k} className="rounded border border-ov/[0.12] bg-ov/[0.06] px-1 py-px font-mono text-[10px] text-muted">{k}</kbd>)}
         </span>
       )}
     </div>

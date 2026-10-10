@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Instala Orches en Linux (sin permisos de administrador): descarga el AppImage de la última release y crea el comando
-# `orches` y la entrada del menú de aplicaciones. Después la app se actualiza sola: avisa con un botón «Actualizar».
+# Instala Tutti en Linux (sin permisos de administrador): descarga el AppImage de la última release y crea el comando
+# `tutti` y la entrada del menú de aplicaciones. Después la app se actualiza sola: avisa con un botón «Actualizar».
 #
 #   curl -fsSL https://github.com/cyansaju-sys/orches/releases/latest/download/install.sh | bash
 #   ./install.sh                  instala (o reinstala) la última versión
 #   ./install.sh --version 0.2.0  una versión concreta
-#   ./install.sh --uninstall      lo quita (tus ajustes en ~/.config/orches se conservan)
+#   ./install.sh --uninstall      lo quita (tus ajustes en ~/.config/tutti se conservan)
 #
-# Variables: ORCHES_HOME (dónde se guarda el AppImage), ORCHES_REPO (usuario/repositorio).
+# Variables: TUTTI_HOME (dónde se guarda el AppImage), TUTTI_REPO (usuario/repositorio).
 set -euo pipefail
 
-REPO="${ORCHES_REPO:-cyansaju-sys/orches}"
+REPO="${TUTTI_REPO:-cyansaju-sys/orches}"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
-DIR="${ORCHES_HOME:-$DATA/orches}"
+DIR="${TUTTI_HOME:-$DATA/tutti}"
 BIN="$HOME/.local/bin"
-DESKTOP="$DATA/applications/orches.desktop"
+DESKTOP="$DATA/applications/tutti.desktop"
 VERSION=""
 UNINSTALL=0
 
@@ -31,18 +31,21 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Se borra y se reescribe $DIR: solo si está vacía o ya es una instalación de Orches (la actual o la antigua en Python).
+# Se borra y se reescribe $DIR: solo si está vacía o ya es una instalación de Tutti (la actual o la antigua en Python).
 guard_dir() {
-  if [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ] && [ ! -f "$DIR/VERSION" ] && [ ! -d "$DIR/.git" ] && [ ! -f "$DIR/Orches.AppImage" ]; then
-    fail "$DIR existe y no parece una instalación de Orches; elige otra con ORCHES_HOME"
+  if [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ] && [ ! -f "$DIR/VERSION" ] && [ ! -d "$DIR/.git" ] && [ ! -f "$DIR/Tutti.AppImage" ] && [ ! -f "$DIR/Orches.AppImage" ]; then
+    fail "$DIR existe y no parece una instalación de Tutti; elige otra con TUTTI_HOME"
   fi
 }
 update_desktop_db() { command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$(dirname "$DESKTOP")" 2>/dev/null || true; }
 
 guard_dir
+# La app se llamaba Orches: se quita su instalación antigua (los ajustes se migran solos al abrir Tutti)
+OLD_DIR="$DATA/orches"
+remove_legacy() { [ "$DIR" != "$OLD_DIR" ] && [ -f "$OLD_DIR/Orches.AppImage" ] && rm -rf "$OLD_DIR" "$BIN/orches" "$DATA/applications/orches.desktop"; true; }
 if [ "$UNINSTALL" = 1 ]; then
-  rm -rf "$DIR" "$BIN/orches" "$DESKTOP"; update_desktop_db
-  say "Orches quitado. Tus ajustes siguen en ~/.config/orches (bórralos a mano si quieres)."
+  rm -rf "$DIR" "$BIN/tutti" "$DESKTOP"; remove_legacy; update_desktop_db
+  say "Tutti quitado. Tus ajustes siguen en ~/.config/tutti (bórralos a mano si quieres)."
   exit 0
 fi
 
@@ -51,8 +54,8 @@ fi
 command -v curl >/dev/null 2>&1 || fail "falta curl"
 
 # --- qué descargar -----------------------------------------------------------------------------------------------------
-if [ -n "${ORCHES_ASSET_URL:-}" ]; then            # solo para pruebas del instalador
-  URL="$ORCHES_ASSET_URL"; TAG="${VERSION:-prueba}"; ICON_URL="${ORCHES_ICON_URL:-}"
+if [ -n "${TUTTI_ASSET_URL:-}" ]; then            # solo para pruebas del instalador
+  URL="$TUTTI_ASSET_URL"; TAG="${VERSION:-prueba}"; ICON_URL="${TUTTI_ICON_URL:-}"
 else
   API="https://api.github.com/repos/$REPO/releases/latest"
   [ -n "$VERSION" ] && API="https://api.github.com/repos/$REPO/releases/tags/v$VERSION"
@@ -63,39 +66,44 @@ else
   ICON_URL="https://raw.githubusercontent.com/$REPO/$TAG/resources/icon.png"
 fi
 
-say "Descargando Orches $TAG…"
+say "Descargando Tutti $TAG…"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-curl -fL --progress-bar "$URL" -o "$TMP/Orches.AppImage" || fail "no se pudo descargar $URL"
-chmod +x "$TMP/Orches.AppImage"
+curl -fL --progress-bar "$URL" -o "$TMP/Tutti.AppImage" || fail "no se pudo descargar $URL"
+chmod +x "$TMP/Tutti.AppImage"
 
 rm -rf "$DIR"; mkdir -p "$DIR" "$BIN" "$(dirname "$DESKTOP")"
-mv "$TMP/Orches.AppImage" "$DIR/Orches.AppImage"       # la app se actualiza reemplazando este mismo archivo
+mv "$TMP/Tutti.AppImage" "$DIR/Tutti.AppImage"; remove_legacy       # la app se actualiza reemplazando este mismo archivo
 printf '%s\n' "$TAG" > "$DIR/VERSION"
 ICON="utilities-terminal"
 if [ -n "$ICON_URL" ] && curl -fsSL "$ICON_URL" -o "$DIR/icon.png" 2>/dev/null; then ICON="$DIR/icon.png"; fi
 
 # Un AppImage necesita FUSE 2 para montarse; sin él se ejecuta extrayéndose a una carpeta temporal.
-RUN="exec \"$DIR/Orches.AppImage\" \"\$@\""
+RUN="exec \"$DIR/Tutti.AppImage\" \"\$@\""
 LIBS="$(ldconfig -p 2>/dev/null || true)"           # (sin `| grep -q`: con pipefail, grep cierra la tubería y daría un falso «no»)
 case "$LIBS" in
   *libfuse.so.2*) ;;
-  *) say "No encuentro FUSE 2 (libfuse2 / fuse2): Orches arrancará un poco más lento. Instálalo para que abra al instante."
+  *) say "No encuentro FUSE 2 (libfuse2 / fuse2): Tutti arrancará un poco más lento. Instálalo para que abra al instante."
      RUN="export APPIMAGE_EXTRACT_AND_RUN=1; $RUN" ;;
 esac
-printf '#!/usr/bin/env bash\n%s\n' "$RUN" > "$BIN/orches"; chmod +x "$BIN/orches"
+printf '#!/usr/bin/env bash\n%s\n' "$RUN" > "$BIN/tutti"; chmod +x "$BIN/tutti"
 
 cat > "$DESKTOP" <<ENTRY
 [Desktop Entry]
 Type=Application
-Name=Orches
+Name=Tutti
 Comment=Panel para trabajar con varios agentes de programación
-Exec=$BIN/orches
+Exec=$BIN/tutti
 Icon=$ICON
 Terminal=false
 Categories=Development;
-StartupWMClass=Orches
+StartupWMClass=Tutti
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=Nueva ventana vacía
+Exec=$BIN/tutti --new-window
 ENTRY
 update_desktop_db
 
-say "Listo. Ejecuta «orches» o búscalo en el menú de aplicaciones."
+say "Listo. Ejecuta «tutti» o búscalo en el menú de aplicaciones."
 case ":$PATH:" in *":$BIN:"*) ;; *) say "Ojo: $BIN no está en tu PATH; añádelo a tu ~/.bashrc o ~/.zshrc." ;; esac

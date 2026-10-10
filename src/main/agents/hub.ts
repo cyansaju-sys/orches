@@ -6,6 +6,7 @@ import { detectAgents } from './agents'
 import { capableFor, exhausted, isDifficulty, capable, pickAgent, type Candidate, type Difficulty } from './assign'
 import { readContext } from '../context/context'
 import { projectRoot } from '../context/projectRoot'
+import { ensureAgyBridge } from './agyBridge'
 import { buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
 import { Orchestra, type AgentOutput, type Host } from './orchestra'
@@ -68,7 +69,7 @@ function notifyLeaders(): void {
     t.notified = true
     const what = t.task.replace(/\s+/g, ' ').slice(0, 80)
     const result = status === 'closed' ? 'se cerró' : 'terminó'
-    pty.sendPrompt(t.callerId, `[Orches] ${t.agent} (${t.agentId}) ${result} la tarea «${what}». Lee el resultado con read_agent_output(agent_id: "${t.agentId}") y sigue con tu plan.`)
+    pty.sendPrompt(t.callerId, `[Tutti] ${t.agent} (${t.agentId}) ${result} la tarea «${what}». Lee el resultado con read_agent_output(agent_id: "${t.agentId}") y sigue con tu plan.`)
   }
 }
 let notifier: ReturnType<typeof setInterval> | null = null
@@ -237,6 +238,7 @@ export async function startHub(window: () => BrowserWindow | null): Promise<void
   // el gancho va siempre: sin servidor de reparto de tareas los agentes siguen recibiendo el contexto del proyecto
   pty.setLaunchHook((opts): pty.Launch => {
     const entry = orchestra?.configFor(opts.id) ?? null
+    if (entry && opts.command === 'agy') ensureAgyBridge()
     const prompt = opts.prompt?.trim()
     const context = opts.cwd ? readContext(projectRoot(opts.cwd, knownProjects())) ?? undefined : undefined
     const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2, context)

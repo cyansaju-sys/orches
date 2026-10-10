@@ -29,6 +29,7 @@ export function EditorArea() {
   const git = useStore((s) => s.git)
   const editEnabled = useStore((s) => s.editEnabled)
   const focus = useStore((s) => s.focus)
+  const reveal = useStore((s) => s.reveal)
   const set = useStore((s) => s.set)
   const closeDoc = useStore((s) => s.closeDoc)
   const updateDocText = useStore((s) => s.updateDocText)
@@ -108,7 +109,7 @@ export function EditorArea() {
         <CodeEditor
           path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled} marks={marks}
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
-          focusToken={focus === 'editor' ? 1 : 0}
+          focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
         />
       )}
       {doc?.kind === 'graph' && <GitGraph />}

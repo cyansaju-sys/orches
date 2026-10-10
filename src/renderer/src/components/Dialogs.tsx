@@ -45,10 +45,10 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
   return (
     <div>
       <div className="p-1.5 pb-1">
-        <div className="flex items-center rounded-md bg-white/[0.04] px-2.5">
+        <div className="flex items-center rounded-md bg-ov/[0.04] px-2.5">
           <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={key} placeholder={placeholder}
             spellCheck={false} className="h-8 flex-1 bg-transparent text-[13px] caret-accent outline-none placeholder:text-muted/80" />
-          {query && <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted">{shown.length}</span>}
+          {query && <span className="rounded bg-ov/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted">{shown.length}</span>}
         </div>
       </div>
       <ul ref={list} className="max-h-[420px] overflow-y-auto pb-1">
@@ -59,9 +59,9 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
           const active = i === index
           return (
             <li key={label(item)}>
-              {heading && i > 0 && <div className="mx-0 my-1 border-t border-white/[0.08]" />}
+              {heading && i > 0 && <div className="mx-0 my-1 border-t border-ov/[0.08]" />}
               <button data-active={active} onMouseMove={() => setIndex(i)} onClick={() => onPick(item, query)}
-                className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-white/[0.04]')}>
+                className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-ov/[0.04]')}>
                 {render(item, active)}
                 {heading && <span className="absolute right-3 top-1.5 text-[11px] text-muted/80">{heading}</span>}
               </button>
@@ -71,7 +71,7 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
         {shown.length === 0 && !footer && <li className="px-3 py-4 text-center text-[12px] text-muted">{empty}</li>}
       </ul>
       {footer?.(query)}
-      <div className="flex items-center gap-4 border-t border-white/[0.06] bg-black/20 px-3 py-1.5 text-[10px] text-muted">
+      <div className="flex items-center gap-4 border-t border-ov/[0.06] bg-black/20 px-3 py-1.5 text-[10px] text-muted">
         <span><Kbd>↑↓</Kbd> navegar</span><span><Kbd>↵</Kbd> elegir</span><span><Kbd>esc</Kbd> cerrar</span>
       </div>
     </div>
@@ -80,10 +80,10 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
 
 /** Ícono dentro de una pastilla cuadrada: da el mismo ritmo a todas las filas. */
 const Chip = ({ active, children }: { active: boolean; children: React.ReactNode }) => (
-  <span className={clsx('grid size-7 shrink-0 place-items-center rounded-md transition-colors', active ? 'bg-accent/15 text-accent' : 'bg-white/[0.04] text-muted')}>{children}</span>
+  <span className={clsx('grid size-7 shrink-0 place-items-center rounded-md transition-colors', active ? 'bg-accent/15 text-accent' : 'bg-ov/[0.04] text-muted')}>{children}</span>
 )
 const Tag = ({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'accent' }) => (
-  <span className={clsx('ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium', tone === 'accent' ? 'bg-accent/15 text-accent' : 'bg-white/[0.05] text-muted')}>{children}</span>
+  <span className={clsx('ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium', tone === 'accent' ? 'bg-accent/15 text-accent' : 'bg-ov/[0.05] text-muted')}>{children}</span>
 )
 
 export function AgentPicker() {
@@ -163,7 +163,7 @@ export function AddAgentDialog() {
         </div>
         {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-[12px] text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button onClick={() => set({ modal: null, focus: 'pane' })} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.06]">Cancelar</button>
+          <button onClick={() => set({ modal: null, focus: 'pane' })} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:bg-ov/[0.06]">Cancelar</button>
           <button onClick={() => void save()} disabled={!name.trim() || !command.trim()}
             className="rounded-lg bg-accent px-3.5 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-40">Añadir</button>
         </div>
@@ -268,7 +268,7 @@ function NameStep({ initial, base, branches, project, onBack, onDone }: {
   return (
     <div>
       <div className="p-1.5 pb-1">
-        <div className={clsx('flex items-center rounded-md border bg-white/[0.04] px-2.5', problem ? 'border-danger/70' : 'border-transparent')}>
+        <div className={clsx('flex items-center rounded-md border bg-ov/[0.04] px-2.5', problem ? 'border-danger/70' : 'border-transparent')}>
           <input autoFocus value={name} spellCheck={false} placeholder="Nombre de la rama nueva (feat/mi-rama)"
             onChange={(e) => setName(e.target.value.replace(/\s+/g, '-'))}
             onKeyDown={(e) => { if (e.key === 'Enter') void create(); else if (e.key === 'Escape') { e.stopPropagation(); onBack() } }}

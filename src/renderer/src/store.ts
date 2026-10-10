@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
+import { cacheTheme, cachedTheme, paintTheme, resolveTheme, type ThemeMode, type ThemePref } from '@/lib/theme'
 
-export type SidebarTab = 'files' | 'agents' | 'git' | 'mcp' | 'ai' | 'context'
+export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'mcp' | 'ai' | 'context'
 export type ToastKind = 'ok' | 'error' | 'info'
 export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news'
 export type Focus = 'tree' | 'editor' | 'pane'
@@ -28,8 +29,14 @@ interface State {
   editorWidth: number
   shellHeight: number
   editEnabled: boolean
+  theme: ThemePref                       // lo elegido: oscuro, claro o el del sistema
+  themeMode: ThemeMode                   // el que se está usando
   docs: Doc[]
   activeDoc: string | null
+  /** Dónde colocar el cursor al abrir un resultado de búsqueda; `token` distingue dos clics en el mismo sitio. */
+  reveal: { path: string; line: number; col: number; length: number; token: number } | null
+  searchReplace: boolean                 // Ctrl+Shift+H: el panel se abre con el campo de reemplazo
+  searchToken: number                    // sube al pulsar Ctrl+Shift+F: el campo de búsqueda toma el foco
   panes: Pane[]
   shells: Pane[]
   shellActive: string | null
@@ -49,6 +56,7 @@ interface State {
   toast: (message: string, kind?: ToastKind) => void
   dismissToast: (id: number) => void
   openDoc: (path: string) => Promise<void>
+  openAt: (path: string, line: number, col: number, length: number) => Promise<void>
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
@@ -64,6 +72,7 @@ interface State {
   addShell: () => Promise<void>
   closeShells: () => void
   closePane: (id: string) => void
+  setTheme: (pref: ThemePref) => void
   setEdit: (enabled: boolean) => void
 }
 
@@ -79,7 +88,7 @@ const guessKind = (m: string): ToastKind => {
 }
 
 export const useStore = create<State>((set, get) => ({
-  project: null, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true,
+  project: null, reveal: null, searchToken: 0, searchReplace: false, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()),
   docs: [], activeDoc: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
   maximized: false, agents: [], update: { status: 'idle' },
 
@@ -137,6 +146,10 @@ export const useStore = create<State>((set, get) => ({
     } catch (e) {
       get().toast(`No se pudo abrir ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
     }
+  },
+  openAt: async (path, line, col, length) => {
+    await get().openDoc(path)
+    if (get().docs.some((d) => d.path === path)) set({ reveal: { path, line, col, length, token: Date.now() } })
   },
   openGraph: () => {
     const path = 'graph:git'
@@ -227,6 +240,12 @@ export const useStore = create<State>((set, get) => ({
     return { panes, shells, shellActive, activePane, shellMax: shells.length ? s.shellMax : false }
   }),
 
+  setTheme: (pref) => {
+    const mode = resolveTheme(pref)
+    cacheTheme(pref); paintTheme(mode)
+    set({ theme: pref, themeMode: mode })
+    void window.api.settings.set('theme', pref)
+  },
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
 }))
 

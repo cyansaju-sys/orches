@@ -188,7 +188,7 @@ export function FilesView() {
         {rows.map((row) => {
           const { entry, depth } = row
           const code = status.get(toPosix(relative(project, entry.path)))
-          const color = code ? (GIT_COLOR[code] ?? '#e6e8ef') : undefined
+          const color = code ? (GIT_COLOR[code] ?? 'var(--color-text)') : undefined
           return (
             <Fragment key={entry.path}>
             <button
@@ -287,7 +287,7 @@ function NameInput({ isDir, depth, onOk, onCancel }: { isDir: boolean; depth: nu
         onChange={(e) => setValue(e.target.value)} onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && value.trim()) onOk(value.trim()); else if (e.key === 'Escape') onCancel() }}
         onBlur={() => { if (ready.current) onCancel() }}
-        className="min-w-0 flex-1 rounded-[3px] bg-white/[0.08] px-1.5 py-[1px] text-[12px] caret-accent outline-none placeholder:text-muted/70"
+        className="min-w-0 flex-1 rounded-[3px] bg-ov/[0.08] px-1.5 py-[1px] text-[12px] caret-accent outline-none placeholder:text-muted/70"
       />
     </div>
   )

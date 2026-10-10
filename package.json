@@ -1,5 +1,5 @@
 {
-  "name": "orches",
+  "name": "tutti",
   "version": "1.0.6",
   "description": "Panel de escritorio para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
@@ -61,9 +61,9 @@
     "vitest": "^2.1.0"
   },
   "build": {
-    "appId": "com.cyansaju.orches",
-    "productName": "Orches",
-    "executableName": "orches",
+    "appId": "com.cyansaju.tutti",
+    "productName": "Tutti",
+    "executableName": "tutti",
     "copyright": "cyansaju",
     "directories": {
       "output": "release",
@@ -84,14 +84,18 @@
       "icon": "resources/icon.png",
       "category": "Development",
       "synopsis": "Panel para trabajar con varios agentes de programación",
-      "artifactName": "Orches-${version}-x86_64.AppImage"
+      "desktop": {
+        "Actions": "new-window;",
+        "Desktop Action new-window": { "Name": "Nueva ventana vacía", "Exec": "tutti --new-window" }
+      },
+      "artifactName": "Tutti-${version}-x86_64.AppImage"
     },
     "win": {
       "target": [
         "nsis"
       ],
       "icon": "resources/icon.png",
-      "artifactName": "Orches-Setup-${version}.exe"
+      "artifactName": "Tutti-Setup-${version}.exe"
     },
     "nsis": {
       "oneClick": true,

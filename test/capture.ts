@@ -1,5 +1,5 @@
 /**
- * Modo captura: ORCHES_CAPTURE=<carpeta> abre la app con una configuración temporal, recorre las pantallas,
+ * Modo captura: TUTTI_CAPTURE=<carpeta> abre la app con una configuración temporal, recorre las pantallas,
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, screen, type BrowserWindow } from 'electron'
@@ -20,7 +20,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     writeFileSync(join(outDir, `${name}.png`), image.toPNG())
     console.log('capturada', name)
   }
-  const store = 'window.__orches.getState()'
+  const store = 'window.__tutti.getState()'
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
   // en la pantalla integrada (si hay varias) y ocupando su área útil: las capturas salen siempre del mismo tamaño
   const internal = screen.getAllDisplays().find((d) => d.internal)
@@ -29,7 +29,8 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await sleep(1500)
   await run(`${store}.setProject(${JSON.stringify(project)})`)
   await run(`${store}.set({ tab: 'files' })`)
-  if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar la terminal sola, ocupando todo el espacio
+  if (process.env.TUTTI_CAPTURE_LIGHT) await run(`${store}.setTheme('light')`)         // todas las capturas en tema claro
+  if (process.env.TUTTI_CAPTURE_TERMINAL) {          // solo para verificar la terminal sola, ocupando todo el espacio
     await run(`${store}.toggleShell()`)
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
@@ -38,8 +39,36 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await snap('01-archivos-y-editor', 1800)
   await open('docs/demo/Contador.tsx')
   await snap('02-sintaxis-tsx')
+  // tema claro, y el menú de ajustes de la barra lateral
+  await run(`${store}.setTheme('light')`)
+  await snap('02b-tema-claro', 900)
+  await run(`${store}.set({ tab: 'agents' })`)
+  await run(`document.querySelector('[title="Ajustes"]')?.click()`)
+  await snap('02c-ajustes', 500)
+  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+  await run(`${store}.set({ tab: 'files' })`)
+  await run(`${store}.setTheme('${process.env.TUTTI_CAPTURE_LIGHT ? 'light' : 'dark'}')`)
   await open('docs/demo/ejemplo.sql')
   await snap('03-sql')
+  // buscar en el archivo abierto: Ctrl+H abre el cuadro flotante con la fila de reemplazo
+  await open('src/main/git/git.ts')
+  await run(`(() => {
+    const type = (el, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })) }
+    document.querySelector('.cm-content')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }))
+    setTimeout(() => { type(document.querySelector('.tutti-find-input'), 'root'); type(document.querySelectorAll('.tutti-find-input')[1], 'raiz') }, 150)
+  })()`)
+  await snap('03b-buscar-en-archivo', 900)
+  await run(`document.querySelector('.cm-content')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
+  // buscar y reemplazar en el proyecto
+  await run(`${store}.set({ tab: 'search', searchReplace: true, searchToken: ${store}.searchToken + 1 })`)
+  await sleep(300)
+  await run(`(() => {
+    const type = (el, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })) }
+    const [find, repl] = document.querySelectorAll('input[placeholder="Buscar"], input[placeholder="Reemplazar"]')
+    type(find, 'agente'); if (repl) type(repl, 'asistente')
+  })()`)
+  await snap('03c-buscar-en-proyecto', 1500)
+  await run(`${store}.set({ tab: 'files' })`)
   await run(`${store}.set({ tab: 'git' })`)
   await snap('04-git', 1200)
   await run(`${store}.set({ tab: 'agents' })`)
@@ -65,32 +94,32 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await run(`${store}.set({ modal: null }); ${store}.toast('Commit hecho', 'ok'); ${store}.toast('No se pudo iniciar «claude»: comando no encontrado', 'error')`)
   await snap('08-avisos', 400)
   await run(`${store}.set({ toasts: [] })`)
-  if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar los sub-agentes, con procesos falsos (`cat`)
+  if (process.env.TUTTI_CAPTURE_TERMINAL) {          // solo para verificar los sub-agentes, con procesos falsos (`cat`)
     await run(`${store}.set({ docs: [], activeDoc: null, tab: 'agents' })`)
-    await run(`${store}.addPane({ id: 'a1', kind: 'agent', name: 'Claude Code', title: 'Claude Code · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)} })`)
-    await run(`${store}.addPane({ id: 'a2', kind: 'agent', name: 'Claude Code', title: 'Claude Code · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
-    await run(`${store}.addPane({ id: 'a3', kind: 'agent', name: 'OpenCode', title: 'OpenCode · orches', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
+    await run(`${store}.addPane({ id: 'a1', kind: 'agent', name: 'Claude Code', title: 'Claude Code · tutti', command: 'cat', args: [], cwd: ${JSON.stringify(project)} })`)
+    await run(`${store}.addPane({ id: 'a2', kind: 'agent', name: 'Claude Code', title: 'Claude Code · tutti', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
+    await run(`${store}.addPane({ id: 'a3', kind: 'agent', name: 'OpenCode', title: 'OpenCode · tutti', command: 'cat', args: [], cwd: ${JSON.stringify(project)}, parentId: 'a1' })`)
     await snap('subagentes', 2000)
     await run(`${store}.set({ panes: [], activePane: null })`)
   }
-  if (process.env.ORCHES_CAPTURE_TERMINAL) {          // solo para verificar: el prompt de tu shell no debe ir a la documentación
+  if (process.env.TUTTI_CAPTURE_TERMINAL) {          // solo para verificar: el prompt de tu shell no debe ir a la documentación
     await run(`${store}.set({ modal: null }); ${store}.toggleShell()`)
     await snap('terminal-verificacion', 2500)
   }
-  if (process.env.ORCHES_CAPTURE_REAL) {              // agentes de verdad (gasta tokens): un líder arregla una función y delega las pruebas
-    const dir = mkdtempSync(join(tmpdir(), 'orches-demo-'))
+  if (process.env.TUTTI_CAPTURE_REAL) {              // agentes de verdad (gasta tokens): un líder arregla una función y delega las pruebas
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-demo-'))
     mkdirSync(join(dir, 'src')); mkdirSync(join(dir, '.claude'))
     writeFileSync(join(dir, 'package.json'), '{ "name": "demo-precios", "type": "module" }\n')
     writeFileSync(join(dir, 'src/precio.js'), '// Precio final de un artículo con su impuesto (la tasa es un porcentaje, p. ej. 15)\nexport function conImpuesto(monto, tasa) {\n  return monto + tasa\n}\n')
     // permisos solo de este proyecto de ejemplo: así ningún agente se queda esperando una confirmación
-    writeFileSync(join(dir, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Read', 'Edit', 'Write', 'mcp__orches', 'Bash(node:*)'] } }))
+    writeFileSync(join(dir, '.claude/settings.json'), JSON.stringify({ permissions: { allow: ['Read', 'Edit', 'Write', 'mcp__tutti', 'Bash(node:*)'] } }))
     execFileSync('git', ['init', '-q'], { cwd: dir })
     await run(`${store}.setProject(${JSON.stringify(dir)})`)
     await run(`${store}.set({ docs: [], activeDoc: null, tab: 'agents', modal: null })`)
     const task = 'En src/precio.js la función conImpuesto está mal: suma la tasa en vez de aplicar el porcentaje. Corrígela tú. ' +
       'Después usa delegate_task con agent "claude", difficulty "easy" y new_instance true para pedirle a otro agente que escriba src/precio.test.js ' +
       'con 3 pruebas usando node:test, espera su resultado con wait_agent y cuéntame en una frase cómo quedó. Sé breve.'
-    await run(`(async () => { const id = await window.api.orchestra.newId(); window.__orches.getState().addPane({ id, kind: 'agent', name: 'Claude Code', title: 'Claude Code · demo-precios', command: 'claude', args: [], cwd: ${JSON.stringify(dir)}, prompt: ${JSON.stringify(task)} }) })()`)
+    await run(`(async () => { const id = await window.api.orchestra.newId(); window.__tutti.getState().addPane({ id, kind: 'agent', name: 'Claude Code', title: 'Claude Code · demo-precios', command: 'claude', args: [], cwd: ${JSON.stringify(dir)}, prompt: ${JSON.stringify(task)} }) })()`)
     // la carpeta es nueva: Claude pregunta si se confía en ella (la opción marcada es «No»): se baja a «Sí» y se confirma
     const answerTrust = (): void => {
       for (const m of pty.agentSessions()) {
@@ -108,10 +137,10 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     console.log('carpeta de ejemplo:', dir)
     await run(`${store}.set({ panes: [], activePane: null })`)
   }
-  if (process.env.ORCHES_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
-    const sample = '# Orches\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+  if (process.env.TUTTI_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
+    const sample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
     await run(`window.api.context.ensure(${JSON.stringify(project)}).then((f) => window.api.fs.write(f, ${JSON.stringify(sample)}, false))`)
-    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/orches-docs'] })`)
+    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/tutti-docs'] })`)
     await snap('21-contexto', 1500)
     await run(`${store}.set({ tab: 'files' })`)
     await snap('22-inicio', 800)
@@ -119,7 +148,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('23-novedades', 800)
     await run(`${store}.set({ modal: null })`)
   }
-  if (process.env.ORCHES_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
+  if (process.env.TUTTI_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
     await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
     await snap('14-actualizar-disponible', 500)
     await run(`${store}.set({ update: { status: 'downloading', version: '0.2.1', percent: 42 } })`)
@@ -128,25 +157,25 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('16-actualizar-reiniciando', 400)
     await run(`${store}.set({ update: { status: 'idle' }, tab: 'files' })`)
   }
-  if (process.env.ORCHES_CAPTURE_DIFF) {              // la comparación de cambios de un archivo modificado
+  if (process.env.TUTTI_CAPTURE_DIFF) {              // la comparación de cambios de un archivo modificado
     await run(`${store}.set({ tab: 'git', modal: null })`)
-    await run(`${store}.openDiff(${JSON.stringify(join(project, process.env.ORCHES_CAPTURE_DIFF))}, false)`)
+    await run(`${store}.openDiff(${JSON.stringify(join(project, process.env.TUTTI_CAPTURE_DIFF))}, false)`)
     await snap('20-comparacion', 1200)
   }
-  if (process.env.ORCHES_CAPTURE_GRAPH) {             // el grafo de git del proyecto abierto
+  if (process.env.TUTTI_CAPTURE_GRAPH) {             // el grafo de git del proyecto abierto
     await run(`${store}.openGraph()`)
     await snap('18-grafo', 1500)
     await run(`[...document.querySelectorAll('[title*="Clic: ver"]')].find((e) => e.textContent.includes("Merge branch"))?.click()`)
     await snap('19-grafo-detalle', 1200)
     await run(`${store}.set({ modal: null })`)
   }
-  if (process.env.ORCHES_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
+  if (process.env.TUTTI_CAPTURE_USAGE) {            // lee el consumo e historial reales del HOME
     await run(`${store}.set({ modal: null, tab: 'ai' })`)
     await snap('12-consumo', 2500)
     await run(`(() => { const b = document.querySelectorAll('[title="Más acciones"]')[0]; b?.scrollIntoView({ block: 'center' }); b?.click() })()`)
     await snap('13-consumo-menu', 500)
   }
-  if (process.env.ORCHES_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
+  if (process.env.TUTTI_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
     await run(`${store}.set({ modal: null, tab: 'mcp' })`)
     await snap('09-mcp', 1500)
     await run(`document.querySelector('[title="Ver detalles"]')?.click()`)

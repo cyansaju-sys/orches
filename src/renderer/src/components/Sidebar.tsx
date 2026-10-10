@@ -1,15 +1,20 @@
 import { clsx } from 'clsx'
+import { useState } from 'react'
+import { MdCheck, MdSettings } from 'react-icons/md'
+import { Menu } from '@/components/Menu'
 import { sidebarIcon } from '@/lib/icons'
 import { useStore, type SidebarTab } from '@/store'
 import { AgentsView } from '@/views/AgentsView'
 import { FilesView } from '@/views/FilesView'
 import { GitView } from '@/views/GitView'
 import { ContextView } from '@/views/ContextView'
+import { SearchView } from '@/views/SearchView'
 import { McpView } from '@/views/McpView'
 import { UsageView } from '@/views/UsageView'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; title: string; key: string }> = [
   { id: 'files', icon: 'files', title: 'Archivos', key: 'E' },
+  { id: 'search', icon: 'search', title: 'Buscar', key: 'F' },
   { id: 'agents', icon: 'agents', title: 'Agentes', key: 'A' },
   { id: 'git', icon: 'git', title: 'Git', key: 'G' },
   { id: 'context', icon: 'context', title: 'Contexto del proyecto', key: 'K' },
@@ -23,6 +28,10 @@ export function Sidebar() {
   const width = useStore((s) => s.sidebarWidth)
   const open = useStore((s) => s.sidebarOpen)
   const changes = useStore((s) => s.git?.files.length ?? 0)
+  const theme = useStore((s) => s.theme)
+  const setTheme = useStore((s) => s.setTheme)
+  const [menu, setMenu] = useState<DOMRect | null>(null)
+  const check = (on: boolean) => on ? <MdCheck size={15} /> : <span className="inline-block size-[15px]" />
 
   return (
     <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', !open && 'mr-1.5')}>
@@ -43,9 +52,24 @@ export function Sidebar() {
             )}
           </button>
         ))}
+        <button
+          title="Ajustes"
+          onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())}
+          className={clsx('mt-auto grid size-10 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent', menu && 'bg-accent-bg text-accent')}
+        >
+          <MdSettings size={22} />
+        </button>
       </div>
+      {menu && (
+        <Menu width={210} anchor={menu} onClose={() => setMenu(null)} items={[
+          { label: 'Tema oscuro', icon: check(theme === 'dark'), onClick: () => setTheme('dark') },
+          { label: 'Tema claro', icon: check(theme === 'light'), onClick: () => setTheme('light') },
+          { label: 'Automático (sistema)', icon: check(theme === 'system'), onClick: () => setTheme('system') }
+        ]} />
+      )}
       {open && <div className="min-w-0 flex-1 overflow-hidden pt-1.5">
         {tab === 'files' && <FilesView />}
+        {tab === 'search' && <SearchView />}
         {tab === 'agents' && <AgentsView />}
         {tab === 'git' && <GitView />}
         {tab === 'context' && <ContextView />}

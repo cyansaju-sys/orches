@@ -3,6 +3,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Terminal } from '@xterm/xterm'
 import { useEffect, useRef } from 'react'
 import { isGlobalShortcut } from '@/lib/shortcuts'
+import { TERMINAL_THEMES } from '@/lib/theme'
 import { useStore, type Pane } from '@/store'
 
 // los prompts con íconos (powerlevel10k, starship) usan una Nerd Font: se prueban las más comunes antes de la fuente base
@@ -28,12 +29,6 @@ function wire(): void {
   })
 }
 
-const theme = {
-  background: '#0d0f16', foreground: '#e6e8ef', cursor: '#8fa6c4', cursorAccent: '#0d0f16', selectionBackground: '#2c3a50',
-  black: '#1a1d2b', red: '#ff6b81', green: '#7ee0a1', yellow: '#e2c08d', blue: '#82aaff', magenta: '#c792ea', cyan: '#4cc9b0', white: '#e6e8ef',
-  brightBlack: '#6b7088', brightRed: '#ff8a9b', brightGreen: '#9bf0b9', brightYellow: '#f0d4a8', brightBlue: '#a3bdff',
-  brightMagenta: '#d9b3f5', brightCyan: '#6fe0c9', brightWhite: '#ffffff'
-}
 
 export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) {
   const host = useRef<HTMLDivElement>(null)
@@ -47,7 +42,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     void (async () => {
     await Promise.all([document.fonts.load('13px "DejaVu Sans Mono"'), document.fonts.load('13px "Symbols Nerd Font Mono"')]).catch(() => undefined)
     if (disposed || !host.current) return
-    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme, allowProposedApi: true })
+    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme: TERMINAL_THEMES[useStore.getState().themeMode], allowProposedApi: true })
     const fit = new FitAddon()
     t.loadAddon(fit)
     t.loadAddon(new WebLinksAddon((_e, url) => window.open(url)))
@@ -87,6 +82,8 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     return () => { disposed = true; cleanup() }
   }, [pane.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  const mode = useStore((s) => s.themeMode)
+  useEffect(() => { if (term.current) term.current.options.theme = TERMINAL_THEMES[mode] }, [mode])
   useEffect(() => { if (active) { term.current?.focus(); term.current?.scrollToBottom() } }, [active])
   return <div ref={host} className="min-h-0 flex-1 overflow-hidden bg-surface px-2 pb-3 pt-1.5" />
 }

@@ -12,7 +12,7 @@ export function IconButton({ title, onClick, children, className, danger }: {
       onClick={onClick}
       className={clsx(
         'no-drag grid h-[26px] w-8 place-items-center rounded-md text-muted transition-colors',
-        danger ? 'hover:bg-[#3a1620] hover:text-danger' : 'hover:bg-accent-bg hover:text-accent',
+        danger ? 'hover:bg-danger/15 hover:text-danger' : 'hover:bg-accent-bg hover:text-accent',
         className
       )}
     >
@@ -80,12 +80,12 @@ export function Modal({ onClose, children, width = 520, title, top }: { onClose:
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ width }}
-        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-xl border border-white/[0.06] bg-[#0e1118] shadow-[0_18px_50px_-18px_rgba(0,0,0,0.75)]"
+        className="max-h-[78vh] animate-pop-in overflow-hidden rounded-xl border border-ov/[0.06] bg-pop shadow-[0_18px_50px_-18px_rgba(0,0,0,0.75)]"
       >
         {title && (
           <div className="flex items-center justify-between px-5 pt-4">
             <h2 className="text-[13px] font-medium tracking-[0.01em] text-text">{title}</h2>
-            <button onClick={onClose} title="Cerrar" className="-mr-1.5 grid size-6 place-items-center rounded-md text-muted/70 transition-colors hover:bg-white/[0.06] hover:text-text"><MdClose size={14} /></button>
+            <button onClick={onClose} title="Cerrar" className="-mr-1.5 grid size-6 place-items-center rounded-md text-muted/70 transition-colors hover:bg-ov/[0.06] hover:text-text"><MdClose size={14} /></button>
           </div>
         )}
         {title ? <div className="pt-3.5">{children}</div> : children}
@@ -99,4 +99,4 @@ export function Kbd({ children }: { children: ReactNode }) {
 }
 
 /** Aspecto común de los campos de texto: fondo suave, sin borde ni resaltado de foco. */
-export const FIELD = 'w-full rounded-md bg-white/[0.04] px-3 py-2 text-[12px] caret-accent outline-none placeholder:text-muted/70'
+export const FIELD = 'w-full rounded-md bg-ov/[0.04] px-3 py-2 text-[12px] caret-accent outline-none placeholder:text-muted/70'

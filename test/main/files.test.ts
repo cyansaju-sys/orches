@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createEntry, renameEntry, validName } from '../../src/main/files'
 
-const dir = (): string => mkdtempSync(join(tmpdir(), 'orches-files-'))
+const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-files-'))
 
 describe('crear y renombrar', () => {
   it('solo acepta nombres simples', () => {

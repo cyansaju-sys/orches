@@ -12,11 +12,11 @@ describe('proyecto al que pertenece una carpeta', () => {
     expect(projectRoot('/a/mono/pkg/x', ['/a/mono', '/a/mono/pkg'])).toBe('/a/mono/pkg')
   })
   it('un nombre que solo empieza igual no cuenta', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-root-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-root-'))
     expect(projectRoot(`${dir}-2`, [dir])).toBe(`${dir}-2`)
   })
   it('sin proyecto conocido ni git usa la carpeta misma', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-root-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-root-'))
     mkdirSync(join(dir, 'x'))
     expect(projectRoot(join(dir, 'x'), [])).toBe(join(dir, 'x'))
   })

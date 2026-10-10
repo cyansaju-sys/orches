@@ -8,39 +8,58 @@ import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef } from 'react'
 import type { GitMarks } from '@shared/types'
 import { languageFor } from '@/lib/languages'
+import { findPanel, openFind } from './searchPanel'
 
 /** Mismos colores de sintaxis que la versión anterior. */
 const highlight = HighlightStyle.define([
-  { tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword], color: '#c792ea', fontWeight: '600' },
-  { tag: [t.typeName, t.className, t.namespace, t.standard(t.typeName)], color: '#4cc9b0' },
-  { tag: [t.string, t.special(t.string), t.regexp], color: '#7ccb8b' },
-  { tag: [t.number, t.bool, t.null, t.atom], color: '#f0b67f' },
-  { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: '#6b7088', fontStyle: 'italic' },
-  { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))], color: '#82aaff' },
-  { tag: [t.tagName, t.angleBracket], color: '#f07178' },
-  { tag: [t.attributeName], color: '#ffcb6b' },
-  { tag: [t.meta, t.annotation], color: '#ffcb6b' },
-  { tag: [t.heading], color: '#c792ea', fontWeight: '700' },
-  { tag: [t.link, t.url], color: '#82aaff', textDecoration: 'underline' }
+  { tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword], color: 'var(--syn-keyword)', fontWeight: '600' },
+  { tag: [t.typeName, t.className, t.namespace, t.standard(t.typeName)], color: 'var(--syn-type)' },
+  { tag: [t.string, t.special(t.string), t.regexp], color: 'var(--syn-string)' },
+  { tag: [t.number, t.bool, t.null, t.atom], color: 'var(--syn-number)' },
+  { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: 'var(--color-muted)', fontStyle: 'italic' },
+  { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))], color: 'var(--syn-func)' },
+  { tag: [t.tagName, t.angleBracket], color: 'var(--syn-tag)' },
+  { tag: [t.attributeName], color: 'var(--syn-attr)' },
+  { tag: [t.meta, t.annotation], color: 'var(--syn-attr)' },
+  { tag: [t.heading], color: 'var(--syn-keyword)', fontWeight: '700' },
+  { tag: [t.link, t.url], color: 'var(--syn-func)', textDecoration: 'underline' }
 ])
 
 const theme = EditorView.theme({
-  '&': { color: '#e6e8ef', backgroundColor: '#0d0f16', fontSize: '12.5px' },
-  '.cm-content': { caretColor: '#8fa6c4', padding: '4px 0' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#8fa6c4', borderLeftWidth: '2px' },
-  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#222c3c !important' },
-  '.cm-activeLine': { backgroundColor: '#ffffff08' },
-  '.cm-gutters': { backgroundColor: '#0d0f16', color: '#6b7088', border: 'none' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: '#e6e8ef' },
+  '&': { color: 'var(--color-text)', backgroundColor: 'var(--color-surface)', fontSize: '12.5px' },
+  '.cm-content': { caretColor: 'var(--color-accent)', padding: '4px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--color-accent)', borderLeftWidth: '2px' },
+  '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--color-accent-bg) !important' },
+  '.cm-activeLine': { backgroundColor: 'var(--ed-line)' },
+  '.cm-gutters': { backgroundColor: 'var(--color-surface)', color: 'var(--color-muted)', border: 'none' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--color-text)' },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 6px', minWidth: '34px' },
-  '.cm-matchingBracket': { backgroundColor: '#3b4a6366', outline: 'none' },
-  '.cm-tooltip': { backgroundColor: '#11141d', border: '1px solid #2a2f3d', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 12px 32px #000a' },
+  '.cm-matchingBracket': { backgroundColor: 'var(--ed-bracket)', outline: 'none' },
+  '.cm-tooltip': { backgroundColor: 'var(--color-panel)', border: '1px solid var(--color-line)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 12px 32px var(--ed-shadow)' },
   '.cm-tooltip-autocomplete ul': { fontFamily: 'var(--font-mono)', fontSize: '12px', maxHeight: '260px' },
   '.cm-tooltip-autocomplete ul li': { padding: '4px 10px' },
-  '.cm-tooltip-autocomplete ul li[aria-selected]': { backgroundColor: '#222c3c', color: '#e6e8ef' },
+  '.cm-tooltip-autocomplete ul li[aria-selected]': { backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-text)' },
   '.cm-completionIcon': { opacity: 0.6 },
-  '.cm-searchMatch': { backgroundColor: '#3b4a6388' },
-  '.cm-panels': { backgroundColor: '#11141d', color: '#e6e8ef', borderColor: '#2a2f3d' },
+  '.cm-searchMatch': { backgroundColor: 'var(--ed-match)' },
+  '.cm-panels': { position: 'absolute', top: '6px', right: '18px', left: 'auto', backgroundColor: 'transparent', border: 'none', pointerEvents: 'none', zIndex: '20' },
+  '.cm-panels-top': { border: 'none' },
+  '.tutti-find': { pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: '1px', padding: '4px 5px 4px 0', backgroundColor: 'var(--color-panel)', border: '1px solid var(--color-line)', borderRadius: '8px', boxShadow: '0 8px 24px var(--ed-shadow)', fontSize: '11px', color: 'var(--color-text)' },
+  '.tutti-find-chevron': { width: '13px', alignSelf: 'stretch', border: 'none', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', fontSize: '12px', padding: 0 },
+  '.tutti-find-chevron:hover': { color: 'var(--color-text)' },
+  '.tutti-find-rows': { display: 'flex', flexDirection: 'column', gap: '3px' },
+  '.tutti-find-row': { display: 'flex', alignItems: 'center', gap: '2px' },
+  '.tutti-find-box': { display: 'flex', alignItems: 'center', gap: '1px', width: '200px', backgroundColor: 'var(--ed-field)', borderRadius: '5px', padding: '0 2px 0 0' },
+  '.tutti-find-input': { flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none', color: 'var(--color-text)', caretColor: 'var(--color-accent)', padding: '3px 6px', font: 'inherit' },
+  '.tutti-find-input.invalid': { color: 'var(--color-danger)' },
+  '.tutti-find-opt': { height: '17px', minWidth: '17px', border: 'none', borderRadius: '4px', background: 'transparent', color: 'var(--color-muted)', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '10px', padding: '0 2px' },
+  '.tutti-find-opt:hover': { color: 'var(--color-text)' },
+  '.tutti-find-opt.on': { backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' },
+  '.tutti-find-status': { minWidth: '58px', textAlign: 'center', color: 'var(--color-muted)', fontSize: '10px', whiteSpace: 'nowrap' },
+  '.tutti-find-status.none': { color: 'var(--color-danger)' },
+  '.tutti-find-btn': { height: '20px', minWidth: '20px', border: 'none', borderRadius: '4px', background: 'transparent', color: 'var(--color-text)', cursor: 'pointer', fontSize: '12px', padding: '0 3px' },
+  '.tutti-find-btn:hover:not(:disabled)': { backgroundColor: 'var(--color-accent-bg)' },
+  '.tutti-find-btn:disabled': { opacity: 0.35, cursor: 'default' },
+  '.tutti-find-text': { fontSize: '10px', padding: '0 6px' },
   '.cm-git-gutter': { width: '4px' }
 }, { dark: true })
 
@@ -78,10 +97,11 @@ interface Props {
   onChange: (text: string) => void
   onSave: () => void
   focusToken: number
+  reveal?: { path: string; line: number; col: number; length: number; token: number } | null
 }
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focusToken }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focusToken, reveal }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const states = useRef(new Map<string, EditorState>())
@@ -98,8 +118,11 @@ export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focu
       autocompletion({ override: undefined, activateOnTyping: true, icons: true }),
       EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
       languageFor(p.split(/[\\/]/).pop() ?? p),
+      findPanel,
       ro.current.of([EditorState.readOnly.of(locked), EditorView.editable.of(!locked)]),
       keymap.of([
+        { key: 'Mod-f', run: (v) => openFind(v, false), scope: 'editor search-panel', preventDefault: true },
+        { key: 'Mod-h', run: (v) => openFind(v, true), scope: 'editor search-panel', preventDefault: true },
         { key: 'Mod-s', run: () => { handlers.current.onSave(); return true } },
         ...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap
       ]),
@@ -134,6 +157,15 @@ export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focu
   }, [readOnly])
 
   useEffect(() => { view.current?.dispatch({ effects: setMarks.of(marks) }) }, [marks])
+  // un resultado de búsqueda: el cursor va a la coincidencia y queda seleccionada
+  useEffect(() => {
+    const v = view.current
+    if (!v || !reveal || reveal.path !== path) return
+    const line = v.state.doc.line(Math.min(Math.max(reveal.line, 1), v.state.doc.lines))
+    const from = Math.min(line.from + reveal.col, line.to)
+    v.dispatch({ selection: { anchor: from, head: Math.min(from + reveal.length, line.to) }, effects: EditorView.scrollIntoView(from, { y: 'center' }) })
+    v.focus()
+  }, [reveal?.token])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (focusToken) view.current?.focus() }, [focusToken])
 
   return <div ref={host} className="min-h-0 flex-1 overflow-hidden" />

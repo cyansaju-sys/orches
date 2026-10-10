@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents/agents'
 import { ensureContext } from './context/context'
@@ -7,8 +8,9 @@ import { suggestCommit } from './git/commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
 import * as git from './git/git'
 import * as pty from './agents/pty'
-import { getSetting, setSetting } from './settings'
-import type { GitOp, PtyOptions } from '../shared/types'
+import { getSetting, migrateLegacyConfig, setSetting } from './settings'
+import { replaceInFiles, searchFiles } from './search'
+import type { GitOp, PtyOptions, SearchOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
@@ -16,20 +18,28 @@ import { collectUsage, deleteSession, renameSession, sessionNames } from './usag
 import { runSelfTest } from './selftest'
 import { clearTasks, newId, startHub, stopHub, taskList } from './agents/hub'
 
-if (process.argv.includes('--orches-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
+if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
 
 let win: BrowserWindow | null = null
+const emptyWindow = process.argv.includes('--new-window')      // ventana nueva: arranca sin abrir el último proyecto
+
+/** Otra ventana de Tutti es otro proceso: cada una tiene sus agentes, su servidor de tareas y su proyecto. */
+function openNewWindow(): void {
+  const exe = app.isPackaged ? process.env.APPIMAGE || process.execPath : process.execPath      // en desarrollo nunca el AppImage instalado
+  const args = app.isPackaged ? ['--new-window'] : [app.getAppPath(), '--new-window']
+  spawn(exe, args, { detached: true, stdio: 'ignore', env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined } }).unref()
+}
 
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1360, height: 860, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
-    title: 'Orches', icon: join(__dirname, '../../resources/icon.png'),
+    title: 'Tutti', icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true }
   })
   win.once('ready-to-show', () => win?.show())
-  if (process.env.ORCHES_CAPTURE) {
-    win.webContents.once('did-finish-load', () => void runCapture(win!, process.env.ORCHES_CAPTURE!, process.cwd()))
+  if (process.env.TUTTI_CAPTURE) {
+    win.webContents.once('did-finish-load', () => void runCapture(win!, process.env.TUTTI_CAPTURE!, process.cwd()))
   }
   win.on('maximize', () => win?.webContents.send('window:maximized', true))
   win.on('unmaximize', () => win?.webContents.send('window:maximized', false))
@@ -58,6 +68,8 @@ function registerIpc(): void {
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
   ipcMain.handle('context:ensure', (_e, project: string) => ensureContext(project))
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
+  ipcMain.handle('search:run', (_e, root: string, opts: SearchOptions) => searchFiles(root, opts))
+  ipcMain.handle('search:replace', (_e, root: string, opts: SearchOptions, text: string, paths: string[]) => replaceInFiles(root, opts, text, paths))
   ipcMain.handle('fs:read', (_e, path: string) => readFileData(path))
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
   ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
@@ -89,7 +101,7 @@ function registerIpc(): void {
   ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))
   ipcMain.handle('mcp:add', (_e, agent, spec, scope, project) => mcp.addServer(agent, spec, scope, project))
   ipcMain.handle('mcp:remove', (_e, server, project) => mcp.removeServer(server, project))
-  ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.ORCHES_NO_LIMITS_FETCH))   // ORCHES_NO_LIMITS_FETCH: pruebas sin red
+  ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.TUTTI_NO_LIMITS_FETCH))   // TUTTI_NO_LIMITS_FETCH: pruebas sin red
   ipcMain.handle('usage:rename', (_e, session, name: string) => renameSession(session, name))
   ipcMain.handle('usage:remove', (_e, session) => deleteSession(session))
   ipcMain.handle('usage:names', () => sessionNames())
@@ -114,16 +126,19 @@ function registerIpc(): void {
   ipcMain.on('window:minimize', () => win?.minimize())
   ipcMain.on('window:toggleMaximize', () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()))
   ipcMain.on('window:close', () => win?.close())
+  ipcMain.on('window:new', openNewWindow)
+  ipcMain.handle('window:isEmpty', () => emptyWindow)
 }
 
-if (process.env.ORCHES_CAPTURE) app.setPath('appData', join(app.getPath('temp'), `orches-captura-${process.pid}`))   // ajustes aislados
+if (process.env.TUTTI_CAPTURE) app.setPath('appData', join(app.getPath('temp'), `tutti-captura-${process.pid}`))   // ajustes aislados
 
 app.whenReady().then(() => {
+  if (!process.env.TUTTI_CAPTURE) migrateLegacyConfig()
   Menu.setApplicationMenu(null)             // sin menú: los atajos los gestiona la propia app
   registerIpc()
-  if (!process.env.ORCHES_CAPTURE && !process.env.ORCHES_SELFTEST) setupUpdater(() => win)
-  void startHub(() => win).then(() => { if (process.env.ORCHES_SELFTEST) void runSelfTest() })
-  if (!process.env.ORCHES_SELFTEST) createWindow()
+  if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) setupUpdater(() => win)
+  void startHub(() => win).then(() => { if (process.env.TUTTI_SELFTEST) void runSelfTest() })
+  if (!process.env.TUTTI_SELFTEST) createWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 let closing = false

@@ -5,8 +5,8 @@ export interface McpEntry { type: 'http'; url: string; headers: Record<string, s
 export interface ProjectContext { text: string; file: string }
 export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
 
-// herramientas del servidor «orches» que Claude Code puede usar sin pedir permiso cada vez
-export const ORCHES_TOOLS = ['mcp__orches__list_agents', 'mcp__orches__delegate_task', 'mcp__orches__wait_agent', 'mcp__orches__read_agent_output']
+// herramientas del servidor «tutti» que Claude Code puede usar sin pedir permiso cada vez
+export const TUTTI_TOOLS = ['mcp__tutti__list_agents', 'mcp__tutti__delegate_task', 'mcp__tutti__wait_agent', 'mcp__tutti__read_agent_output']
 // cómo arrancar cada agente con una tarea inicial (el resto la recibe escrita cuando ya está listo)
 export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
   claude: (t) => [t], opencode: (t) => ['--prompt', t],
@@ -19,7 +19,7 @@ const instructions = (context?: ProjectContext): { instructions?: string[] } => 
 /**
  * OpenCode 2.x atiende a todos sus clientes desde UN servicio en segundo plano compartido: la configuración que se le pasa
  * a un proceso por variable de entorno se pierde si el servicio ya estaba corriendo, y la que consigue entrar queda para
- * todos los demás OpenCode (incluidos los que abres fuera de Orches). `--standalone` le da a cada panel su propio servidor
+ * todos los demás OpenCode (incluidos los que abres fuera de Tutti). `--standalone` le da a cada panel su propio servidor
  * privado: la configuración (con el id de ese panel) se aplica solo a él y no deja nada atrás.
  * La 1.x no tiene servicio compartido ni ese flag, y declara los servidores directamente bajo `mcp`.
  */
@@ -29,17 +29,17 @@ export function opencodeLaunch(entry: McpEntry | null, first: string[], given: s
   }
   const remote = { type: 'remote', url: entry.url, headers: entry.headers }
   if (major >= 2) {
-    const config = { mcp: { servers: { orches: remote } }, permission: { 'orches_*': 'allow' }, ...instructions(context) }   // sin preguntar en cada llamada
+    const config = { mcp: { servers: { tutti: remote } }, permission: { 'tutti_*': 'allow' }, ...instructions(context) }   // sin preguntar en cada llamada
     return { args: ['--standalone', ...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) } }
   }
-  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: { orches: remote }, ...instructions(context) }) } }
+  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: { tutti: remote }, ...instructions(context) }) } }
 }
 
 /** La tarea inicial va primero: --mcp-config acepta varios valores y se la comería. */
 export function claudeLaunch(entry: McpEntry | null, first: string[], given: string[], context?: ProjectContext): Launch {
   const system = context ? ['--append-system-prompt', context.text] : []
   if (!entry) return { args: [...first, ...given, ...system], env: {} }
-  return { args: [...first, ...given, ...system, '--mcp-config', JSON.stringify({ mcpServers: { orches: entry } }), '--allowedTools', ...ORCHES_TOOLS], env: {} }
+  return { args: [...first, ...given, ...system, '--mcp-config', JSON.stringify({ mcpServers: { tutti: entry } }), '--allowedTools', ...TUTTI_TOOLS], env: {} }
 }
 
 export function buildLaunch(command: string, entry: McpEntry | null, prompt: string | undefined, given: string[], opencodeMajor: number, context?: ProjectContext): Launch {
@@ -47,8 +47,12 @@ export function buildLaunch(command: string, entry: McpEntry | null, prompt: str
   const first = task && PROMPT_ARGS[command] ? PROMPT_ARGS[command](task) : []
   if (command === 'claude') return claudeLaunch(entry, first, given, context)
   if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context)
+  if (command === 'agy' && entry) return { args: given, env: agyEnv(entry) }
   return { args: given, env: {} }
 }
+
+/** Antigravity recibe la URL y la clave de su sesión por entorno; el puente que registra Tutti (agyBridge) las lee. */
+export const agyEnv = (entry: McpEntry): Record<string, string> => ({ TUTTI_MCP_URL: entry.url, TUTTI_MCP_AUTH: entry.headers.Authorization ?? '' })
 
 /** Deja solo letras y números: así el texto se reconoce aunque la pantalla lo parta en líneas o lo rodee de bordes. */
 const squash = (t: string): string => t.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase()

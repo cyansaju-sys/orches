@@ -9,6 +9,7 @@ import { Resizer } from '@/components/ui'
 import { Tooltips } from '@/components/Tooltip'
 import { refreshGit } from '@/lib/gitSync'
 import { isGlobalShortcut } from '@/lib/shortcuts'
+import { isPref, resolveTheme, paintTheme } from '@/lib/theme'
 import { loadIconTheme } from '@/lib/icons'
 import { isDirty, useStore } from '@/store'
 
@@ -30,8 +31,11 @@ export function App() {
   useEffect(() => {
     void (async () => {
       await loadIconTheme()
-      const project = (await window.api.settings.get('project')) as string | undefined
+      const empty = await window.api.window.isEmpty()
+      const project = empty ? undefined : (await window.api.settings.get('project')) as string | undefined
       const edit = await window.api.settings.get('edit_enabled')
+      const savedTheme = await window.api.settings.get('theme')
+      if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
@@ -42,6 +46,19 @@ export function App() {
       void window.api.settings.set('last_seen_version', current)
       setReady(true)
     })()
+  }, [])
+
+  // con «Automático», el tema sigue al del sistema
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-color-scheme: light)')
+    const onChange = (): void => {
+      const st = useStore.getState()
+      if (st.theme !== 'system') return
+      const mode = resolveTheme('system')
+      paintTheme(mode); st.set({ themeMode: mode })
+    }
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
   }, [])
 
   // un agente pidió abrir otro (reparto de tareas) o avisó de algo
@@ -96,8 +113,9 @@ export function App() {
         st.set({ activePane: all[(i + (e.key === 'PageDown' ? 1 : -1) + all.length) % all.length].id, focus: 'pane' })
         return
       }
+      if (key === 'H') { st.set({ tab: 'search', sidebarOpen: true, searchReplace: true, searchToken: st.searchToken + 1 }); return }
       const tab = TABS.find((t) => t.key === key)
-      if (tab) { st.set({ tab: tab.id, sidebarOpen: true }); return }
+      if (tab) { st.set({ tab: tab.id, sidebarOpen: true, ...(tab.id === 'search' && { searchToken: st.searchToken + 1, searchReplace: false }) }); return }
       if (key === 'N') st.set({ modal: 'agents' })
       else if (key === 'T') void st.toggleShell()
       else if (key === 'B') st.set({ sidebarOpen: !st.sidebarOpen })

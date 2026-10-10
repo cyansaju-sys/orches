@@ -1,6 +1,6 @@
 # Al subir un tag v* (p. ej. v0.4.0): comprueba tipos y pruebas, empaqueta la app y crea la release de GitHub con
-#   Linux:    Orches-<versión>-x86_64.AppImage + latest-linux.yml + install.sh (instalador de una línea)
-#   Windows:  Orches-Setup-<versión>.exe + latest.yml (+ .blockmap)
+#   Linux:    Tutti-<versión>-x86_64.AppImage + latest-linux.yml + install.sh (instalador de una línea)
+#   Windows:  Tutti-Setup-<versión>.exe + latest.yml (+ .blockmap)
 # Los archivos latest*.yml son lo que lee el actualizador de la app para saber que hay una versión nueva.
 # Si el build de Windows falla, la release de Linux sale igual (y se ve el fallo en Actions).
 name: Release
@@ -46,7 +46,7 @@ jobs:
         with:
           name: linux
           path: |
-            release/Orches-*-x86_64.AppImage
+            release/Tutti-*-x86_64.AppImage
             release/latest-linux.yml
             install.sh
 
@@ -74,8 +74,8 @@ jobs:
         with:
           name: windows
           path: |
-            release/Orches-Setup-*.exe
-            release/Orches-Setup-*.exe.blockmap
+            release/Tutti-Setup-*.exe
+            release/Tutti-Setup-*.exe.blockmap
             release/latest.yml
 
   release:
@@ -96,4 +96,4 @@ jobs:
           mapfile -t files < <(find dist-artifacts -type f)      # los artefactos conservan sus subcarpetas
           printf '%s\n' "${files[@]}"
           gh release create "$GITHUB_REF_NAME" "${files[@]}" \
-            --title "Orches $GITHUB_REF_NAME" --generate-notes
+            --title "Tutti $GITHUB_REF_NAME" --generate-notes

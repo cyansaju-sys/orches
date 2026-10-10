@@ -1,5 +1,5 @@
 /** Atajos globales: llevan Ctrl+Shift para no chocar con las teclas que usan los agentes y las shells. */
-export const GLOBAL_KEYS = new Set(['N', 'T', 'W', 'B', 'L', 'E', 'A', 'G', 'X', 'U', 'K'])
+export const GLOBAL_KEYS = new Set(['N', 'T', 'W', 'B', 'L', 'E', 'A', 'G', 'X', 'U', 'K', 'F', 'H'])
 
 export function isGlobalShortcut(e: KeyboardEvent): boolean {
   if (e.key === 'F1') return true
@@ -10,6 +10,7 @@ export function isGlobalShortcut(e: KeyboardEvent): boolean {
 export const SECTIONS: Array<{ title: string; items: Array<[string, string]> }> = [
   { title: 'Archivos', items: [
     ['Ctrl + S', 'Guardar el archivo abierto'], ['Ctrl + W', 'Cerrar la pestaña del archivo'],
+    ['Ctrl + F', 'Buscar en el archivo abierto'], ['Ctrl + H', 'Buscar y reemplazar en el archivo abierto'],
     ['Ctrl + Shift + L', 'Permitir o bloquear la edición de archivos'], ['Tab / Shift + Tab', 'Sangría al editar'],
     ['Ctrl + Espacio', 'Pedir sugerencias de autocompletado'], ['↑ ↓ · Enter o Tab · Esc', 'Elegir, aceptar o cerrar una sugerencia'],
     ['↑ ↓ ← → · Enter · Esc', 'Moverse por el árbol de archivos (tras pulsar uno)']
@@ -19,7 +20,7 @@ export const SECTIONS: Array<{ title: string; items: Array<[string, string]> }> 
     ['Ctrl + Shift + W', 'Cerrar el panel activo'], ['Ctrl + Av Pág / Re Pág', 'Panel siguiente / anterior']
   ] },
   { title: 'Barra lateral', items: [
-    ['Ctrl + Shift + B', 'Mostrar u ocultar la barra lateral'], ['Ctrl + Shift + E', 'Archivos'], ['Ctrl + Shift + A', 'Agentes'],
+    ['Ctrl + Shift + B', 'Mostrar u ocultar la barra lateral'], ['Ctrl + Shift + E', 'Archivos'], ['Ctrl + Shift + F', 'Buscar en el proyecto'], ['Ctrl + Shift + H', 'Buscar y reemplazar en el proyecto'], ['Ctrl + Shift + A', 'Agentes'],
     ['Ctrl + Shift + G', 'Git'], ['Ctrl + Shift + K', 'Contexto del proyecto'], ['Ctrl + Shift + X', 'Servidores MCP'], ['Ctrl + Shift + U', 'Consumo e historial de IA']
   ] },
   { title: 'General', items: [['Ctrl + Shift + V', 'Pegar en la terminal'], ['F1', 'Esta ayuda']] }
