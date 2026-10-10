@@ -4,10 +4,10 @@
 
 # Tutti
 
-### Todos tus agentes de programación, en una sola ventana.
+### Forma tu orquesta de IA en la era de los agentes.
 
-Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otro,<br />
-cada uno en su terminal, repartiéndose el trabajo entre ellos.
+La IA y los agentes cambiaron la forma de programar. Tutti los reúne:<br />
+Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otro, cada uno con su instrumento, tocando juntos en una sola ventana.
 
 <br />
 
@@ -368,6 +368,7 @@ Todas por variable de entorno:
 | `TUTTI_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
 | `TUTTI_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
 | `TUTTI_CAPTURE_GRAPH=1` · `TUTTI_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
+| `TUTTI_CAPTURE_INTERNAL=1` | Con la captura, coloca la ventana en la pantalla integrada (si hay varias) y ocupando su área útil |
 | `TUTTI_CAPTURE_LANG=en` · `TUTTI_CAPTURE_LIGHT=1` | Con la captura, saca las imágenes en inglés (`es` / `en`) o con el tema claro |
 | `TUTTI_CAPTURE_MCP=1` · `TUTTI_CAPTURE_UPDATE=1` | Con la captura, añade los servidores MCP (incluida la tienda, que consulta el registro) y el botón de actualización |
 | `TUTTI_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
@@ -404,6 +405,6 @@ GitHub. El servidor de reparto de tareas escucha únicamente en `127.0.0.1`.
 
 <br />
 
-<sub>Hecho con Electron, React, TypeScript y Tailwind · MIT</sub>
+<sub>Hecho con Electron, React, TypeScript y Tailwind, y con la ayuda de [Claude](https://claude.com/claude-code) (Anthropic) · MIT</sub>
 
 </div>

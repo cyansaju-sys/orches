@@ -2,7 +2,7 @@
  * Modo captura: TUTTI_CAPTURE=<carpeta> abre la app con una configuración temporal, recorre las pantallas,
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
-import { app, type BrowserWindow } from 'electron'
+import { app, screen, type BrowserWindow } from 'electron'
 import * as pty from '../src/main/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
@@ -22,7 +22,10 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   }
   const store = 'window.__tutti.getState()'
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
-  win.setContentSize(1360, 860)          // tamaño fijo: las capturas salen siempre iguales
+  // TUTTI_CAPTURE_INTERNAL=1: en la pantalla integrada (si hay varias) y ocupando su área útil; si no, un tamaño fijo
+  const internal = process.env.TUTTI_CAPTURE_INTERNAL ? screen.getAllDisplays().find((d) => d.internal) : undefined
+  if (internal) win.setBounds(internal.workArea)
+  else win.setContentSize(1360, 860)
   await sleep(1500)
   await run(`${store}.setProject(${JSON.stringify(project)})`)
   await run(`${store}.set({ tab: 'files' })`)

@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tutti — forma tu orquesta de IA en la era de los agentes</title>
+<meta name="description" content="Forma tu orquesta de IA en la era de los agentes: Tutti reúne Claude Code, Codex, OpenCode, Gemini CLI, Antigravity y más en una sola ventana, con editor, git, MCP y reparto de tareas entre agentes." />
+<meta property="og:title" content="Tutti" />
+<meta property="og:description" content="Forma tu orquesta de IA en la era de los agentes: varios agentes, una sola ventana." />
+<meta property="og:image" content="img/agentes.png" />
+<link rel="icon" href="icon.png" />
+<script>
+  (function () {
+    var pref = 'system'
+    try { pref = localStorage.getItem('tutti-site-theme') || 'system' } catch (e) {}
+    var dark = pref === 'dark' || (pref !== 'light' && !matchMedia('(prefers-color-scheme: light)').matches)
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  })()
+</script>
+<style>
+  /* misma paleta que la app: oscuro por defecto, claro con tonos suaves (sin blanco puro) */
+  :root {
+    --bg: #090b11; --bg2: #0d0f16; --panel: #11141d; --raised: #151925; --line: #2a2f3d;
+    --text: #e6e8ef; --muted: #8a90a6; --accent: #8fa6c4; --accent-2: #b4c6e0; --glow: rgba(143, 166, 196, .22);
+    --hair: rgba(255, 255, 255, .06); --header-bg: rgba(9, 11, 17, .72); --on-accent: #0b0e15; --shadow: rgba(0, 0, 0, .8);
+    --radius: 14px; color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #dfe3ea; --bg2: #e9ebf1; --panel: #f1f2f6; --raised: #f6f7fa; --line: #c8cdd9;
+    --text: #272c3b; --muted: #5b6277; --accent: #3f628f; --accent-2: #2f4f78; --glow: rgba(63, 98, 143, .20);
+    --hair: rgba(0, 0, 0, .08); --header-bg: rgba(223, 227, 234, .78); --on-accent: #f6f7fa; --shadow: rgba(40, 50, 75, .35);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+  /* fondo con un halo suave arriba */
+  body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 720px; z-index: -1; pointer-events: none;
+    background: radial-gradient(900px 420px at 50% -80px, var(--glow), transparent 70%); }
+
+  header { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: var(--header-bg); border-bottom: 1px solid var(--hair); }
+  .bar { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; letter-spacing: .01em; }
+  .brand img { width: 28px; height: 28px; }
+  nav { display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
+  nav a:hover { color: var(--text); }
+  .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+  .lang button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 999px; cursor: pointer; }
+  .lang button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+  .seg button { background: none; border: 0; color: var(--muted); width: 28px; height: 24px; display: grid; place-items: center; border-radius: 999px; cursor: pointer; }
+  .seg button svg { width: 15px; height: 15px; }
+  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
+  @media (max-width: 760px) { nav a.hide-sm { display: none; } }
+
+  .hero { text-align: center; padding: 84px 0 40px; }
+  .hero .logo { width: 92px; height: 92px; margin: 0 auto 22px; filter: drop-shadow(0 10px 40px var(--glow)); }
+  .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--raised); border-radius: 999px; padding: 5px 14px; font-size: 13px; color: var(--muted); }
+  .pill b { color: var(--accent-2); font-weight: 600; }
+  h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.04; letter-spacing: -.03em; margin: 22px auto 18px; max-width: 900px; font-weight: 700; }
+  h1 em { font-style: normal; background: linear-gradient(120deg, var(--accent-2), var(--accent) 60%, var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { font-size: clamp(17px, 2vw, 20px); color: var(--muted); max-width: 720px; margin: 0 auto 32px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 22px; border-radius: 12px; font-weight: 600; font-size: 15px; border: 1px solid var(--line); background: var(--raised); transition: transform .15s, border-color .15s, background .15s; }
+  .btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .btn.primary { background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: var(--on-accent); border-color: transparent; box-shadow: 0 10px 34px -10px var(--glow); }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+
+  .install { display: flex; align-items: center; gap: 10px; max-width: 900px; margin: 26px auto 0; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 10px 10px 16px; text-align: left; }
+  .install code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 12.5px/1.5 "DejaVu Sans Mono", ui-monospace, Menlo, Consolas, monospace; color: var(--accent-2); scrollbar-width: none; }
+  .install code::-webkit-scrollbar { display: none; }
+  .install .prompt { color: var(--muted); user-select: none; }
+  .copy { border: 1px solid var(--line); background: var(--raised); color: var(--text); font: inherit; font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  .copy:hover { border-color: var(--accent); }
+
+  .shot { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 30px 80px -30px var(--shadow), 0 0 0 1px var(--hair); }
+  .shot img { width: 100%; height: auto; }
+  .hero .shot { margin-top: 56px; box-shadow: 0 40px 120px -30px var(--glow), 0 30px 80px -30px var(--shadow); }
+  .caption { color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+  section { padding: 84px 0 0; }
+  .eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  h2 { font-size: clamp(28px, 4vw, 42px); line-height: 1.12; letter-spacing: -.02em; margin: 10px 0 14px; font-weight: 700; }
+  .sub { color: var(--muted); max-width: 640px; }
+  .center { text-align: center; } .center .sub { margin: 0 auto; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+  .card { background: linear-gradient(180deg, var(--panel), var(--bg2)); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
+  .card .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--glow); color: var(--accent-2); margin-bottom: 16px; }
+  .card .ico svg { width: 22px; height: 22px; }
+  .card h3 { margin: 0 0 8px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  @media (max-width: 860px) { .cards { grid-template-columns: 1fr; } }
+
+  .row { display: grid; grid-template-columns: 1fr 1.25fr; gap: 56px; align-items: center; }
+  .row.flip { grid-template-columns: 1.25fr 1fr; }
+  .row.flip .text { order: 2; }
+  .text h2 { margin-top: 8px; }
+  .text p { color: var(--muted); }
+  .text ul { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 10px; }
+  .text li { position: relative; padding-left: 26px; color: var(--text); font-size: 15px; }
+  .text li::before { content: ""; position: absolute; left: 0; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--glow); }
+  @media (max-width: 900px) { .row, .row.flip { grid-template-columns: 1fr; gap: 28px; } .row.flip .text { order: 0; } }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .duo { grid-template-columns: 1fr; } }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 34px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 8px 16px; font-size: 14px; color: var(--text); }
+  .chip.more { color: var(--accent-2); border-style: dashed; }
+
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+  .gallery figure { margin: 0; }
+  .gallery figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; text-align: center; }
+  @media (max-width: 860px) { .gallery { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .gallery { grid-template-columns: 1fr; } }
+
+  .final { margin-top: 96px; text-align: center; padding: 64px 24px; border-radius: 22px; border: 1px solid var(--line);
+    background: radial-gradient(600px 240px at 50% 0, var(--glow), transparent 70%), var(--panel); }
+  .final h2 { margin-top: 0; }
+  .final .cta { margin-top: 26px; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 18px; }
+
+  footer { margin-top: 80px; border-top: 1px solid var(--hair); padding: 30px 0 50px; color: var(--muted); font-size: 14px; }
+  footer .in { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; align-items: center; }
+  footer a:hover { color: var(--text); }
+  footer .links { display: flex; gap: 22px; flex-wrap: wrap; }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="#top"><img src="icon.png" alt="" />Tutti</a>
+    <nav>
+      <a class="hide-sm" href="#que" data-i="nav.why">Por qué</a>
+      <a class="hide-sm" href="#funciones" data-i="nav.features">Funciones</a>
+      <a href="#instalar" data-i="nav.install">Instalar</a>
+      <a href="documentacion.html" data-i="nav.docs">Documentación</a>
+      <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
+      <span class="seg" role="group" aria-label="Tema / Theme">
+        <button data-theme-pref="system" title="Auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
+        <button data-theme-pref="dark" title="Dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
+        <button data-theme-pref="light" title="Light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      </span>
+      <span class="lang" role="group" aria-label="Idioma / Language"><button data-lang="es">ES</button><button data-lang="en">EN</button></span>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <img class="logo" src="icon.png" alt="Tutti" />
+    <span class="pill"><b data-i="pill.a">Nuevo</b> <span data-i="pill.b">Tienda de servidores MCP integrada</span></span>
+    <h1 data-i="h1">Forma tu <em>orquesta de IA</em> en la era de los agentes</h1>
+    <p class="lead" data-i="lead">La IA y los agentes cambiaron la forma de programar. Tutti los reúne: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity y cualquier otro, cada uno con su instrumento y tocando juntos en una sola ventana.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/cyansaju-sys/tutti/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+        <span data-i="dl.linux">Descargar para Linux</span>
+      </a>
+      <a class="btn" href="https://github.com/cyansaju-sys/tutti/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+        <span data-i="dl.win">Descargar para Windows</span>
+      </a>
+    </div>
+    <div class="install">
+      <code><span class="prompt">$ </span><span id="cmd">curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/install.sh | bash</span></code>
+      <button class="copy" id="copy" data-i="copy">Copiar</button>
+    </div>
+    <div class="shot"><img src="img/agentes.png" alt="Varios agentes repartiéndose una tarea" /></div>
+    <p class="caption" data-i="hero.cap">Un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio panel.</p>
+  </div>
+
+  <section id="que" class="wrap reveal">
+    <div class="center">
+      <div class="eyebrow" data-i="why.eyebrow">Por qué Tutti</div>
+      <h2 data-i="why.h">Menos pestañas, más trabajo hecho</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 11l6-4M9 13l6 4"/></svg></div>
+        <h3 data-i="c1.h">Que se coordinen</h3>
+        <p data-i="c1.p">Un agente le manda tareas a otro, y Tutti elige el más adecuado según la dificultad, el modelo y su límite de uso.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></div>
+        <h3 data-i="c2.h">Todo en la misma ventana</h3>
+        <p data-i="c2.p">Terminales, editor con búsqueda y reemplazo, git con grafo de commits, servidores MCP y consumo de tokens.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 7l-5 5 5 5"/><path d="M20 12H9"/><path d="M4 4v16"/></svg></div>
+        <h3 data-i="c3.h">Sin atarte a nadie</h3>
+        <p data-i="c3.p">Detecta más de 20 agentes y añade el tuyo. Es de código abierto, sin cuentas, y tus datos se quedan en tu equipo.</p>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip">Claude Code</span><span class="chip">Codex</span><span class="chip">OpenCode</span><span class="chip">Gemini CLI</span><span class="chip">Antigravity</span>
+      <span class="chip">Aider</span><span class="chip">Cursor</span><span class="chip">Goose</span><span class="chip">Amp</span><span class="chip">Qwen Code</span>
+      <span class="chip more" data-i="chips.more">y más de 10 otros…</span>
+    </div>
+  </section>
+
+  <div id="funciones"></div>
+
+  <section class="wrap reveal">
+    <div class="row">
+      <div class="text">
+        <div class="eyebrow" data-i="f1.eyebrow">Reparto de tareas</div>
+        <h2 data-i="f1.h">Tus agentes trabajan en equipo</h2>
+        <p data-i="f1.p">Tutti abre un servidor MCP local y conecta a cada agente con cuatro herramientas para listar, delegar, esperar y leer a los demás.</p>
+        <ul>
+          <li data-i="f1.l1">Asigna por dificultad: el justo para la tarea, libre antes que ocupado.</li>
+          <li data-i="f1.l2">Cada sub-agente se abre en su propio panel, marcado «sub de …».</li>
+          <li data-i="f1.l3">Un panel muestra qué tarea lleva cada uno, con su modelo y duración.</li>
+        </ul>
+      </div>
+      <div class="shot"><img loading="lazy" src="img/elegir-agente.png" alt="Elegir agente" /></div>
+    </div>
+  </section>
+
+  <section class="wrap reveal">
+    <div class="row flip">
+      <div class="shot"><img loading="lazy" src="img/commits.png" alt="Grafo de commits" /></div>
+      <div class="text">
+        <div class="eyebrow" data-i="f2.eyebrow">Git</div>
+        <h2 data-i="f2.h">Del cambio al commit, sin salir</h2>
+        <p data-i="f2.p">Un botón que hace commit, push o pull según toque, mensajes de commit redactados por un agente y el grafo de todas las ramas.</p>
+        <ul>
+          <li data-i="f2.l1">Mensaje en Conventional Commits a partir de lo que tienes preparado.</li>
+          <li data-i="f2.l2">Cherry-pick, revert, merge, rebase y reset con clic derecho.</li>
+          <li data-i="f2.l3">Comparación de cambios en dos columnas y selector de ramas.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap reveal">
+    <div class="row">
+      <div class="text">
+        <div class="eyebrow" data-i="f3.eyebrow">Servidores MCP</div>
+        <h2 data-i="f3.h">Una tienda para tus agentes</h2>
+        <p data-i="f3.p">Busca en el registro oficial de MCP y añade un servidor a Claude Code, Codex, OpenCode, Gemini o Antigravity en un par de clics.</p>
+        <ul>
+          <li data-i="f3.l1">Los más conocidos primero: Context7, Playwright, GitHub, Notion, Figma…</li>
+          <li data-i="f3.l2">Ves el comando exacto antes de instalar y lo que hay que rellenar.</li>
+          <li data-i="f3.l3">Un servidor, una tarjeta: ves en qué agentes está y lo copias a otro.</li>
+        </ul>
+      </div>
+      <div class="shot"><img loading="lazy" src="img/mcp-tienda.png" alt="Tienda de servidores MCP" /></div>
+    </div>
+  </section>
+
+  <section class="wrap reveal">
+    <div class="row flip">
+      <div class="duo">
+        <div class="shot"><img loading="lazy" src="img/ajustes.png" alt="Ajustes de tema e idioma" /></div>
+        <div class="shot"><img loading="lazy" src="img/tema-claro.png" alt="Tema claro" /></div>
+      </div>
+      <div class="text">
+        <div class="eyebrow" data-i="f4.eyebrow">A tu manera</div>
+        <h2 data-i="f4.h">Claro u oscuro, en español o en inglés</h2>
+        <p data-i="f4.p">El tema claro usa tonos suaves, sin blanco puro, para no cansar la vista. Cambia el idioma al instante desde la tuerca de ajustes.</p>
+        <ul>
+          <li data-i="f4.l1">Tema oscuro, claro o el del sistema.</li>
+          <li data-i="f4.l2">Interfaz, mensajes y contexto del proyecto en tu idioma.</li>
+          <li data-i="f4.l3">Copiar y pegar como en cualquier terminal moderna.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap reveal">
+    <div class="center">
+      <div class="eyebrow" data-i="g.eyebrow">Un vistazo</div>
+      <h2 data-i="g.h">Todo lo demás, a mano</h2>
+    </div>
+    <div class="gallery">
+      <figure><div class="shot"><img loading="lazy" src="img/archivos-y-editor.png" alt="" /></div><figcaption data-i="g.1">Archivos y editor</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/buscar-en-proyecto.png" alt="" /></div><figcaption data-i="g.2">Buscar y reemplazar en el proyecto</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/git.png" alt="" /></div><figcaption data-i="g.3">Cambios y commit</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/contexto.png" alt="" /></div><figcaption data-i="g.4">Contexto del proyecto para los agentes</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/terminales.png" alt="" /></div><figcaption data-i="g.5">Terminales integradas</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/comparacion.png" alt="" /></div><figcaption data-i="g.6">Comparación de cambios</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="instalar" class="wrap reveal">
+    <div class="final">
+      <div class="eyebrow" data-i="i.eyebrow">Empieza ahora</div>
+      <h2 data-i="i.h">Instálalo en un minuto</h2>
+      <p class="sub" style="margin: 0 auto" data-i="i.p">Gratis y de código abierto. Se actualiza solo y te cuenta qué cambió en cada versión.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/cyansaju-sys/tutti/releases/latest"><span data-i="dl.linux">Descargar para Linux</span></a>
+        <a class="btn" href="https://github.com/cyansaju-sys/tutti/releases/latest"><span data-i="dl.win">Descargar para Windows</span></a>
+        <a class="btn" href="documentacion.html"><span data-i="docs.btn">Leer la documentación</span></a>
+      </div>
+      <p class="note" data-i="i.note">En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap in">
+    <div class="brand"><img src="icon.png" alt="" /> Tutti <span style="color:var(--muted);font-weight:400;font-size:14px">· MIT · <span data-i="f.built">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)</span></span></div>
+    <div class="links">
+      <a href="documentacion.html" data-i="f.docs">Documentación</a>
+      <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener" data-i="f.changes">Novedades</a>
+      <a href="https://github.com/cyansaju-sys/tutti#privacidad" target="_blank" rel="noopener" data-i="f.privacy">Privacidad</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const T = {
+  es: {
+    'nav.why': 'Por qué', 'nav.features': 'Funciones', 'nav.install': 'Instalar', 'nav.docs': 'Documentación',
+    'pill.a': 'Nuevo', 'pill.b': 'Tienda de servidores MCP integrada',
+    'h1': 'Forma tu <em>orquesta de IA</em> en la era de los agentes',
+    'lead': 'La IA y los agentes cambiaron la forma de programar. Tutti los reúne: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity y cualquier otro, cada uno con su instrumento y tocando juntos en una sola ventana.',
+    'dl.linux': 'Descargar para Linux', 'dl.win': 'Descargar para Windows', 'copy': 'Copiar', 'copied': '¡Copiado!',
+    'hero.cap': 'Un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio panel.',
+    'why.eyebrow': 'Por qué Tutti', 'why.h': 'Menos pestañas, más trabajo hecho',
+    'c1.h': 'Que se coordinen', 'c1.p': 'Un agente le manda tareas a otro, y Tutti elige el más adecuado según la dificultad, el modelo y su límite de uso.',
+    'c2.h': 'Todo en la misma ventana', 'c2.p': 'Terminales, editor con búsqueda y reemplazo, git con grafo de commits, servidores MCP y consumo de tokens.',
+    'c3.h': 'Sin atarte a nadie', 'c3.p': 'Detecta más de 20 agentes y añade el tuyo. Es de código abierto, sin cuentas, y tus datos se quedan en tu equipo.',
+    'chips.more': 'y más de 10 otros…',
+    'f1.eyebrow': 'Reparto de tareas', 'f1.h': 'Tus agentes trabajan en equipo', 'f1.p': 'Tutti abre un servidor MCP local y conecta a cada agente con cuatro herramientas para listar, delegar, esperar y leer a los demás.',
+    'f1.l1': 'Asigna por dificultad: el justo para la tarea, libre antes que ocupado.', 'f1.l2': 'Cada sub-agente se abre en su propio panel, marcado «sub de …».', 'f1.l3': 'Un panel muestra qué tarea lleva cada uno, con su modelo y duración.',
+    'f2.eyebrow': 'Git', 'f2.h': 'Del cambio al commit, sin salir', 'f2.p': 'Un botón que hace commit, push o pull según toque, mensajes de commit redactados por un agente y el grafo de todas las ramas.',
+    'f2.l1': 'Mensaje en Conventional Commits a partir de lo que tienes preparado.', 'f2.l2': 'Cherry-pick, revert, merge, rebase y reset con clic derecho.', 'f2.l3': 'Comparación de cambios en dos columnas y selector de ramas.',
+    'f3.eyebrow': 'Servidores MCP', 'f3.h': 'Una tienda para tus agentes', 'f3.p': 'Busca en el registro oficial de MCP y añade un servidor a Claude Code, Codex, OpenCode, Gemini o Antigravity en un par de clics.',
+    'f3.l1': 'Los más conocidos primero: Context7, Playwright, GitHub, Notion, Figma…', 'f3.l2': 'Ves el comando exacto antes de instalar y lo que hay que rellenar.', 'f3.l3': 'Un servidor, una tarjeta: ves en qué agentes está y lo copias a otro.',
+    'f4.eyebrow': 'A tu manera', 'f4.h': 'Claro u oscuro, en español o en inglés', 'f4.p': 'El tema claro usa tonos suaves, sin blanco puro, para no cansar la vista. Cambia el idioma al instante desde la tuerca de ajustes.',
+    'f4.l1': 'Tema oscuro, claro o el del sistema.', 'f4.l2': 'Interfaz, mensajes y contexto del proyecto en tu idioma.', 'f4.l3': 'Copiar y pegar como en cualquier terminal moderna.',
+    'g.eyebrow': 'Un vistazo', 'g.h': 'Todo lo demás, a mano',
+    'g.1': 'Archivos y editor', 'g.2': 'Buscar y reemplazar en el proyecto', 'g.3': 'Cambios y commit', 'g.4': 'Contexto del proyecto para los agentes', 'g.5': 'Terminales integradas', 'g.6': 'Comparación de cambios',
+    'i.eyebrow': 'Empieza ahora', 'i.h': 'Instálalo en un minuto', 'i.p': 'Gratis y de código abierto. Se actualiza solo y te cuenta qué cambió en cada versión.',
+    'i.note': 'En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.',
+    'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+  },
+  en: {
+    'nav.why': 'Why', 'nav.features': 'Features', 'nav.install': 'Install', 'nav.docs': 'Docs',
+    'pill.a': 'New', 'pill.b': 'Built-in MCP server store',
+    'h1': 'Build your <em>AI orchestra</em> for the age of agents',
+    'lead': 'AI and agents changed how we code. Tutti brings them together: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity and any other, each with its own instrument, playing together in a single window.',
+    'dl.linux': 'Download for Linux', 'dl.win': 'Download for Windows', 'copy': 'Copy', 'copied': 'Copied!',
+    'hero.cap': 'A Claude Code (the leader) hands a task to OpenCode and Antigravity; each one opens in its own panel.',
+    'why.eyebrow': 'Why Tutti', 'why.h': 'Fewer tabs, more work done',
+    'c1.h': 'Let them coordinate', 'c1.p': 'One agent hands tasks to another, and Tutti picks the most suitable one by difficulty, model and usage limit.',
+    'c2.h': 'Everything in one window', 'c2.p': 'Terminals, an editor with find and replace, git with a commit graph, MCP servers and token usage.',
+    'c3.h': 'No lock-in', 'c3.p': 'It detects more than 20 agents and lets you add your own. It is open source, needs no account, and your data stays on your machine.',
+    'chips.more': 'and 10+ more…',
+    'f1.eyebrow': 'Task delegation', 'f1.h': 'Your agents work as a team', 'f1.p': 'Tutti opens a local MCP server and connects every agent with four tools to list, delegate, wait for and read the others.',
+    'f1.l1': 'Assigns by difficulty: just enough for the task, idle before busy.', 'f1.l2': 'Each sub-agent opens in its own panel, tagged “sub of …”.', 'f1.l3': 'A panel shows which task each one has, with its model and duration.',
+    'f2.eyebrow': 'Git', 'f2.h': 'From change to commit, without leaving', 'f2.p': 'One button that commits, pushes or pulls as needed, commit messages written by an agent, and a graph of every branch.',
+    'f2.l1': 'Conventional Commits message from what you have staged.', 'f2.l2': 'Cherry-pick, revert, merge, rebase and reset with a right click.', 'f2.l3': 'Two-column diff view and a branch picker.',
+    'f3.eyebrow': 'MCP servers', 'f3.h': 'A store for your agents', 'f3.p': 'Search the official MCP registry and add a server to Claude Code, Codex, OpenCode, Gemini or Antigravity in a couple of clicks.',
+    'f3.l1': 'The best-known first: Context7, Playwright, GitHub, Notion, Figma…', 'f3.l2': 'You see the exact command before installing, and what you need to fill in.', 'f3.l3': 'One server, one card: see which agents have it and copy it to another.',
+    'f4.eyebrow': 'Your way', 'f4.h': 'Light or dark, in English or Spanish', 'f4.p': 'The light theme uses soft tones, no pure white, to go easy on your eyes. Switch the language instantly from the settings gear.',
+    'f4.l1': 'Dark theme, light theme or the system one.', 'f4.l2': 'Interface, messages and project context in your language.', 'f4.l3': 'Copy and paste like in any modern terminal.',
+    'g.eyebrow': 'At a glance', 'g.h': 'Everything else, within reach',
+    'g.1': 'Files and editor', 'g.2': 'Find and replace across the project', 'g.3': 'Changes and commit', 'g.4': 'Project context for the agents', 'g.5': 'Built-in terminals', 'g.6': 'Diff view',
+    'i.eyebrow': 'Get started', 'i.h': 'Install it in a minute', 'i.p': 'Free and open source. It updates itself and tells you what changed in every version.',
+    'i.note': 'No admin rights needed on Linux. The Windows installer is not signed: click “More info → Run anyway”. macOS is coming later.',
+    'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+  }
+}
+const media = matchMedia('(prefers-color-scheme: light)')
+let themePref = 'system'
+try { themePref = localStorage.getItem('tutti-site-theme') || 'system' } catch {}
+function applyTheme(pref) {
+  themePref = pref
+  const light = pref === 'light' || (pref === 'system' && media.matches)
+  document.documentElement.dataset.theme = light ? 'light' : 'dark'
+  document.querySelectorAll('[data-theme-pref]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themePref === pref)))
+  try { localStorage.setItem('tutti-site-theme', pref) } catch {}
+}
+document.querySelectorAll('[data-theme-pref]').forEach((b) => b.addEventListener('click', () => applyTheme(b.dataset.themePref)))
+media.addEventListener('change', () => { if (themePref === 'system') applyTheme('system') })     // «Auto» sigue al sistema, como la app
+applyTheme(themePref)
+
+let lang = 'es'
+function apply(l) {
+  lang = l
+  document.documentElement.lang = l
+  document.querySelectorAll('[data-i]').forEach((el) => { const v = T[l][el.dataset.i]; if (v !== undefined) el.innerHTML = v })
+  document.querySelectorAll('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === l)))
+  const names = l === 'es' ? { system: 'Automático', dark: 'Oscuro', light: 'Claro' } : { system: 'Auto', dark: 'Dark', light: 'Light' }
+  document.querySelectorAll('[data-theme-pref]').forEach((b) => { b.title = names[b.dataset.themePref] })
+  document.title = l === 'es' ? 'Tutti — forma tu orquesta de IA en la era de los agentes' : 'Tutti — build your AI orchestra for the age of agents'
+  try { localStorage.setItem('tutti-site-lang', l) } catch {}
+}
+let saved = null
+try { saved = localStorage.getItem('tutti-site-lang') } catch {}
+apply(saved === 'en' || saved === 'es' ? saved : (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en')
+document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => apply(b.dataset.lang)))
+
+document.getElementById('copy').addEventListener('click', async (e) => {
+  const btn = e.currentTarget
+  try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent) } catch { return }
+  btn.textContent = T[lang].copied
+  setTimeout(() => { btn.textContent = T[lang].copy }, 1600)
+})
+
+const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }), { threshold: 0.12 })
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+</script>
+</body>
+</html>
