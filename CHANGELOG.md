@@ -2,7 +2,7 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
-## Próximamente
+## 1.0.7
 
 - **Orches ahora se llama Tutti.** Tus ajustes y el contexto de tus proyectos se conservan. Si lo instalaste con el script, vuelve a ejecutarlo para que el comando pase a ser `tutti`; si no, la app se actualiza sola.
 - **Buscar en el proyecto (Ctrl+Shift+F):** como en VS Code: distingue mayúsculas, palabra completa y expresiones regulares, con filtros de archivos a incluir y excluir. Los resultados salen agrupados por archivo y al pulsar uno se abre en esa línea. Respeta el .gitignore.

@@ -13,7 +13,7 @@ import { autoUpdater } from 'electron-updater'
 import type { UpdateState } from '../shared/types'
 import { isNewer } from './version'
 
-const REPO = 'cyansaju-sys/orches'
+const REPO = 'cyansaju-sys/tutti'
 const FIRST_CHECK_MS = 8_000
 const EVERY_MS = 30 * 60_000
 

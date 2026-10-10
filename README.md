@@ -9,7 +9,7 @@
 Claude Code, OpenCode, Gemini CLI, Codex, Antigravity y cualquier otro, cada uno en su terminal,<br />
 con editor, git, servidores MCP y consumo de tokens en la misma ventana.
 
-[![Release](https://img.shields.io/github/v/release/cyansaju-sys/orches?style=flat-square&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/orches/releases/latest)
+[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=flat-square&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
 ![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=flat-square)
 ![Electron](https://img.shields.io/badge/Electron-33-8fa6c4?style=flat-square)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-8fa6c4?style=flat-square)
@@ -35,7 +35,7 @@ con editor, git, servidores MCP y consumo de tokens en la misma ventana.
 ### Linux
 
 ```bash
-curl -fsSL https://github.com/cyansaju-sys/orches/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/install.sh | bash
 ```
 
 Descarga el AppImage de la última release en `~/.local/share/tutti/`, crea el comando `tutti` y la entrada del menú de
@@ -48,7 +48,7 @@ Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/tutti` se con
 
 ### Windows
 
-Descarga **`Tutti-Setup-X.Y.Z.exe`** de la [última release](https://github.com/cyansaju-sys/orches/releases/latest) y ábrelo.
+Descarga **`Tutti-Setup-X.Y.Z.exe`** de la [última release](https://github.com/cyansaju-sys/tutti/releases/latest) y ábrelo.
 Se instala para tu usuario, sin permisos de administrador, y crea el acceso directo.
 
 > El instalador no está firmado: Windows puede mostrar el aviso de SmartScreen. Pulsa
