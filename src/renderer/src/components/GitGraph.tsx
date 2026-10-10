@@ -40,7 +40,7 @@ function refBadges(refs: string[]): Badge[] {
 }
 const BADGE = {
   head: 'bg-accent/25 text-accent ring-1 ring-inset ring-accent/60', branch: 'bg-ok/15 text-ok',
-  remote: 'bg-white/[0.07] text-muted', tag: 'bg-warn/15 text-warn'
+  remote: 'bg-ov/[0.07] text-muted', tag: 'bg-warn/15 text-warn'
 }
 
 function RefBadge({ b }: { b: Badge }) {
@@ -50,7 +50,7 @@ function RefBadge({ b }: { b: Badge }) {
         {b.kind === 'tag' && <MdLocalOffer size={10} />}
         <span className="truncate">{b.label}</span>
       </span>
-      {b.remote && <span className="border-l border-white/10 bg-black/20 px-1.5 py-px text-[9px] opacity-80">{b.remote}</span>}
+      {b.remote && <span className="border-l border-ov/10 bg-black/20 px-1.5 py-px text-[9px] opacity-80">{b.remote}</span>}
     </span>
   )
 }
@@ -69,7 +69,7 @@ function Lines({ row, lanes, head }: { row: GraphRow; lanes: number; head: boole
         ? <line key={`p${i}`} x1={x(row.lane)} y1={mid} x2={x(row.lane)} y2={HEIGHT} stroke={col(e.color)} strokeWidth={1.6} />
         : <path key={`p${i}`} d={curve(x(row.lane), mid, x(e.lane), HEIGHT)} fill="none" stroke={col(e.color)} strokeWidth={1.6} />))}
       {head && <circle cx={x(row.lane)} cy={mid} r={7} fill="none" stroke={col(row.color)} strokeWidth={1.4} opacity={0.7} />}
-      <circle cx={x(row.lane)} cy={mid} r={row.commit.parents.length > 1 ? 3.5 : 4.5} fill={row.commit.parents.length > 1 ? '#0f121a' : col(row.color)} stroke={col(row.color)} strokeWidth={1.8} />
+      <circle cx={x(row.lane)} cy={mid} r={row.commit.parents.length > 1 ? 3.5 : 4.5} fill={row.commit.parents.length > 1 ? 'var(--color-pop)' : col(row.color)} stroke={col(row.color)} strokeWidth={1.8} />
     </svg>
   )
 }
@@ -163,7 +163,7 @@ export function GitGraph() {
         <div onClick={() => set({ tab: 'git' })} title="Hay cambios sin commit: clic para verlos en la sección Git" style={{ height: HEIGHT }}
           className="flex cursor-pointer items-center gap-2 rounded-md pr-2 text-[12px] transition-colors hover:bg-accent-bg">
           <svg width={graph.lanes * STEP} height={HEIGHT} className="shrink-0" style={{ overflow: 'visible' }}>
-            <circle cx={headLane * STEP + STEP / 2} cy={HEIGHT / 2} r={4.5} fill="#0d0f16" stroke="#8b92a8" strokeWidth={1.8} />
+            <circle cx={headLane * STEP + STEP / 2} cy={HEIGHT / 2} r={4.5} fill="var(--color-surface)" stroke="#8b92a8" strokeWidth={1.8} />
           </svg>
           <span className="font-medium text-muted">Cambios sin commit ({changes})</span>
         </div>
@@ -223,8 +223,8 @@ function AskDialog({ ask, busy, onClose, onOk }: { ask: Ask; busy: boolean; onCl
         <div className="flex flex-col gap-3 px-4 pb-4">
           <p className="text-[12px] leading-relaxed text-muted">La rama se moverá a {SHORT(ask.commit)} · {ask.commit.subject}. Elige qué pasa con los cambios:</p>
           <div className="flex flex-col gap-1.5 text-[12px]">
-            <button disabled={busy} onClick={() => go('reset-soft', 'Reset suave hecho')} className={`${btn} bg-white/[0.05] text-left font-normal hover:bg-white/[0.09]`}><b>Suave</b> <span className="text-muted">· conserva los cambios preparados</span></button>
-            <button disabled={busy} onClick={() => go('reset-mixed', 'Reset hecho')} className={`${btn} bg-white/[0.05] text-left font-normal hover:bg-white/[0.09]`}><b>Mixto</b> <span className="text-muted">· conserva los cambios sin preparar</span></button>
+            <button disabled={busy} onClick={() => go('reset-soft', 'Reset suave hecho')} className={`${btn} bg-ov/[0.05] text-left font-normal hover:bg-ov/[0.09]`}><b>Suave</b> <span className="text-muted">· conserva los cambios preparados</span></button>
+            <button disabled={busy} onClick={() => go('reset-mixed', 'Reset hecho')} className={`${btn} bg-ov/[0.05] text-left font-normal hover:bg-ov/[0.09]`}><b>Mixto</b> <span className="text-muted">· conserva los cambios sin preparar</span></button>
             <button disabled={busy} onClick={() => go('reset-hard', 'Reset duro hecho')} className={`${btn} bg-danger/15 text-left font-normal text-danger hover:bg-danger/25`}><b>Duro</b> · descarta todos los cambios sin guardar</button>
           </div>
           <div className="flex justify-end">{cancel}</div>

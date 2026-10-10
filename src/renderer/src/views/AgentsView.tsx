@@ -93,7 +93,7 @@ export function AgentsView() {
             <button onClick={() => void openAgent(a)} title={a.path} className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-accent-bg">
               <AgentIcon name={a.name} command={a.command} size={20} />
               {a.name}
-              {a.custom && <span className="rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-muted">propio</span>}
+              {a.custom && <span className="rounded-full bg-ov/[0.05] px-1.5 py-0.5 text-[9px] text-muted">propio</span>}
             </button>
             {a.custom && (
               <button onClick={() => void remove(a.command)} title="Quitar de la lista" className="absolute right-1.5 top-1/2 hidden size-6 -translate-y-1/2 place-items-center rounded-md text-muted hover:bg-[#3a1620] hover:text-danger group-hover:grid">

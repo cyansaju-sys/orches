@@ -1,4 +1,4 @@
-/** Contexto de un proyecto para los agentes: <config>/orches/<proyecto>/contexto.md, fuera del repositorio. */
+/** Contexto de un proyecto para los agentes: <config>/tutti/<proyecto>/contexto.md, fuera del repositorio. */
 import { app } from 'electron'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -6,7 +6,7 @@ import { basename, join } from 'node:path'
 
 const TEMPLATE = `# Contexto del proyecto
 
-Lo que escribas aquí lo leen los agentes que abras desde Orches en este proyecto.
+Lo que escribas aquí lo leen los agentes que abras desde Tutti en este proyecto.
 
 ## Qué es
 
@@ -19,7 +19,7 @@ Lo que escribas aquí lo leen los agentes que abras desde Orches en este proyect
 export function contextDir(project: string): string {
   const name = basename(project).replace(/[^\w.-]+/g, '_') || 'proyecto'
   const hash = createHash('sha1').update(project).digest('hex').slice(0, 8)
-  return join(app.getPath('appData'), 'orches', `${name}-${hash}`)
+  return join(app.getPath('appData'), 'tutti', `${name}-${hash}`)
 }
 
 export const contextFile = (project: string): string => join(contextDir(project), 'contexto.md')

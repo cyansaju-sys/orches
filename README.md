@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="resources/icon.png" width="96" alt="Orches" />
+<img src="resources/icon.png" width="96" alt="Tutti" />
 
-# Orches
+# Tutti
 
 **Un orquestador para trabajar con varios agentes de programación a la vez.**
 
@@ -20,7 +20,7 @@ con editor, git, servidores MCP y consumo de tokens en la misma ventana.
 
 ![Varios agentes repartiéndose una tarea](docs/img/agentes.png)
 
-<sub>Ejemplo real: un Claude Code corrige una función, le pide a otro agente que escriba las pruebas (se abre en su propio editor, «sub de …») y espera su resultado.</sub>
+<sub>Ejemplo real: un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio editor, marcado «sub de …», y el apartado de tareas delegadas muestra su estado, modelo y duración.</sub>
 
 </div>
 
@@ -38,17 +38,17 @@ con editor, git, servidores MCP y consumo de tokens en la misma ventana.
 curl -fsSL https://github.com/cyansaju-sys/orches/releases/latest/download/install.sh | bash
 ```
 
-Descarga el AppImage de la última release en `~/.local/share/orches/`, crea el comando `orches` y la entrada del menú de
+Descarga el AppImage de la última release en `~/.local/share/tutti/`, crea el comando `tutti` y la entrada del menú de
 aplicaciones. No hace falta ser administrador. Si falta `libfuse2` (Arch: `fuse2`) funciona igual, solo que abre más despacio.
 
-Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/orches` se conservan).
+Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/tutti` se conservan).
 
 </td>
 <td width="50%" valign="top">
 
 ### Windows
 
-Descarga **`Orches-Setup-X.Y.Z.exe`** de la [última release](https://github.com/cyansaju-sys/orches/releases/latest) y ábrelo.
+Descarga **`Tutti-Setup-X.Y.Z.exe`** de la [última release](https://github.com/cyansaju-sys/orches/releases/latest) y ábrelo.
 Se instala para tu usuario, sin permisos de administrador, y crea el acceso directo.
 
 > El instalador no está firmado: Windows puede mostrar el aviso de SmartScreen. Pulsa
@@ -106,6 +106,23 @@ Con **clic derecho** sobre un archivo o carpeta:
 
 ![JSX y TypeScript con colores](docs/img/sintaxis.png)
 
+#### Buscar y reemplazar
+
+- **En el archivo abierto:** `Ctrl+F` abre un cuadro flotante arriba a la derecha del editor, con *distinguir mayúsculas*, *palabra
+  completa* y *expresión regular*, el contador («3 de 12») y los botones anterior / siguiente. `Ctrl+H` añade la fila de reemplazo
+  (*Reemplazar* y *Todo*). `Enter` / `Shift+Enter` recorren las coincidencias y `Esc` cierra.
+- **En todo el proyecto:** el apartado **Buscar** de la barra lateral (`Ctrl+Shift+F`) agrupa los resultados por archivo y al pulsar
+  uno se abre en esa línea, con la coincidencia seleccionada. *Filtros* admite globs separados por comas para incluir y excluir
+  (`*.ts, src/**` · `*.test.ts, docs/`). Respeta el `.gitignore` si el proyecto usa git y salta binarios y archivos de más de 1 MB.
+  Se corta a las 5000 coincidencias o 500 archivos (el contador muestra «+»).
+- **Reemplazar en el proyecto:** `Ctrl+Shift+H` (o la flecha a la izquierda del campo) despliega el campo de reemplazo; se puede
+  reemplazar por archivo o todo a la vez, pidiendo confirmación. Con expresión regular admite `$1`, `$&` y `$$`; conserva los fines
+  de línea y **salta los archivos abiertos con cambios sin guardar** para no pisarlos.
+
+![Buscar en el archivo](docs/img/buscar-en-archivo.png)
+
+![Buscar y reemplazar en el proyecto](docs/img/buscar-en-proyecto.png)
+
 ### Agentes y terminal
 
 `Ctrl+Shift+N` abre un agente de los instalados. Se buscan en el `PATH`, en el de tu shell de login y en las carpetas habituales,
@@ -129,6 +146,12 @@ doble clic en un icono.
 
 ![Pantalla de inicio](docs/img/inicio.png)
 
+**Tema claro y oscuro.** La tuerca de abajo en la barra lateral abre los ajustes: *Tema oscuro*, *Tema claro* o *Automático*, que sigue al del sistema. El tema elegido se recuerda y cambia también el editor, los colores del código y las terminales.
+
+**Varias ventanas.** El botón de la barra de título (o *Nueva ventana vacía* en el menú del lanzador, con clic derecho sobre el
+icono en Linux) abre otra ventana de Tutti **sin proyecto**: es otro proceso, con sus propios agentes, su servidor de tareas y su
+proyecto. Los ajustes (`settings.json`) se comparten, así que lo último que abras en cualquier ventana es lo que se reabre al iniciar.
+
 ### Reparto de tareas
 
 La app abre un servidor MCP local (solo `127.0.0.1`, con un token distinto en cada ejecución) y conecta a cada agente a él con las
@@ -140,14 +163,16 @@ comprueba el nivel de su modelo (*basic*, *standard*, *advanced*) y su límite d
 tarea (no gasta uno avanzado en algo fácil), libre antes que ocupado y que no tenga el límite agotado. Si el agente que se pide no
 tiene capacidad suficiente, se rechaza y se propone otro (`force` lo mantiene).
 
-Se desactiva con `"orchestration": false` en `~/.config/orches/settings.json`. OpenCode 2.x atiende a todos sus clientes desde un
+Se desactiva con `"orchestration": false` en `~/.config/tutti/settings.json`. OpenCode 2.x atiende a todos sus clientes desde un
 servicio compartido, así que a cada editor se le lanza con `--standalone`: su configuración no se mezcla con la de otros OpenCode.
+
+**Antigravity** no admite configuración por proceso, así que Tutti registra en `~/.gemini/config/mcp_config.json` un servidor «tutti» (un pequeño puente que genera en `<config>/tutti/mcp-bridge.mjs`) y a cada panel le pasa por entorno la dirección y la clave de su sesión. Fuera de Tutti ese servidor no ofrece herramientas. Si Antigravity pide permiso la primera vez que usa una herramienta, apruébalo.
 
 ### Contexto del proyecto
 
 El apartado **Contexto** (`Ctrl+Shift+K`) guarda un texto sobre el proyecto —qué es, cómo se ejecuta, convenciones— que **leen los
 agentes que abras en él**: Claude Code lo recibe como parte de su prompt de sistema y OpenCode como archivo de instrucciones. Vive
-**fuera del repositorio**, en `<config>/orches/<proyecto>-<huella>/contexto.md`, y se guarda solo (o con *Guardar*). Funciona
+**fuera del repositorio**, en `<config>/tutti/<proyecto>-<huella>/contexto.md`, y se guarda solo (o con *Guardar*). Funciona
 también si el agente se abre en una subcarpeta y sin el reparto de tareas.
 
 **Generar con IA** lo redacta un agente a partir de un resumen pequeño del proyecto (estructura, `package.json`, inicio del README,
@@ -215,13 +240,15 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | Atajo | Acción |
 |---|---|
 | `Ctrl+S` / `Ctrl+W` | Guardar / cerrar el archivo abierto |
+| `Ctrl+Shift+F` / `Ctrl+Shift+H` | Buscar / buscar y reemplazar en el proyecto |
+| `Ctrl+F` / `Ctrl+H` | Buscar / reemplazar en el archivo abierto |
 | `Ctrl+Shift+L` | Permitir o bloquear la edición |
 | `Ctrl+Shift+N` | Abrir un agente |
 | `Ctrl+Shift+T` | Mostrar u ocultar la terminal |
 | `Ctrl+Shift+W` | Cerrar el editor activo |
 | `Ctrl+AvPág` / `Ctrl+RePág` | Editor siguiente / anterior |
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
-| `Ctrl+Shift+E` · `A` · `G` · `K` · `X` · `U` | Archivos · Agentes · Git · Contexto · MCP · Consumo |
+| `Ctrl+Shift+E` · `F` · `A` · `G` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Contexto · MCP · Consumo |
 
 
 <br />
@@ -264,12 +291,12 @@ Todas por variable de entorno:
 
 | Variable | Qué hace |
 |---|---|
-| `ORCHES_MCP_LOG=1` | Imprime cada petición que reciben los servidores MCP |
-| `ORCHES_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
-| `ORCHES_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
-| `ORCHES_CAPTURE_GRAPH=1` · `ORCHES_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
-| `ORCHES_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
-| `ORCHES_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
+| `TUTTI_MCP_LOG=1` | Imprime cada petición que reciben los servidores MCP |
+| `TUTTI_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
+| `TUTTI_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
+| `TUTTI_CAPTURE_GRAPH=1` · `TUTTI_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
+| `TUTTI_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
+| `TUTTI_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
 
 </details>
 
@@ -282,7 +309,7 @@ Todas por variable de entorno:
 2. `git tag v1.0.2 && git push origin master v1.0.2`.
 
 GitHub Actions comprueba que el tag coincide con la versión y que el changelog la menciona, pasa tipos y pruebas, empaqueta el AppImage (Linux) y el instalador
-(Windows) y crea la release con `Orches-X.Y.Z-x86_64.AppImage`, `latest-linux.yml`, `install.sh`, `Orches-Setup-X.Y.Z.exe` y
+(Windows) y crea la release con `Tutti-X.Y.Z-x86_64.AppImage`, `latest-linux.yml`, `install.sh`, `Tutti-Setup-X.Y.Z.exe` y
 `latest.yml` (lo que lee el actualizador). Si el build de Windows falla, la de Linux sale igual. Las instalaciones existentes ven el
 botón **Actualizar** al cabo de unos minutos.
 

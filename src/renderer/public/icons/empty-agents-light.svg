@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" fill="none">
+  <!-- ventana de terminal, en el estilo del icono de la app: formas planas y translúcidas en azul grisáceo, sin bordes -->
+  <rect x="10" y="16" width="76" height="64" rx="16" fill="#3F628F" fill-opacity="0.9"/>
+  <path d="M10 32a16 16 0 0 1 16-16h44a16 16 0 0 1 16 16v4H10z" fill="#3F628F" fill-opacity="0.75"/>
+  <circle cx="23" cy="27" r="2.8" fill="#FFFFFF" fill-opacity="0.85"/>
+  <circle cx="32" cy="27" r="2.8" fill="#FFFFFF" fill-opacity="0.6"/>
+  <circle cx="41" cy="27" r="2.8" fill="#FFFFFF" fill-opacity="0.4"/>
+  <!-- prompt -->
+  <path d="M24 50l11 8-11 8" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42 67h15" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- chispa de IA -->
+  <path d="M70 42Q70 54 82 54Q70 54 70 66Q70 54 58 54Q70 54 70 42Z" fill="#FFFFFF"/>
+</svg>

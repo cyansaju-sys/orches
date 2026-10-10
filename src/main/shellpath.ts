@@ -7,7 +7,7 @@ import { existsSync, readdirSync, statSync, accessSync, constants } from 'node:f
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 
-const MARK = '__orches_path__'
+const MARK = '__tutti_path__'
 let cache: string | null = null
 
 function commonDirs(): string[] {

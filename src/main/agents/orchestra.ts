@@ -2,7 +2,7 @@
  * Servidor MCP local para que los agentes repartan tareas entre sí.
  *
  * Escucha solo en 127.0.0.1, con un token aleatorio por ejecución. Cada agente lo ve como un servidor MCP más
- * («orches») con las herramientas list_agents, delegate_task, wait_agent y read_agent_output. La app (`host`) hace
+ * («tutti») con las herramientas list_agents, delegate_task, wait_agent y read_agent_output. La app (`host`) hace
  * el trabajo real: abrir paneles, escribir en sus terminales y leer su pantalla.
  */
 import { randomBytes } from 'node:crypto'
@@ -20,7 +20,7 @@ Para repartir, llama a delegate_task con "difficulty" (easy, medium o hard) y la
 (renombrar, texto, boilerplate, tests simples, búsquedas) va a agentes basic o standard; lo difícil (arquitectura, bugs sutiles, cambios amplios) \
 hazlo tú o pásalo a uno advanced. Para elegir modelo usa available_models sin inventar nombres; si viene vacío, busca en la web el comando con el que \
 ese agente lista sus modelos y ejecútalo. Cada tarea debe ser autosuficiente (archivos, objetivo, criterio de terminado) y sin que dos agentes editen \
-los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Orches]»: sigue con lo tuyo y lee el resultado con read_agent_output \
+los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Tutti]»: sigue con lo tuyo y lee el resultado con read_agent_output \
 (wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.`
 
 export const TOOLS = [
@@ -145,14 +145,14 @@ export class Orchestra {
   /** JSON-RPC: devuelve null para las notificaciones (sin respuesta). */
   async handle(message: RpcMessage, caller: string): Promise<object | null> {
     const { method, params = {}, id } = message
-    if (process.env.ORCHES_MCP_LOG) console.log(`MCP ${caller} ${method}${method === 'tools/call' ? ' ' + String(params.name) : ''}`)   // depuración: qué piden los agentes
+    if (process.env.TUTTI_MCP_LOG) console.log(`MCP ${caller} ${method}${method === 'tools/call' ? ' ' + String(params.name) : ''}`)   // depuración: qué piden los agentes
     if (id === undefined || id === null) return null
     try {
       let result: unknown
       if (method === 'initialize') {
         result = {
           protocolVersion: (params.protocolVersion as string) || PROTOCOL, capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: 'orches', version: '0.2' }, instructions: INSTRUCTIONS
+          serverInfo: { name: 'tutti', version: '0.2' }, instructions: INSTRUCTIONS
         }
       } else if (method === 'ping') result = {}
       else if (method === 'tools/list') result = { tools: TOOLS }

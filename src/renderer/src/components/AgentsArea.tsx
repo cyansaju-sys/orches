@@ -31,6 +31,7 @@ export function PaneBox({ pane }: { pane: Pane }) {
 export function AgentsArea() {
   const panes = useStore((s) => s.panes)
   const set = useStore((s) => s.set)
+  const mode = useStore((s) => s.themeMode)
   const project = useStore((s) => s.project)
   const recentAll = useStore((s) => s.recentProjects)
   const recent = recentAll.filter((p) => p !== project)
@@ -49,7 +50,7 @@ export function AgentsArea() {
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-start justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
-              <img src={`${import.meta.env.BASE_URL}icons/empty-agents.svg`} alt="" width={72} height={72} draggable={false} />
+              <img src={`${import.meta.env.BASE_URL}icons/empty-agents${mode === 'light' ? '-light' : ''}.svg`} alt="" width={72} height={72} draggable={false} />
               <p className="mt-3 text-[12px] text-muted">Elige un agente para abrirlo aquí</p>
               <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
                 <MdSearch size={16} /> Elegir agente

@@ -1,5 +1,5 @@
 /**
- * Autoprueba del reparto de tareas (ORCHES_SELFTEST=1): abre dos «agentes» falsos (`cat`, que repite lo que recibe),
+ * Autoprueba del reparto de tareas (TUTTI_SELFTEST=1): abre dos «agentes» falsos (`cat`, que repite lo que recibe),
  * y uno delega una tarea al otro por HTTP, como lo haría Claude Code. Imprime el resultado y cierra.
  */
 import { app, type WebContents } from 'electron'
@@ -11,14 +11,14 @@ import { orchestraConfig } from './agents/hub'
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const sender = { send: () => undefined, isDestroyed: () => false } as unknown as WebContents
 
-/** ORCHES_SELFTEST=serve: deja el servidor encendido unos segundos e imprime su configuración, para probarlo con un agente real. */
+/** TUTTI_SELFTEST=serve: deja el servidor encendido unos segundos e imprime su configuración, para probarlo con un agente real. */
 export async function serveForAgents(seconds = 40): Promise<void> {
   const cfg = orchestraConfig('a1')
   console.log('CONFIG ' + JSON.stringify(cfg))
   setTimeout(() => app.quit(), seconds * 1000)
 }
 
-/** ORCHES_SELFTEST=opencode: abre un OpenCode real por el mismo camino que la app (sin enviarle mensajes) y espera su conexión. */
+/** TUTTI_SELFTEST=opencode: abre un OpenCode real por el mismo camino que la app (sin enviarle mensajes) y espera su conexión. */
 async function realAgent(command: string): Promise<void> {
   const id = newId()
   const res = pty.spawn(sender, { id, kind: 'agent', name: command, command, cwd: process.cwd(), cols: 120, rows: 30 })
@@ -30,7 +30,7 @@ async function realAgent(command: string): Promise<void> {
   app.quit()
 }
 
-/** ORCHES_SELFTEST=mcp: añade, lista y quita servidores con las CLIs reales de Claude y OpenCode (úsala con HOME y XDG_* temporales). */
+/** TUTTI_SELFTEST=mcp: añade, lista y quita servidores con las CLIs reales de Claude y OpenCode (úsala con HOME y XDG_* temporales). */
 async function mcpRoundTrip(): Promise<void> {
   const mcp = await import('./mcp')
   const { mkdirSync } = await import('node:fs')
@@ -65,9 +65,9 @@ async function mcpRoundTrip(): Promise<void> {
 }
 
 export async function runSelfTest(): Promise<void> {
-  if (process.env.ORCHES_SELFTEST === 'mcp') return mcpRoundTrip()
-  if (process.env.ORCHES_SELFTEST === 'serve') return serveForAgents()
-  if (process.env.ORCHES_SELFTEST === 'opencode') return realAgent('opencode')
+  if (process.env.TUTTI_SELFTEST === 'mcp') return mcpRoundTrip()
+  if (process.env.TUTTI_SELFTEST === 'serve') return serveForAgents()
+  if (process.env.TUTTI_SELFTEST === 'opencode') return realAgent('opencode')
   const log = (name: string, ok: boolean, detail = ''): void => console.log(`${ok ? 'OK ' : 'FALLO'} ${name} ${detail}`)
   const a1 = newId(), a2 = newId()
   for (const [id, name] of [[a1, 'Líder falso'], [a2, 'Trabajador falso']] as const) {
@@ -89,7 +89,7 @@ export async function runSelfTest(): Promise<void> {
 
   log('rechaza sin token', (await rpc('initialize', {}, 'Bearer mal')).status === 401)
   const init = await rpc('initialize', { protocolVersion: '2025-03-26' })
-  log('initialize', init.result?.serverInfo?.name === 'orches')
+  log('initialize', init.result?.serverInfo?.name === 'tutti')
   const tools = await rpc('tools/list', {})
   log('4 herramientas', tools.result.tools.length === 4)
   const list = await call('list_agents', {})

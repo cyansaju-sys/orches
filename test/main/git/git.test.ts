@@ -58,7 +58,7 @@ describe('nombres de rama', () => {
 
 describe('estado de un repositorio recién creado', () => {
   it('se reconoce como repositorio aunque aún no tenga commits', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-git-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-git-'))
     try {
       execFileSync('git', ['-C', dir, 'init', '-q', '-b', 'main'])
       writeFileSync(join(dir, '.gitignore'), 'tools\n')
@@ -70,14 +70,14 @@ describe('estado de un repositorio recién creado', () => {
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })
   it('una carpeta sin git no lo es', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-nogit-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-nogit-'))
     try { expect((await status(dir)).isRepo).toBe(false) } finally { rmSync(dir, { recursive: true, force: true }) }
   })
 })
 
 describe('ramas con su último commit', () => {
   it('lista autor, hash y asunto, y permite colocarse sin crear rama', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orches-branches-'))
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-branches-'))
     const git = (...a: string[]): string => execFileSync('git', ['-C', dir, '-c', 'user.name=Ana', '-c', 'user.email=a@b.c', ...a], { encoding: 'utf8' })
     try {
       git('init', '-q', '-b', 'main')

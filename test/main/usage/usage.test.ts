@@ -16,7 +16,7 @@ const msg = (id: string, ts: number, input: number, output: number, extra: objec
 
 let home: string
 const previous = process.env.HOME
-beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'orches-usage-')); process.env.HOME = home; for (const k of Object.keys(store)) delete store[k] })
+beforeEach(() => { home = mkdtempSync(join(tmpdir(), 'tutti-usage-')); process.env.HOME = home; for (const k of Object.keys(store)) delete store[k] })
 afterEach(() => { process.env.HOME = previous })
 
 function writeSession(project: string, id: string, lines: string[]): void {
@@ -66,7 +66,7 @@ describe('consumo de Claude Code', () => {
 
 describe('proyecto de una sesión', () => {
   it('incluye subcarpetas y sigue enlaces simbólicos', () => {
-    const base = mkdtempSync(join(tmpdir(), 'orches-proj-'))
+    const base = mkdtempSync(join(tmpdir(), 'tutti-proj-'))
     mkdirSync(join(base, 'real', 'app', 'src'), { recursive: true })
     symlinkSync(join(base, 'real'), join(base, 'enlace'))
     expect(inProject(join(base, 'real', 'app', 'src'), join(base, 'enlace', 'app'))).toBe(true)

@@ -1,6 +1,16 @@
 # Novedades
 
-Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Orches las muestra una vez, la primera vez que se abre tras actualizar.
+Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
+
+## Próximamente
+
+- **Orches ahora se llama Tutti.** Tus ajustes y el contexto de tus proyectos se conservan. Si lo instalaste con el script, vuelve a ejecutarlo para que el comando pase a ser `tutti`; si no, la app se actualiza sola.
+- **Buscar en el proyecto (Ctrl+Shift+F):** como en VS Code: distingue mayúsculas, palabra completa y expresiones regulares, con filtros de archivos a incluir y excluir. Los resultados salen agrupados por archivo y al pulsar uno se abre en esa línea. Respeta el .gitignore.
+- **Buscar y reemplazar:** `Ctrl+Shift+H` añade el campo de reemplazo en todo el proyecto (por archivo o todo a la vez; salta los archivos con cambios sin guardar) y `Ctrl+H` abre el reemplazo dentro del archivo abierto. El cuadro de buscar del editor es nuevo: flotante, más pequeño y en español.
+- **Nueva ventana vacía:** botón en la barra de título y opción en el menú del lanzador para abrir otra ventana de Tutti sin proyecto, con sus propios agentes.
+- **Antigravity ya se conecta al reparto de tareas:** antes abría sin las herramientas de Tutti. Ahora, al abrirlo desde Tutti, ve `list_agents`, `delegate_task`, `wait_agent` y `read_agent_output`. Tutti registra un servidor «tutti» en la configuración MCP de Antigravity (`~/.gemini/config/mcp_config.json`); fuera de Tutti ese servidor no ofrece herramientas.
+- **Tema claro y oscuro:** la tuerca de abajo en la barra lateral abre un menú para elegir *Tema oscuro*, *Tema claro* o *Automático* (sigue al sistema). Cambian también el editor, los colores del código y las terminales, y se recuerda al reabrir.
+- **Icono nuevo:** tres círculos que se solapan, en los colores de la app. La pantalla de inicio de los agentes usa el mismo estilo.
 
 ## 1.0.6
 

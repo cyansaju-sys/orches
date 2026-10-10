@@ -10,6 +10,7 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 const api: Api = {
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },
+  search: { run: (root, opts) => ipcRenderer.invoke('search:run', root, opts), replace: (root, opts, text, paths) => ipcRenderer.invoke('search:replace', root, opts, text, paths) },
   fs: {
     list: (d) => ipcRenderer.invoke('fs:list', d), read: (p) => ipcRenderer.invoke('fs:read', p),
     write: (p, t, c) => ipcRenderer.invoke('fs:write', p, t, c), mtime: (p) => ipcRenderer.invoke('fs:mtime', p),
@@ -63,7 +64,8 @@ const api: Api = {
   },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'), toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'),
-    close: () => ipcRenderer.send('window:close'), onMaximized: (cb) => subscribe<[boolean]>('window:maximized', cb)
+    close: () => ipcRenderer.send('window:close'),
+    openNew: () => ipcRenderer.send('window:new'), isEmpty: () => ipcRenderer.invoke('window:isEmpty'), onMaximized: (cb) => subscribe<[boolean]>('window:maximized', cb)
   }
 }
 

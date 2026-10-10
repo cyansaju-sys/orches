@@ -9,4 +9,4 @@ export async function refreshGit(): Promise<void> {
   if (JSON.stringify(prev) !== JSON.stringify(git)) useStore.setState({ git })
 }
 
-export const GIT_COLOR: Record<string, string> = { M: '#e2c08d', A: '#73c991', U: '#73c991', R: '#73c991', D: '#c74e39', C: '#e4676b' }
+export const GIT_COLOR: Record<string, string> = { M: 'var(--color-git-m)', A: 'var(--color-git-a)', U: 'var(--color-git-a)', R: 'var(--color-git-a)', D: 'var(--color-git-d)', C: 'var(--color-git-c)' }

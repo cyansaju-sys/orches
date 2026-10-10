@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { buildPrompt, cleanContext, fallbackContext, projectDigest, treeOf } from '../../../src/main/context/contextGen'
 
 const project = (): string => {
-  const dir = mkdtempSync(join(tmpdir(), 'orches-ctx-'))
+  const dir = mkdtempSync(join(tmpdir(), 'tutti-ctx-'))
   mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'node_modules')); mkdirSync(join(dir, '.git'))
   writeFileSync(join(dir, 'src', 'a.ts'), '')
   writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'demo', description: 'Una app', scripts: { test: 'vitest' } }))

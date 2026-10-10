@@ -62,7 +62,7 @@ export function McpView() {
             {items.map((s) => (
               <div key={`${s.scope}${s.name}${s.source}`} className="group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg">
                 <button onClick={() => setDetails(s)} title="Ver detalles" className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5 text-left">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/[0.05] text-accent">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-md bg-ov/[0.05] text-accent">
                     {s.kind === 'remote' ? <MdCloudQueue size={15} /> : <MdTerminal size={15} />}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function McpView() {
                   </span>
                 </button>
                 <button title="Quitar" onClick={() => setRemoving(s)}
-                  className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-[#2a1a22] hover:text-danger group-hover:opacity-100">
+                  className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover:opacity-100">
                   <MdDeleteOutline size={16} />
                 </button>
               </div>
@@ -142,9 +142,9 @@ function Details({ server, all, installed, project, onClose, onChanged }: {
           </button>
         )}
         {missing.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-t border-white/[0.06] pt-3">
+          <div className="flex flex-wrap gap-2 border-t border-ov/[0.06] pt-3">
             {missing.map((a) => (
-              <button key={a} onClick={() => void copyTo(a)} className="flex items-center gap-1.5 rounded-lg bg-white/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg">
+              <button key={a} onClick={() => void copyTo(a)} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg">
                 <MdAdd size={15} className="text-accent" /> Copiar a {AGENT_NAMES[a]}
               </button>
             ))}
@@ -172,7 +172,7 @@ function AddDialog({ installed, project, onClose, onDone }: { installed: McpAgen
   const [busy, setBusy] = useState(false)
 
   const Choice = ({ on, label, onClick, disabled }: { on: boolean; label: string; onClick: () => void; disabled?: boolean }) => (
-    <button disabled={disabled} onClick={onClick} className={clsx('rounded-lg px-3 py-1.5 text-[12px] transition-colors disabled:opacity-40', on ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-muted hover:bg-white/[0.08]')}>{label}</button>
+    <button disabled={disabled} onClick={onClick} className={clsx('rounded-lg px-3 py-1.5 text-[12px] transition-colors disabled:opacity-40', on ? 'bg-accent/20 text-accent' : 'bg-ov/[0.05] text-muted hover:bg-ov/[0.08]')}>{label}</button>
   )
 
   const submit = async (): Promise<void> => {

@@ -50,7 +50,7 @@ function claudeCredentials(): { accessToken?: string; expiresAt?: number } | nul
 
 async function fetchLimits(token: string): Promise<LimitInfo[]> {
   const res = await fetch(LIMITS_URL, {
-    headers: { Authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20', 'User-Agent': 'orches', Accept: 'application/json' },
+    headers: { Authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20', 'User-Agent': 'tutti', Accept: 'application/json' },
     signal: AbortSignal.timeout(10_000)
   })
   if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status, retryAfter: Number(res.headers.get('retry-after')) || 0 })

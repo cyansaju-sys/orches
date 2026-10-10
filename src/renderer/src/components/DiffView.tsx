@@ -6,7 +6,7 @@ const TINT = { del: 'bg-danger/[0.14]', add: 'bg-ok/[0.13]' }
 
 function Cell({ side, tint, sign }: { side: Side | null; tint?: string; sign: string }) {
   return (
-    <div className={clsx('flex min-w-0', side ? tint : 'bg-white/[0.02]')}>
+    <div className={clsx('flex min-w-0', side ? tint : 'bg-ov/[0.02]')}>
       <span className="w-10 shrink-0 select-none px-2 text-right text-muted/60">{side?.n ?? ''}</span>
       <span className="w-3 shrink-0 select-none text-muted/70">{side ? sign : ''}</span>
       <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{side?.text ?? ''}</span>
@@ -31,7 +31,7 @@ export function DiffView({ before, after, label }: { before: string; after: stri
       <div className="selectable min-h-0 flex-1 overflow-x-hidden overflow-y-auto font-mono text-[12px] leading-[1.5]">
         <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] divide-x divide-line">
           {rows.map((r: Row, i) => r.kind === 'fold' ? (
-            <div key={i} className="col-span-2 select-none bg-white/[0.03] px-3 py-0.5 text-center text-[11px] text-muted">⋯ {r.count} líneas sin cambios</div>
+            <div key={i} className="col-span-2 select-none bg-ov/[0.03] px-3 py-0.5 text-center text-[11px] text-muted">⋯ {r.count} líneas sin cambios</div>
           ) : (
             <Pair key={i} row={r} />
           ))}

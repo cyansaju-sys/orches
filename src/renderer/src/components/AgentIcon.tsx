@@ -22,11 +22,11 @@ export function AgentIcon({ name, command, size = 18, mark = 'letter', className
     const url = `${base}icons/agents/${logo.file}.svg`
     const inner = Math.round(size * 0.68)
     return (
-      <span role="img" aria-label={name} className={`grid shrink-0 place-items-center bg-white/[0.07] ring-1 ring-inset ring-white/[0.08] ${className ?? ''}`}
+      <span role="img" aria-label={name} className={`grid shrink-0 place-items-center bg-ov/[0.07] ring-1 ring-inset ring-ov/[0.08] ${className ?? ''}`}
         style={{ width: size, height: size, borderRadius: size * 0.28 }}>
         {logo.mono
           // un solo color: se usa como máscara y se pinta con el color del texto (sobre fondo oscuro un SVG negro no se vería)
-          ? <span style={{ width: inner, height: inner, backgroundColor: '#e6e8ef', maskImage: `url(${url})`, WebkitMaskImage: `url(${url})`, maskSize: 'contain', WebkitMaskSize: 'contain', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskPosition: 'center' }} />
+          ? <span style={{ width: inner, height: inner, backgroundColor: 'var(--color-text)', maskImage: `url(${url})`, WebkitMaskImage: `url(${url})`, maskSize: 'contain', WebkitMaskSize: 'contain', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskPosition: 'center' }} />
           : <img src={url} width={inner} height={inner} alt="" draggable={false} />}
       </span>
     )

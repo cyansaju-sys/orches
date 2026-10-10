@@ -43,7 +43,7 @@ export function Menu({ anchor, items, onClose, width = WIDTH }: { anchor: DOMRec
       <div
         ref={box} role="menu" onMouseDown={(e) => e.stopPropagation()}
         style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
-        className="absolute animate-pop-in rounded-xl border border-white/[0.08] bg-[#0f121a] p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]"
+        className="absolute animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]"
       >
         {shown.map((item, i) => (
           <button

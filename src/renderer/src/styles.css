@@ -33,6 +33,8 @@
   --color-git-a: #73c991;
   --color-git-d: #c74e39;
   --color-git-c: #e4676b;
+  --color-ov: #ffffff;              /* velos translúcidos (bg-ov/5…): blanco en oscuro, negro en claro */
+  --color-pop: #0f121a;             /* menús, tooltips y diálogos */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: "DejaVu Sans Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --animate-toast-in: toast-in 0.18s ease-out;
@@ -52,6 +54,26 @@
 @keyframes check-pop { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
 
+/* variables que usan el editor y el resto de colores que no salen de Tailwind */
+:root {
+  color-scheme: dark;
+  --ed-line: #ffffff08; --ed-field: #ffffff0a; --ed-bracket: #3b4a6366; --ed-match: #3b4a6388; --ed-shadow: #000a;
+  --syn-keyword: #c792ea; --syn-type: #4cc9b0; --syn-string: #7ccb8b; --syn-number: #f0b67f; --syn-func: #82aaff; --syn-tag: #f07178; --syn-attr: #ffcb6b;
+}
+/* tema claro: se activa con <html data-theme="light"> */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #e9ebf1; --color-bar: #e1e4ec; --color-surface: #ffffff; --color-panel: #f6f7fa; --color-raised: #ffffff;
+  --color-line: #d5d9e3; --color-accent: #3f628f; --color-accent-bg: #dbe5f3; --color-accent-dim: #aebdd4;
+  --color-muted: #646a80; --color-text: #1c2030;
+  --color-ok: #17803f; --color-warn: #8f5f00; --color-danger: #c92c47;
+  --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47;
+  --color-ov: #000000; --color-pop: #ffffff;
+  --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #8aa3c944; --ed-match: #8aa3c96e; --ed-shadow: #0000002e;
+  --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00;
+}
+:root[data-theme="light"] img[src*="icons/sidebar"] { filter: brightness(0.5) saturate(1.3); }
+
 html, body, #root { height: 100%; }
 body {
   margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 13px;
@@ -68,9 +90,9 @@ body {
 .no-drag { -webkit-app-region: no-drag; }
 
 /* barras de desplazamiento finas */
-* { scrollbar-width: thin; scrollbar-color: #2a2f3d transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: #2a2f3d; border-radius: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 8px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
 *::-webkit-scrollbar-track { background: transparent; }
 

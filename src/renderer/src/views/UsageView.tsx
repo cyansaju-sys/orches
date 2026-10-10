@@ -15,7 +15,7 @@ const BAR: Record<string, string> = { danger: 'bg-danger', warn: 'bg-warn', acce
 
 function Bar({ value, tone = 'accent' }: { value: number; tone?: string }) {
   return (
-    <div className="h-[5px] overflow-hidden rounded-full bg-white/[0.07]">
+    <div className="h-[5px] overflow-hidden rounded-full bg-ov/[0.07]">
       <div className={clsx('h-full rounded-full transition-all duration-500', BAR[tone])} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
     </div>
   )
@@ -143,8 +143,8 @@ export function UsageView() {
                   <span className="block truncate text-[10px] text-muted">{s.agent} · {s.project} · {ago(s.end, now)} · {fmtTokens(s.tokens)}</span>
                 </button>
                 <button title="Más acciones" onClick={(e) => setMenu({ session: s, anchor: e.currentTarget.getBoundingClientRect() })}
-                  className={clsx('mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted transition-opacity hover:bg-white/10 hover:text-text group-hover:opacity-100',
-                    menu?.session === s ? 'bg-white/10 text-text opacity-100' : 'opacity-0')}>
+                  className={clsx('mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted transition-opacity hover:bg-ov/10 hover:text-text group-hover:opacity-100',
+                    menu?.session === s ? 'bg-ov/10 text-text opacity-100' : 'opacity-0')}>
                   <MdMoreHoriz size={16} />
                 </button>
               </li>

@@ -92,6 +92,10 @@ export interface Api {
     generate(project: string): Promise<McpResult & { text?: string; agent?: string }>
     onAgent(cb: (name: string) => void): () => void
   }
+  search: {
+    run(root: string, opts: SearchOptions): Promise<SearchResult>
+    replace(root: string, opts: SearchOptions, replacement: string, paths: string[]): Promise<ReplaceResult>
+  }
   fs: {
     list(dir: string): Promise<DirEntry[]>
     read(path: string): Promise<FileData>
@@ -166,6 +170,16 @@ export interface Api {
     minimize(): void
     toggleMaximize(): void
     close(): void
+    openNew(): void
+    isEmpty(): Promise<boolean>
     onMaximized(cb: (maximized: boolean) => void): () => void
   }
 }
+
+/** Búsqueda en el proyecto (panel «Buscar»). */
+export interface SearchOptions { query: string; caseSensitive: boolean; wholeWord: boolean; regex: boolean; include?: string; exclude?: string }
+/** `col` es la columna en la línea original; `text` es un trozo de la línea que empieza en `offset`. */
+export interface SearchMatch { line: number; col: number; length: number; text: string; offset: number }
+export interface SearchFile { path: string; rel: string; matches: SearchMatch[] }
+export interface SearchResult { files: SearchFile[]; total: number; truncated: boolean; error?: string }
+export interface ReplaceResult { files: number; count: number; error?: string }

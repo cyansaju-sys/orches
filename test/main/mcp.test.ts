@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
 import { buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from '../../src/main/mcp'
 
-const dir = (): string => mkdtempSync(join(tmpdir(), 'orches-mcp-'))
+const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-mcp-'))
 
 suite('describir una entrada', () => {
   it('remota por url o por tipo', () => {
