@@ -48,6 +48,11 @@
   .brand img { width: 28px; height: 28px; }
   nav { display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
   nav a:hover { color: var(--text); }
+  .star { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 10px; color: var(--text); font-size: 13px; font-weight: 600; background: var(--raised); }
+  .star:hover { border-color: var(--accent); text-decoration: none; color: var(--text); }
+  .star svg { width: 14px; height: 14px; color: #e2b93b; }
+  [data-stars]:empty { display: none; }
+  [data-stars]:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--muted); }
   .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
   .lang button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 999px; cursor: pointer; }
   .lang button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
@@ -143,7 +148,7 @@
       <a class="hide-sm" href="#funciones" data-i="nav.features">Funciones</a>
       <a href="#instalar" data-i="nav.install">Instalar</a>
       <a href="documentacion.html" data-i="nav.docs">Documentación</a>
-      <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
+      <a class="star" href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener" title="Star on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z"/></svg><span data-i="star.short">Estrella</span><span data-stars></span></a>
       <span class="seg" role="group" aria-label="Tema / Theme">
         <button data-theme-pref="system" title="Auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
         <button data-theme-pref="dark" title="Dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
@@ -169,6 +174,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
         <span data-i="dl.win">Descargar para Windows</span>
       </a>
+      <a class="btn" href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener"><span style="color:#e2b93b;display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z"/></svg></span><span data-i="star.btn">Dar una estrella</span><span data-stars></span></a>
     </div>
     <div class="install">
       <code><span class="prompt">$ </span><span id="cmd">curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/install.sh | bash</span></code>
@@ -300,6 +306,7 @@
         <a class="btn primary" href="https://github.com/cyansaju-sys/tutti/releases/latest"><span data-i="dl.linux">Descargar para Linux</span></a>
         <a class="btn" href="https://github.com/cyansaju-sys/tutti/releases/latest"><span data-i="dl.win">Descargar para Windows</span></a>
         <a class="btn" href="documentacion.html"><span data-i="docs.btn">Leer la documentación</span></a>
+        <a class="btn" href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener"><span style="color:#e2b93b;display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z"/></svg></span><span data-i="star.btn">Dar una estrella</span><span data-stars></span></a>
       </div>
       <p class="note" data-i="i.note">En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.</p>
     </div>
@@ -311,6 +318,7 @@
     <div class="brand"><img src="icon.png" alt="" /> Tutti <span style="color:var(--muted);font-weight:400;font-size:14px">· MIT · <span data-i="f.built">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)</span></span></div>
     <div class="links">
       <a href="documentacion.html" data-i="f.docs">Documentación</a>
+      <a href="documentacion.html#contribuir" data-i="f.contrib">Contribuir</a>
       <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener" data-i="f.changes">Novedades</a>
       <a href="https://github.com/cyansaju-sys/tutti#privacidad" target="_blank" rel="noopener" data-i="f.privacy">Privacidad</a>
@@ -344,7 +352,7 @@ const T = {
     'g.1': 'Archivos y editor', 'g.2': 'Buscar y reemplazar en el proyecto', 'g.3': 'Cambios y commit', 'g.4': 'Contexto del proyecto para los agentes', 'g.5': 'Terminales integradas', 'g.6': 'Comparación de cambios',
     'i.eyebrow': 'Empieza ahora', 'i.h': 'Instálalo en un minuto', 'i.p': 'Gratis y de código abierto. Se actualiza solo y te cuenta qué cambió en cada versión.',
     'i.note': 'En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.',
-    'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+    'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'star.short': 'Estrella', 'star.btn': 'Dar una estrella', 'f.contrib': 'Contribuir', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
   },
   en: {
     'nav.why': 'Why', 'nav.features': 'Features', 'nav.install': 'Install', 'nav.docs': 'Docs',
@@ -370,7 +378,7 @@ const T = {
     'g.1': 'Files and editor', 'g.2': 'Find and replace across the project', 'g.3': 'Changes and commit', 'g.4': 'Project context for the agents', 'g.5': 'Built-in terminals', 'g.6': 'Diff view',
     'i.eyebrow': 'Get started', 'i.h': 'Install it in a minute', 'i.p': 'Free and open source. It updates itself and tells you what changed in every version.',
     'i.note': 'No admin rights needed on Linux. The Windows installer is not signed: click “More info → Run anyway”. macOS is coming later.',
-    'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+    'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'star.short': 'Star', 'star.btn': 'Star on GitHub', 'f.contrib': 'Contribute', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
   }
 }
 const media = matchMedia('(prefers-color-scheme: light)')
@@ -409,6 +417,24 @@ document.getElementById('copy').addEventListener('click', async (e) => {
   btn.textContent = T[lang].copied
   setTimeout(() => { btn.textContent = T[lang].copy }, 1600)
 })
+
+
+// estrellas de GitHub (se piden una vez por sesión; si falla, el botón queda sin número)
+;(async () => {
+  let n = null
+  try {
+    const cached = sessionStorage.getItem('tutti-stars')
+    if (cached) n = Number(cached)
+    else {
+      const r = await fetch('https://api.github.com/repos/cyansaju-sys/tutti')
+      if (r.ok) { n = (await r.json()).stargazers_count; sessionStorage.setItem('tutti-stars', String(n)) }
+    }
+  } catch {}
+  if (typeof n === 'number' && n > 0) {      // con 0 estrellas no se muestra el número
+    const text = n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
+    document.querySelectorAll('[data-stars]').forEach((el) => { el.textContent = text })
+  }
+})()
 
 const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }), { threshold: 0.12 })
 document.querySelectorAll('.reveal').forEach((el) => io.observe(el))

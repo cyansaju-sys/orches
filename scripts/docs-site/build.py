@@ -73,6 +73,11 @@ html = '''<!doctype html>
   .brand small { color: var(--muted); font-weight: 500; font-size: 14px; }
   nav { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--muted); }
   nav a { color: var(--muted); } nav a:hover { color: var(--text); text-decoration: none; }
+  .star { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 10px; color: var(--text); font-size: 13px; font-weight: 600; background: var(--raised); }
+  .star:hover { border-color: var(--accent); text-decoration: none; color: var(--text); }
+  .star svg { width: 14px; height: 14px; color: #e2b93b; }
+  [data-stars]:empty { display: none; }
+  [data-stars]:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--muted); }
   .seg, .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
   .seg button { background: none; border: 0; color: var(--muted); width: 28px; height: 24px; display: grid; place-items: center; border-radius: 999px; cursor: pointer; }
   .seg button svg { width: 15px; height: 15px; }
@@ -134,7 +139,7 @@ html = '''<!doctype html>
     <nav>
       <a class="hide-sm" href="index.html"><span class="es">Inicio</span><span class="en">Home</span></a>
       <a class="hide-sm" href="index.html#instalar"><span class="es">Descargar</span><span class="en">Download</span></a>
-      <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
+      <a class="star" href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener" title="Star on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z"/></svg><span class="es">Estrella</span><span class="en">Star</span><span data-stars></span></a>
       <span class="seg" role="group" aria-label="Tema / Theme">
         <button data-theme-pref="system" title="Auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
         <button data-theme-pref="dark" title="Dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
@@ -162,7 +167,7 @@ __BODY__
 <footer>
   <div class="wrap in">
     <span>Tutti · MIT · <span class="es">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a> (Anthropic)</span><span class="en">Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a> (Anthropic)</span></span>
-    <span><a href="index.html"><span class="es">Volver al inicio</span><span class="en">Back to home</span></a> · <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener"><span class="es">Novedades</span><span class="en">Changelog</span></a> · <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener"><span class="es">Reportar un problema</span><span class="en">Report an issue</span></a></span>
+    <span><a href="index.html"><span class="es">Volver al inicio</span><span class="en">Back to home</span></a> · <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener"><span class="es">Novedades</span><span class="en">Changelog</span></a> · <a href="#contribuir"><span class="es">Contribuir</span><span class="en">Contribute</span></a> · <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener"><span class="es">Reportar un problema</span><span class="en">Report an issue</span></a></span>
   </div>
 </footer>
 <button class="top" id="top" title="↑" aria-label="Top">↑</button>
@@ -208,6 +213,24 @@ const spy = new IntersectionObserver((entries) => {
   entries.forEach((e) => { if (e.isIntersecting) { links.forEach((a) => a.classList.toggle('on', a.dataset.id === e.target.id)) } })
 }, { rootMargin: '-90px 0px -70% 0px' })
 document.querySelectorAll('main section[id]').forEach((s) => spy.observe(s))
+
+
+// estrellas de GitHub (se piden una vez por sesión; si falla, el botón queda sin número)
+;(async () => {
+  let n = null
+  try {
+    const cached = sessionStorage.getItem('tutti-stars')
+    if (cached) n = Number(cached)
+    else {
+      const r = await fetch('https://api.github.com/repos/cyansaju-sys/tutti')
+      if (r.ok) { n = (await r.json()).stargazers_count; sessionStorage.setItem('tutti-stars', String(n)) }
+    }
+  } catch {}
+  if (typeof n === 'number' && n > 0) {      // con 0 estrellas no se muestra el número
+    const text = n >= 1000 ? (n / 1000).toFixed(1).replace(/\\.0$/, '') + 'k' : String(n)
+    document.querySelectorAll('[data-stars]').forEach((el) => { el.textContent = text })
+  }
+})()
 
 document.getElementById('toc-toggle').addEventListener('click', () => document.getElementById('aside').classList.toggle('open'))
 links.forEach((a) => a.addEventListener('click', () => document.getElementById('aside').classList.remove('open')))

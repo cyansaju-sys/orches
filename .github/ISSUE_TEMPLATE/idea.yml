@@ -1,0 +1,19 @@
+name: Idea o mejora / Idea or improvement
+description: Propón algo nuevo / Suggest something new
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema resuelve / What problem it solves
+      description: Cuéntalo desde tu uso, no desde la solución / Describe it from your use, not from the solution
+    validations: { required: true }
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Cómo lo imaginas / How you picture it
+  - type: dropdown
+    id: ayuda
+    attributes:
+      label: ¿Te gustaría implementarlo? / Would you like to implement it?
+      options: ["Sí / Yes", "Me gustaría ayuda / I would like help", "No"]
