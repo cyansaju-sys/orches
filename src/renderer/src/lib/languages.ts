@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import type { Extension } from '@codemirror/state'
 import { css } from '@codemirror/lang-css'
 import { html } from '@codemirror/lang-html'
@@ -30,5 +31,5 @@ export function languageName(fileName: string): string {
     js: 'JavaScript', jsx: 'JavaScript JSX', ts: 'TypeScript', tsx: 'TypeScript JSX', py: 'Python', sql: 'SQL', json: 'JSON',
     css: 'CSS', html: 'HTML', md: 'Markdown', xml: 'XML', svg: 'SVG', vue: 'Vue'
   }
-  return names[ext] ?? 'Texto'
+  return names[ext] ?? t('lang.text')
 }

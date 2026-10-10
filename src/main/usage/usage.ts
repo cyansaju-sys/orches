@@ -16,6 +16,7 @@ import { deleteAgyConversation, readAgyConversations } from './agyDb'
 import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from '../settings'
 import { extendedPath } from '../shellpath'
+import { tm } from '../i18n'
 
 export const WINDOW_HOURS = 5          // Claude reinicia el límite de sesión en ventanas de 5 horas
 const HOUR = 3_600_000
@@ -28,8 +29,8 @@ const processed = (t: Tokens): number => t.input + t.output + t.cacheWrite
 const LIMITS_URL = 'https://api.anthropic.com/api/oauth/usage'
 const LIMITS_TTL = 60                   // mínimo entre consultas reales (el endpoint limita las peticiones frecuentes)
 const LIMITS_BACKOFF = 120              // espera mínima tras un 429
-const LIMIT_LABELS: Array<[string, string]> = [
-  ['five_hour', 'Sesión (5 h)'], ['seven_day', 'Semanal (7 días)'], ['seven_day_opus', 'Semanal Opus'], ['seven_day_sonnet', 'Semanal Sonnet']
+const LIMIT_LABELS = (): Array<[string, string]> => [
+  ['five_hour', tm('m.us.five')], ['seven_day', tm('m.us.seven')], ['seven_day_opus', tm('m.us.opus')], ['seven_day_sonnet', tm('m.us.sonnet')]
 ]
 const limitsState: { nextTry: number; error: string; good: { at: number; limits: LimitInfo[] } | null } = { nextTry: 0, error: '', good: null }
 
@@ -56,7 +57,7 @@ async function fetchLimits(token: string): Promise<LimitInfo[]> {
   if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status, retryAfter: Number(res.headers.get('retry-after')) || 0 })
   const data = (await res.json()) as Record<string, { utilization?: number | null; resets_at?: string } | undefined>
   const out: LimitInfo[] = []
-  for (const [key, label] of LIMIT_LABELS) {
+  for (const [key, label] of LIMIT_LABELS()) {
     const item = data[key]
     if (item && item.utilization != null && item.resets_at) out.push({ label, percent: Number(item.utilization), resetsAt: Date.parse(item.resets_at) })
   }
@@ -74,17 +75,17 @@ export async function claudeLimits(fetchNow: boolean): Promise<{ limits: LimitIn
   limitsState.good ??= loadGood()
   if (fetchNow && now >= limitsState.nextTry) {
     const creds = claudeCredentials()
-    if (!creds?.accessToken) Object.assign(limitsState, { nextTry: now + 60_000, error: 'Inicia sesión en Claude Code para ver el porcentaje' })
-    else if ((creds.expiresAt ?? 0) < now) Object.assign(limitsState, { nextTry: now + 60_000, error: 'La sesión de Claude caducó: abre Claude Code para renovarla' })
+    if (!creds?.accessToken) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.login') })
+    else if ((creds.expiresAt ?? 0) < now) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.expired') })
     else {
       try {
         const limits = await fetchLimits(creds.accessToken)
         if (limits.length) { limitsState.good = { at: now, limits }; Object.assign(limitsState, { error: '', nextTry: now + LIMITS_TTL * 1000 }); saveGood(now, limits) }
-        else Object.assign(limitsState, { error: 'Anthropic no devolvió límites', nextTry: now + LIMITS_TTL * 1000 })
+        else Object.assign(limitsState, { error: tm('m.us.noLimits'), nextTry: now + LIMITS_TTL * 1000 })
       } catch (e) {
         const err = e as { status?: number; retryAfter?: number }
-        if (err.status) Object.assign(limitsState, { nextTry: now + Math.max(LIMITS_BACKOFF, (err.retryAfter ?? 0)) * 1000, error: `Anthropic respondió ${err.status}` })
-        else Object.assign(limitsState, { nextTry: now + 60_000, error: 'Sin conexión con Anthropic' })
+        if (err.status) Object.assign(limitsState, { nextTry: now + Math.max(LIMITS_BACKOFF, (err.retryAfter ?? 0)) * 1000, error: tm('m.us.status', { status: err.status }) })
+        else Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.offline') })
       }
     }
   }
@@ -120,7 +121,7 @@ export function parseClaudeJsonl(text: string): ClaudeFile {
       })
     }
   }
-  return { msgs, title: title || lastPrompt || '(sin título)', cwd }
+  return { msgs, title: title || lastPrompt || tm('m.us.untitled'), cwd }
 }
 
 const claudeFiles = (): string[] => {
@@ -190,11 +191,11 @@ export function opencodeSessions(now: number): { usage: Omit<AgentUsage, 'limits
     total += tokens
     if (r.time_updated >= startOfToday) today += tokens
     if (r.time_updated >= weekStart) week += tokens
-    return { command: 'opencode', agent: 'OpenCode', id: r.id, title: r.title || '(sin título)', cwd: r.directory ?? '',
+    return { command: 'opencode', agent: 'OpenCode', id: r.id, title: r.title || tm('m.us.untitled'), cwd: r.directory ?? '',
       project: basename(r.directory ?? ''), tokens, start: r.time_created, end: r.time_updated }
   })
   sessions.sort((a, b) => b.end - a.end)
-  return { usage: { command: 'opencode', window: null, today, week, total, note: 'Sin límite propio: el reinicio depende del proveedor y del modelo.' }, sessions }
+  return { usage: { command: 'opencode', window: null, today, week, total, note: tm('m.us.opencodeNote') }, sessions }
 }
 
 // --- Antigravity (agy) ------------------------------------------------------------------------
@@ -216,13 +217,13 @@ export function agySessions(now: number): { usage: Omit<AgentUsage, 'limits' | '
   const sessions: SessionInfo[] = rows.map((r) => {
     const cwd = firstWorkspace(r.workspace_uris)
     const end = toMs(r.last_modified_time)
-    return { command: 'agy' as const, agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || '(sin título)', cwd,
+    return { command: 'agy' as const, agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || tm('m.us.untitled'), cwd,
       project: basename(cwd), tokens: 0, start: end, end }
   }).sort((a, b) => b.end - a.end)
   const startOfToday = new Date(now).setHours(0, 0, 0, 0)
   const note = sessions.length
-    ? `Antigravity no guarda tokens en local. Conversaciones: ${sessions.length} (hoy ${sessions.filter((s) => s.end >= startOfToday).length}).`
-    : 'Sin conversaciones todavía. Antigravity no guarda tokens en local; aquí aparecerá el historial.'
+    ? tm('m.us.agyNote', { n: sessions.length, today: sessions.filter((s) => s.end >= startOfToday).length })
+    : tm('m.us.agyEmpty')
   return { usage: { command: 'agy', window: null, today: 0, week: 0, total: 0, note }, sessions }
 }
 
@@ -245,7 +246,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
     else if (agent.command === 'opencode') found = opencodeSessions(now)
     else if (agent.command === 'agy') found = agySessions(now)
     if (!found) {
-      out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: 'Todavía no se puede leer el consumo de este agente.', limits: [], limitsError: '', limitsAge: 0 })
+      out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.unreadable'), limits: [], limitsError: '', limitsAge: 0 })
       continue
     }
     const lim = agent.command === 'claude' ? await claudeLimits(fetchLimits) : { limits: [], error: '', age: 0 }
@@ -282,15 +283,15 @@ export function deleteSession(session: SessionInfo): Promise<McpResult> {
         unlinkSync(file); claudeCache.delete(file); rmSync(join(root, dir, session.id), { recursive: true, force: true }); removed = true   // carpeta auxiliar de la sesión
       }
     }
-    return Promise.resolve(finish({ ok: removed, message: removed ? 'Borrada' : 'No se encontró el archivo de la sesión' }))
+    return Promise.resolve(finish({ ok: removed, message: removed ? tm('m.us.deleted') : tm('m.us.noFile') }))
   }
   if (session.command === 'agy') {
     const ok = deleteAgyConversation(session.id)
-    return Promise.resolve(finish({ ok, message: ok ? 'Borrada' : 'No se pudo borrar la conversación (¿Antigravity la tiene en uso?)' }))
+    return Promise.resolve(finish({ ok, message: ok ? tm('m.us.deleted') : tm('m.us.agyBusy') }))
   }
-  if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: 'Este agente no permite borrar sesiones desde aquí' })
+  if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: tm('m.us.noDelete') })
   return new Promise((done) => {
     execFile('opencode', ['session', 'delete', session.id], { cwd: session.cwd || undefined, timeout: 30_000, encoding: 'utf8', env: { ...process.env, PATH: extendedPath() } },
-      (err, stdout, stderr) => done(finish({ ok: !err, message: ((err ? stderr || stdout : stdout) || '').trim() || (err ? String(err.message) : 'Borrada') })))
+      (err, stdout, stderr) => done(finish({ ok: !err, message: ((err ? stderr || stdout : stdout) || '').trim() || (err ? String(err.message) : tm('m.us.deleted')) })))
   })
 }

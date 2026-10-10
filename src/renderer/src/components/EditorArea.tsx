@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { MdAccountTree, MdClose } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
+import { t, useT } from '@/lib/i18n'
 import { iconFor } from '@/lib/icons'
 import { languageName } from '@/lib/languages'
 import { crumbs, relative, toPosix } from '@/lib/paths'
@@ -18,11 +19,12 @@ export async function saveDoc(doc: Doc): Promise<void> {
     markSaved(doc.path, doc.text, mtime)
     void refreshGit()
   } catch (e) {
-    toast(`No se pudo guardar ${doc.title}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+    toast(t('ed.saveFailed', { title: doc.title, error: e instanceof Error ? e.message : String(e) }), 'error')
   }
 }
 
 export function EditorArea() {
+  const t = useT()
   const docs = useStore((s) => s.docs)
   const activePath = useStore((s) => s.activeDoc)
   const project = useStore((s) => s.project)
@@ -52,7 +54,7 @@ export function EditorArea() {
   }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = (d: Doc): void => {
-    if (isDirty(d) && !window.confirm(`«${d.title}» tiene cambios sin guardar. ¿Cerrarlo sin guardar?`)) return
+    if (isDirty(d) && !window.confirm(t('app.unsaved', { title: d.title }))) return
     closeDoc(d.path)
   }
   const statusOf = (d: Doc): string => {
@@ -79,7 +81,7 @@ export function EditorArea() {
               {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
-              {isDirty(d) && <span title="Cambios sin guardar" className="text-[10px] text-warn">●</span>}
+              {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
               <button onClick={(e) => { e.stopPropagation(); close(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
                 <MdClose size={12} />
               </button>
@@ -97,12 +99,12 @@ export function EditorArea() {
               </span>
             ))}
           </div>
-          <span className="shrink-0 pl-3 text-[10px] text-muted">{doc.kind === 'diff' ? 'Comparación' : languageName(doc.title)}</span>
+          <span className="shrink-0 pl-3 text-[10px] text-muted">{doc.kind === 'diff' ? t('ed.comparison') : languageName(doc.title)}</span>
         </div>
       )}
       {doc && (doc.readOnly || !editEnabled) && doc.kind === 'text' && (
         <div className="shrink-0 bg-raised px-3 py-1 text-[10px] text-warn">
-          {doc.truncated ? 'Solo el primer MB · solo lectura' : doc.readOnly ? 'Archivo muy grande o no UTF-8 · solo lectura' : 'Edición bloqueada (Ctrl+Shift+L para permitirla)'}
+          {doc.truncated ? t('ed.firstMb') : doc.readOnly ? t('ed.tooBig') : t('ed.locked')}
         </div>
       )}
       {doc?.kind === 'text' && (
@@ -115,7 +117,7 @@ export function EditorArea() {
       {doc?.kind === 'graph' && <GitGraph />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
       {doc?.kind === 'image' && <div className="grid flex-1 place-items-center overflow-auto p-4"><img src={doc.dataUrl} alt={doc.title} className="max-h-full max-w-full object-contain" /></div>}
-      {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">Archivo binario: no se puede mostrar como texto</div>}
+      {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('ed.binary')}</div>}
     </div>
   )
 }

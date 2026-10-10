@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import type { McpResult } from '../../shared/types'
 import { detectAgents } from '../agents/agents'
 import { ask } from '../git/commitMessage'
+import { tm } from '../i18n'
 import { extendedPath } from '../shellpath'
 
 const SKIP = new Set(['node_modules', 'dist', 'out', 'build', 'target', 'release', 'coverage', '__pycache__', 'venv', 'vendor'])
@@ -63,17 +64,13 @@ export async function projectDigest(root: string): Promise<string> {
   const manifests = MANIFESTS.filter((f) => existsSync(join(root, f))).map((f) => `${f}:\n${read(join(root, f), 600)}`)
   const commits = await gitSubjects(root)
   return [
-    `Estructura:\n${treeOf(root).join('\n')}`, packageSummary(root), ...manifests,
-    readme && `README (inicio):\n${readme}`, commits && `Últimos commits:\n${commits}`
+    `${tm('m.ctx.digestTree')}:\n${treeOf(root).join('\n')}`, packageSummary(root), ...manifests,
+    readme && `${tm('m.ctx.digestReadme')}:\n${readme}`, commits && `${tm('m.ctx.digestCommits')}:\n${commits}`
   ].filter(Boolean).join('\n\n')
 }
 
 export function buildPrompt(digest: string): string {
-  return `Redacta el contexto de este proyecto para que otros agentes de programación lo lean antes de trabajar en él.
-Escríbelo en Markdown, en español, de 25 líneas como máximo, con estas secciones: "## Qué es", "## Estructura", "## Cómo se ejecuta y se prueba", "## Convenciones".
-Usa solo lo que aparece abajo; si algo no se puede saber, omítelo en lugar de inventarlo. \
-Responde SOLO con el Markdown, sin explicaciones ni bloques de código que lo envuelvan. \
-No uses herramientas ni leas archivos: todo lo necesario está aquí.
+  return `${tm('m.ctx.prompt')}
 
 ${digest}`
 }
@@ -93,7 +90,7 @@ export function fallbackContext(root: string, digest: string): string {
   const name = root.split(/[\\/]/).filter(Boolean).pop() ?? 'proyecto'
   const tree = digest.split('\n\n')[0].split('\n').slice(1, 25).join('\n')
   const pkg = packageSummary(root)
-  return `# ${name}\n\n## Estructura\n\`\`\`\n${tree}\n\`\`\`\n${pkg ? `\n## Cómo se ejecuta y se prueba\n${pkg}\n` : ''}`
+  return `# ${name}\n\n## ${tm('m.ctx.fbStructure')}\n\`\`\`\n${tree}\n\`\`\`\n${pkg ? `\n## ${tm('m.ctx.fbRun')}\n${pkg}\n` : ''}`
 }
 
 export async function generateContext(root: string, onAgent: (name: string) => void = () => undefined, signal?: AbortSignal): Promise<McpResult & { text?: string; agent?: string }> {
@@ -109,5 +106,5 @@ export async function generateContext(root: string, onAgent: (name: string) => v
     const text = out ? cleanContext(out) : null
     if (text) return { ok: true, message: '', text, agent: agent.name }
   }
-  return { ok: true, message: '', text: fallbackContext(root, digest), agent: 'Reglas automáticas' }
+  return { ok: true, message: '', text: fallbackContext(root, digest), agent: tm('m.autoRules') }
 }

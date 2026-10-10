@@ -1,3 +1,5 @@
+import type { MsgKey } from '@shared/i18n'
+
 /** Atajos globales: llevan Ctrl+Shift para no chocar con las teclas que usan los agentes y las shells. */
 export const GLOBAL_KEYS = new Set(['N', 'T', 'W', 'B', 'L', 'E', 'A', 'G', 'X', 'U', 'K', 'F', 'H'])
 
@@ -7,21 +9,21 @@ export function isGlobalShortcut(e: KeyboardEvent): boolean {
   return e.ctrlKey && e.shiftKey && !e.altKey && GLOBAL_KEYS.has(e.key.toUpperCase())
 }
 
-export const SECTIONS: Array<{ title: string; items: Array<[string, string]> }> = [
-  { title: 'Archivos', items: [
-    ['Ctrl + S', 'Guardar el archivo abierto'], ['Ctrl + W', 'Cerrar la pestaña del archivo'],
-    ['Ctrl + F', 'Buscar en el archivo abierto'], ['Ctrl + H', 'Buscar y reemplazar en el archivo abierto'],
-    ['Ctrl + Shift + L', 'Permitir o bloquear la edición de archivos'], ['Tab / Shift + Tab', 'Sangría al editar'],
-    ['Ctrl + Espacio', 'Pedir sugerencias de autocompletado'], ['↑ ↓ · Enter o Tab · Esc', 'Elegir, aceptar o cerrar una sugerencia'],
-    ['↑ ↓ ← → · Enter · Esc', 'Moverse por el árbol de archivos (tras pulsar uno)']
+export const SECTIONS: Array<{ title: MsgKey; items: Array<[string, MsgKey]> }> = [
+  { title: 'sc.files', items: [
+    ['Ctrl + S', 'sc.save'], ['Ctrl + W', 'sc.closeTab'],
+    ['Ctrl + F', 'sc.find'], ['Ctrl + H', 'sc.replace'],
+    ['Ctrl + Shift + L', 'sc.toggleEdit'], ['Tab / Shift + Tab', 'sc.indent'],
+    ['key.ctrlSpace', 'sc.complete'], ['↑ ↓ · Enter / Tab · Esc', 'sc.suggest'],
+    ['↑ ↓ ← → · Enter · Esc', 'sc.tree']
   ] },
-  { title: 'Paneles', items: [
-    ['Ctrl + Shift + N', 'Abrir un agente'], ['Ctrl + Shift + T', 'Mostrar u ocultar la terminal'],
-    ['Ctrl + Shift + W', 'Cerrar el panel activo'], ['Ctrl + Av Pág / Re Pág', 'Panel siguiente / anterior']
+  { title: 'sc.panels', items: [
+    ['Ctrl + Shift + N', 'sc.openAgent'], ['Ctrl + Shift + T', 'sc.toggleTerminal'],
+    ['Ctrl + Shift + W', 'sc.closePanel'], ['key.pageNav', 'sc.nextPanel']
   ] },
-  { title: 'Barra lateral', items: [
-    ['Ctrl + Shift + B', 'Mostrar u ocultar la barra lateral'], ['Ctrl + Shift + E', 'Archivos'], ['Ctrl + Shift + F', 'Buscar en el proyecto'], ['Ctrl + Shift + H', 'Buscar y reemplazar en el proyecto'], ['Ctrl + Shift + A', 'Agentes'],
-    ['Ctrl + Shift + G', 'Git'], ['Ctrl + Shift + K', 'Contexto del proyecto'], ['Ctrl + Shift + X', 'Servidores MCP'], ['Ctrl + Shift + U', 'Consumo e historial de IA']
+  { title: 'sc.sidebar', items: [
+    ['Ctrl + Shift + B', 'sc.toggleSidebar'], ['Ctrl + Shift + E', 'tab.files'], ['Ctrl + Shift + F', 'sc.searchProject'], ['Ctrl + Shift + H', 'sc.replaceProject'], ['Ctrl + Shift + A', 'sc.agents'],
+    ['Ctrl + Shift + G', 'sc.git'], ['Ctrl + Shift + K', 'sc.context'], ['Ctrl + Shift + X', 'sc.mcp'], ['Ctrl + Shift + U', 'sc.usage']
   ] },
-  { title: 'General', items: [['Ctrl + Shift + V', 'Pegar en la terminal'], ['F1', 'Esta ayuda']] }
+  { title: 'sc.general', items: [['Ctrl + C / Ctrl + Shift + C', 'sc.copyTerminal'], ['Ctrl + V / Ctrl + Shift + V / Shift + Insert', 'sc.pasteAlt'], ['F1', 'sc.help']] }
 ]

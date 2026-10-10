@@ -5,8 +5,9 @@
  * Fuera de Tutti no hay esas variables y el puente responde con una lista de herramientas vacía.
  */
 import { app } from 'electron'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { tm } from '../i18n'
 import { agyGlobalConfig } from '../mcp'
 
 /** Puente stdio -> HTTP: cada línea JSON-RPC que llega por stdin se envía al servidor de tareas y la respuesta sale por stdout. */
@@ -69,4 +70,16 @@ export function ensureAgyBridge(): void {
     mkdirSync(dirname(file), { recursive: true })
     writeFileSync(file, JSON.stringify(next, null, 2) + '\n', 'utf8')
   } catch { /* sin permisos: Antigravity abre igual, solo sin el reparto de tareas */ }
+}
+
+/** ¿El servidor «tutti» registrado en Antigravity apunta a un ejecutable y a un puente que existen? */
+export function agyBridgeStatus(): { ok: boolean; problem?: string } {
+  let config: Json = {}
+  try { config = JSON.parse(readFileSync(agyGlobalConfig(), 'utf8')) as Json } catch { /* sin archivo */ }
+  const entry = (config.mcpServers as Record<string, Json> | undefined)?.tutti
+  if (!entry) return { ok: false, problem: tm('m.agy.notRegistered') }
+  if (entry.disabled === true) return { ok: false, problem: tm('m.agy.disabled') }
+  const files = [String(entry.command ?? ''), ...((entry.args as unknown[]) ?? []).map(String)]
+  const missing = files.find((f) => f.startsWith('/') && !existsSync(f))
+  return missing ? { ok: false, problem: tm('m.agy.missing', { path: missing }) } : { ok: true }
 }

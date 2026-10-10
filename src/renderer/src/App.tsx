@@ -8,6 +8,8 @@ import { TitleBar } from '@/components/TitleBar'
 import { Resizer } from '@/components/ui'
 import { Tooltips } from '@/components/Tooltip'
 import { refreshGit } from '@/lib/gitSync'
+import { t } from '@/lib/i18n'
+import { isLangPref } from '@shared/i18n'
 import { isGlobalShortcut } from '@/lib/shortcuts'
 import { isPref, resolveTheme, paintTheme } from '@/lib/theme'
 import { loadIconTheme } from '@/lib/icons'
@@ -36,6 +38,8 @@ export function App() {
       const edit = await window.api.settings.get('edit_enabled')
       const savedTheme = await window.api.settings.get('theme')
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
+      const savedLang = await window.api.settings.get('language')
+      if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
@@ -76,8 +80,8 @@ export function App() {
     const announced = new Set<string>()
     const apply = (update: import('@shared/types').UpdateState): void => {
       useStore.setState({ update })
-      if (update.status === 'available' && !announced.has(update.version)) { announced.add(update.version); useStore.getState().toast(`Hay una versión nueva: v${update.version}`, 'info') }
-      if (update.status === 'error') useStore.getState().toast(`No se pudo actualizar: ${update.message}`, 'error')
+      if (update.status === 'available' && !announced.has(update.version)) { announced.add(update.version); useStore.getState().toast(t('app.updateAvailable', { v: update.version }), 'info') }
+      if (update.status === 'error') useStore.getState().toast(t('app.updateFailed', { message: update.message }), 'error')
     }
     void window.api.update.state().then(apply)
     return window.api.update.onState(apply)
@@ -99,7 +103,7 @@ export function App() {
       const doc = st.docs.find((d) => d.path === st.activeDoc)
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'W' && st.focus === 'editor' && doc) {
         e.preventDefault(); e.stopPropagation()
-        if (!isDirty(doc) || window.confirm(`«${doc.title}» tiene cambios sin guardar. ¿Cerrarlo sin guardar?`)) st.closeDoc(doc.path)
+        if (!isDirty(doc) || window.confirm(t('app.unsaved', { title: doc.title }))) st.closeDoc(doc.path)
         return
       }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }

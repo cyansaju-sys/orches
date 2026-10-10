@@ -19,6 +19,7 @@ interface Session { term: IPty; killed: boolean; meta: Meta; screen: Headless; l
 /** Cómo arrancar un agente con el reparto de tareas conectado; lo registra el módulo del servidor MCP. */
 export type { Launch } from './launch'
 import type { Launch } from './launch'
+import { tm } from '../i18n'
 type LaunchHook = (opts: PtyOptions) => Launch
 let launchHook: LaunchHook | null = null
 export const setLaunchHook = (hook: LaunchHook): void => { launchHook = hook }
@@ -42,10 +43,10 @@ function childEnv(extra: Record<string, string> = {}): Record<string, string> {
 /** Resuelve el ejecutable; lanza un Error con un mensaje legible si no se puede iniciar. */
 function resolve(opts: PtyOptions, args: string[]): { file: string; args: string[] } {
   const exe = isAbsolute(opts.command) && existsSync(opts.command) ? opts.command : which(opts.command)
-  if (!exe) throw new Error(`No se encontró «${opts.command}»: instálalo o revisa que esté en el PATH`)
+  if (!exe) throw new Error(tm('m.pty.notFound', { command: opts.command }))
   let dir = false
   try { dir = statSync(opts.cwd).isDirectory() } catch { /* no existe */ }
-  if (!dir) throw new Error(`La carpeta «${opts.cwd}» no existe`)
+  if (!dir) throw new Error(tm('m.pty.noDir', { cwd: opts.cwd }))
   if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(exe)) return { file: 'cmd.exe', args: ['/c', exe, ...args] }
   return { file: exe, args }
 }

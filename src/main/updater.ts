@@ -12,8 +12,9 @@ import { app, shell, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { UpdateState } from '../shared/types'
 import { isNewer } from './version'
+import { tm } from './i18n'
 
-const REPO = 'cyansaju-sys/orches'
+const REPO = 'cyansaju-sys/tutti'
 const FIRST_CHECK_MS = 8_000
 const EVERY_MS = 30 * 60_000
 
@@ -31,7 +32,7 @@ const releaseUrl = (version?: string): string => `https://github.com/${REPO}/rel
 /** Sin actualización automática: se consulta la última release de GitHub solo para avisar. */
 async function checkManually(): Promise<void> {
   const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'tutti' }, signal: AbortSignal.timeout(10_000) })
-  if (!res.ok) throw new Error(`GitHub respondió ${res.status}`)
+  if (!res.ok) throw new Error(tm('m.upd.github', { status: res.status }))
   const tag = String(((await res.json()) as { tag_name?: string }).tag_name ?? '')
   const version = tag.replace(/^v/, '')
   set(version && isNewer(version, app.getVersion()) ? { status: 'available', version, canInstall: false, url: releaseUrl(version) } : { status: 'idle' })

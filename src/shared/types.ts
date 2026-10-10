@@ -47,6 +47,21 @@ export interface McpServer {
   config: Record<string, unknown>      // entrada original de la configuración
   source: string                       // archivo donde está guardada
 }
+/** El servidor MCP de la propia app y los agentes a los que se aplica. */
+export interface AppMcpInfo {
+  running: boolean; tools: string[]
+  agents: Array<{ command: string; name: string; installed: boolean; applied: boolean; how: string; problem?: string }>
+}
+/** Un dato que el usuario debe rellenar al instalar un servidor del registro (variable de entorno o cabecera). */
+export interface RegistryField { name: string; description: string; required: boolean; secret: boolean; default: string }
+/** Una forma de instalar un servidor del registro: local (comando) o remota (URL). */
+export interface RegistryOption {
+  label: string; kind: 'remote' | 'local'
+  url?: string; command?: string; args?: string[]
+  env: RegistryField[]; headers: RegistryField[]
+}
+export interface RegistryServer { name: string; title: string; description: string; version: string; repository: string; options: RegistryOption[] }
+export interface RegistryPage { servers: RegistryServer[]; next: string; error: string }
 /** Lo que se necesita para añadir un servidor. */
 export interface McpSpec {
   name: string; kind: 'remote' | 'local'
@@ -148,6 +163,9 @@ export interface Api {
   }
   mcp: {
     list(project: string | null): Promise<McpServer[]>
+    app(): Promise<AppMcpInfo>
+    registry(query: string, cursor: string): Promise<RegistryPage>
+    featured(): Promise<RegistryServer[]>
     add(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult>
     remove(server: McpServer, project: string | null): Promise<McpResult>
   }

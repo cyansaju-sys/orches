@@ -1,7 +1,9 @@
 import { clsx } from 'clsx'
+import type { MsgKey } from '@shared/i18n'
 import { useState } from 'react'
-import { MdCheck, MdSettings } from 'react-icons/md'
+import { MdLanguage, MdPalette, MdSettings } from 'react-icons/md'
 import { Menu } from '@/components/Menu'
+import { useT } from '@/lib/i18n'
 import { sidebarIcon } from '@/lib/icons'
 import { useStore, type SidebarTab } from '@/store'
 import { AgentsView } from '@/views/AgentsView'
@@ -12,14 +14,14 @@ import { SearchView } from '@/views/SearchView'
 import { McpView } from '@/views/McpView'
 import { UsageView } from '@/views/UsageView'
 
-export const TABS: Array<{ id: SidebarTab; icon: string; title: string; key: string }> = [
-  { id: 'files', icon: 'files', title: 'Archivos', key: 'E' },
-  { id: 'search', icon: 'search', title: 'Buscar', key: 'F' },
-  { id: 'agents', icon: 'agents', title: 'Agentes', key: 'A' },
-  { id: 'git', icon: 'git', title: 'Git', key: 'G' },
-  { id: 'context', icon: 'context', title: 'Contexto del proyecto', key: 'K' },
-  { id: 'mcp', icon: 'mcp', title: 'Servidores MCP', key: 'X' },
-  { id: 'ai', icon: 'ai', title: 'Consumo e historial de IA', key: 'U' }
+export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
+  { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
+  { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
+  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
+  { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
+  { id: 'context', icon: 'context', titleKey: 'tab.context', key: 'K' },
+  { id: 'mcp', icon: 'mcp', titleKey: 'tab.mcp', key: 'X' },
+  { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
 ]
 
 export function Sidebar() {
@@ -30,22 +32,24 @@ export function Sidebar() {
   const changes = useStore((s) => s.git?.files.length ?? 0)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
+  const langPref = useStore((s) => s.langPref)
+  const setLang = useStore((s) => s.setLang)
+  const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
-  const check = (on: boolean) => on ? <MdCheck size={15} /> : <span className="inline-block size-[15px]" />
 
   return (
     <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', !open && 'mr-1.5')}>
       <div className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line py-1">
-        {TABS.map((t) => (
+        {TABS.map((tab_) => (
           <button
-            key={t.id}
-            title={`${t.title} (Ctrl+Shift+${t.key})`}
-            onClick={() => set({ tab: t.id })}
-            onDoubleClick={() => set({ tab: t.id, sidebarOpen: !open })}
-            className={clsx('relative grid size-10 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === t.id && 'bg-accent-bg')}
+            key={tab_.id}
+            title={`${t(tab_.titleKey)} (Ctrl+Shift+${tab_.key})`}
+            onClick={() => set({ tab: tab_.id })}
+            onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
+            className={clsx('relative grid size-10 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg')}
           >
-            <img src={sidebarIcon(t.icon)} alt="" className="size-6" draggable={false} />
-            {t.id === 'git' && changes > 0 && (
+            <img src={sidebarIcon(tab_.icon)} alt="" className="size-6" draggable={false} />
+            {tab_.id === 'git' && changes > 0 && (
               <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] font-bold text-bg">
                 {changes > 99 ? '99+' : changes}
               </span>
@@ -53,7 +57,7 @@ export function Sidebar() {
           </button>
         ))}
         <button
-          title="Ajustes"
+          title={t('settings.title')}
           onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())}
           className={clsx('mt-auto grid size-10 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent', menu && 'bg-accent-bg text-accent')}
         >
@@ -61,10 +65,17 @@ export function Sidebar() {
         </button>
       </div>
       {menu && (
-        <Menu width={210} anchor={menu} onClose={() => setMenu(null)} items={[
-          { label: 'Tema oscuro', icon: check(theme === 'dark'), onClick: () => setTheme('dark') },
-          { label: 'Tema claro', icon: check(theme === 'light'), onClick: () => setTheme('light') },
-          { label: 'Automático (sistema)', icon: check(theme === 'system'), onClick: () => setTheme('system') }
+        <Menu width={230} anchor={menu} onClose={() => setMenu(null)} items={[
+          { label: t('theme.title'), icon: <MdPalette size={15} />, detail: t(`theme.s.${theme}`), submenu: [
+            { label: t('theme.dark'), checked: theme === 'dark', onClick: () => setTheme('dark') },
+            { label: t('theme.light'), checked: theme === 'light', onClick: () => setTheme('light') },
+            { label: t('theme.system'), checked: theme === 'system', onClick: () => setTheme('system') }
+          ] },
+          { label: t('lang.title'), icon: <MdLanguage size={15} />, detail: t(`lang.s.${langPref}`), submenu: [
+            { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
+            { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
+            { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
+          ] }
         ]} />
       )}
       {open && <div className="min-w-0 flex-1 overflow-hidden pt-1.5">

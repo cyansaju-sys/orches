@@ -30,8 +30,8 @@ export const TERMINAL_THEMES: Record<ThemeMode, Record<string, string>> = {
     brightMagenta: '#d9b3f5', brightCyan: '#6fe0c9', brightWhite: '#ffffff'
   },
   light: {
-    background: '#ffffff', foreground: '#1c2030', cursor: '#3f628f', cursorAccent: '#ffffff', selectionBackground: '#cddcf1',
-    black: '#1c2030', red: '#c92c47', green: '#17803f', yellow: '#8f5f00', blue: '#1f5fd1', magenta: '#8250df', cyan: '#0f7f6f', white: '#646a80',
+    background: '#f1f2f6', foreground: '#272c3b', cursor: '#3f628f', cursorAccent: '#f1f2f6', selectionBackground: '#c4d3ea',
+    black: '#272c3b', red: '#c92c47', green: '#17803f', yellow: '#8f5f00', blue: '#1f5fd1', magenta: '#8250df', cyan: '#0f7f6f', white: '#646a80',
     brightBlack: '#646a80', brightRed: '#e0455f', brightGreen: '#1f9a4d', brightYellow: '#a87000', brightBlue: '#3a74e0',
     brightMagenta: '#9a66ea', brightCyan: '#1a9886', brightWhite: '#8a90a6'
   }

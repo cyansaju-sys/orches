@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { clsx } from 'clsx'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { MdClose } from 'react-icons/md'
@@ -70,6 +71,7 @@ export function Resizer({ onDrag, direction = 'x' }: { onDrag: (delta: number, d
 /** Diálogo modal centrado arriba, se cierra con Esc o al pulsar fuera. */
 /** `top`: se ancla arriba y al centro (como los selectores rápidos), en vez de centrarse en vertical. */
 export function Modal({ onClose, children, width = 520, title, top }: { onClose: () => void; children: ReactNode; width?: number; title?: string; top?: boolean }) {
+  const t = useT()
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
     window.addEventListener('keydown', onKey, true)
@@ -85,7 +87,7 @@ export function Modal({ onClose, children, width = 520, title, top }: { onClose:
         {title && (
           <div className="flex items-center justify-between px-5 pt-4">
             <h2 className="text-[13px] font-medium tracking-[0.01em] text-text">{title}</h2>
-            <button onClick={onClose} title="Cerrar" className="-mr-1.5 grid size-6 place-items-center rounded-md text-muted/70 transition-colors hover:bg-ov/[0.06] hover:text-text"><MdClose size={14} /></button>
+            <button onClick={onClose} title={t('title.close')} className="-mr-1.5 grid size-6 place-items-center rounded-md text-muted/70 transition-colors hover:bg-ov/[0.06] hover:text-text"><MdClose size={14} /></button>
           </div>
         )}
         {title ? <div className="pt-3.5">{children}</div> : children}
@@ -100,3 +102,5 @@ export function Kbd({ children }: { children: ReactNode }) {
 
 /** Aspecto común de los campos de texto: fondo suave, sin borde ni resaltado de foco. */
 export const FIELD = 'w-full rounded-md bg-ov/[0.04] px-3 py-2 text-[12px] caret-accent outline-none placeholder:text-muted/70'
+/** Igual, más delgado: para los campos de la barra lateral (buscar, reemplazar, filtros). */
+export const FIELD_SLIM = 'w-full rounded-md bg-ov/[0.04] px-2.5 py-1 text-[12px] caret-accent outline-none placeholder:text-muted/70'

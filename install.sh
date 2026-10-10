@@ -2,7 +2,7 @@
 # Instala Tutti en Linux (sin permisos de administrador): descarga el AppImage de la última release y crea el comando
 # `tutti` y la entrada del menú de aplicaciones. Después la app se actualiza sola: avisa con un botón «Actualizar».
 #
-#   curl -fsSL https://github.com/cyansaju-sys/orches/releases/latest/download/install.sh | bash
+#   curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/install.sh | bash
 #   ./install.sh                  instala (o reinstala) la última versión
 #   ./install.sh --version 0.2.0  una versión concreta
 #   ./install.sh --uninstall      lo quita (tus ajustes en ~/.config/tutti se conservan)
@@ -10,7 +10,7 @@
 # Variables: TUTTI_HOME (dónde se guarda el AppImage), TUTTI_REPO (usuario/repositorio).
 set -euo pipefail
 
-REPO="${TUTTI_REPO:-cyansaju-sys/orches}"
+REPO="${TUTTI_REPO:-cyansaju-sys/tutti}"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 DIR="${TUTTI_HOME:-$DATA/tutti}"
 BIN="$HOME/.local/bin"

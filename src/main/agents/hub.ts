@@ -1,16 +1,17 @@
 /** Une el servidor MCP con los agentes abiertos: lista, reparte tareas, abre paneles y lee pantallas. */
 import type { BrowserWindow } from 'electron'
-import type { OpenPane, TaskInfo } from '../../shared/types'
+import type { AppMcpInfo, OpenPane, TaskInfo } from '../../shared/types'
 import { execFileSync } from 'node:child_process'
 import { detectAgents } from './agents'
 import { capableFor, exhausted, isDifficulty, capable, pickAgent, type Candidate, type Difficulty } from './assign'
 import { readContext } from '../context/context'
 import { projectRoot } from '../context/projectRoot'
-import { ensureAgyBridge } from './agyBridge'
+import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
 import { buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
-import { Orchestra, type AgentOutput, type Host } from './orchestra'
+import { Orchestra, TOOLS, type AgentOutput, type Host } from './orchestra'
 import * as pty from './pty'
+import { tm } from '../i18n'
 import { getSetting } from '../settings'
 import { claudeLimits } from '../usage/usage'
 
@@ -215,13 +216,13 @@ const host: Host = {
         win.webContents.send('orchestra:open-pane', request)         // la interfaz crea su panel; la terminal inicia el proceso
         if (!(await pty.waitForSpawn(id, 20_000))) return { ok: false, info: `No se pudo abrir ${match.name}: no arrancó a tiempo.` }
         recordTask(me, id, match.name, match.command, task, { difficulty, model })
-        toast(`${label(me.name)} abrió ${match.name} en un panel con una tarea`)
+        toast(tm('m.hub.opened', { leader: label(me.name), agent: match.name }))
         return { ok: true, info: { agent_id: id, message: `${assigned} Abrí ${match.name}${model ? ` con el modelo ${model}` : ''} en su propio panel con la tarea. Usa wait_agent para esperar su resultado.`.trim() } }
       }
     }
     pty.sendPrompt(pane.id, task)
     recordTask(me, pane.id, pane.name, pane.command, task, { difficulty, model })
-    toast(`${label(me.name)} delegó una tarea a ${label(pane.name)}`)
+    toast(tm('m.hub.delegated', { leader: label(me.name), agent: label(pane.name) }))
     return { ok: true, info: { agent_id: pane.id, message: `${assigned} Tarea enviada. Usa wait_agent para esperar su resultado.`.trim() } }
   },
 
@@ -247,6 +248,7 @@ export async function startHub(window: () => BrowserWindow | null): Promise<void
     return { ...launch, after }
   })
   if (getSetting('orchestration') === false) return
+  if (detectAgents().some((a) => a.command === 'agy')) ensureAgyBridge()      // renueva la ruta del puente si la app cambió de sitio
   notifier ??= setInterval(notifyLeaders, 2000)
   try { orchestra = await new Orchestra(host).start() } catch { /* sin servidor local la app funciona igual */ }
 }
@@ -271,3 +273,21 @@ export const stopHub = (): void => { orchestra?.stop(); if (notifier) clearInter
 
 /** Configuración MCP de un agente (para las pruebas); null si el servidor no arrancó. */
 export const orchestraConfig = (id: string): ReturnType<Orchestra['configFor']> | null => orchestra?.configFor(id) ?? null
+
+/** El servidor MCP de la app y a qué agentes se aplica (lo que muestra la sección global de MCP). */
+export function appMcpInfo(): AppMcpInfo {
+  const installed = new Set(detectAgents().map((a) => a.command))
+  const on = orchestra !== null
+  const per = (command: string, name: string, how = tm('m.hub.appOnOpen')): AppMcpInfo['agents'][number] => ({ command, name, installed: installed.has(command), applied: on && installed.has(command), how })
+  const agy = agyBridgeStatus()
+  return {
+    running: on, tools: TOOLS.map((t) => t.name),
+    agents: [
+      per('claude', 'Claude Code'),
+      per('opencode', 'OpenCode'),
+      { ...per('agy', 'Antigravity', tm('m.hub.agyHow')), applied: on && installed.has('agy') && agy.ok, problem: agy.ok ? undefined : agy.problem },
+      per('codex', 'Codex'),
+      { command: 'gemini', name: 'Gemini CLI', installed: installed.has('gemini'), applied: false, how: tm('m.hub.notSupported') }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents/agents'
@@ -8,15 +8,17 @@ import { suggestCommit } from './git/commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
 import * as git from './git/git'
 import * as pty from './agents/pty'
+import { tm } from './i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './settings'
 import { replaceInFiles, searchFiles } from './search'
 import type { GitOp, PtyOptions, SearchOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
 import * as mcp from './mcp'
+import { featuredServers, searchRegistry } from './mcpRegistry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './usage/usage'
 import { runSelfTest } from './selftest'
-import { clearTasks, newId, startHub, stopHub, taskList } from './agents/hub'
+import { appMcpInfo, clearTasks, newId, startHub, stopHub, taskList } from './agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -31,9 +33,16 @@ function openNewWindow(): void {
   spawn(exe, args, { detached: true, stdio: 'ignore', env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined } }).unref()
 }
 
+/** Posición de una ventana de ese tamaño, centrada en la pantalla donde está el cursor (con varios monitores, ahí es donde se mira al abrir la app). */
+function centeredOnCursor(width: number, height: number): { x: number; y: number; width: number; height: number } {
+  const { workArea } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+  const w = Math.min(width, workArea.width), h = Math.min(height, workArea.height)
+  return { x: Math.round(workArea.x + (workArea.width - w) / 2), y: Math.round(workArea.y + (workArea.height - h) / 2), width: w, height: h }
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
-    width: 1360, height: 860, minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
+    ...(process.env.TUTTI_CAPTURE ? { width: 1360, height: 860 } : centeredOnCursor(1360, 860)), minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
     title: 'Tutti', icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true }
   })
@@ -61,7 +70,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))
   ipcMain.handle('dialog:chooseFolder', async (_e, start?: string) => {
-    const res = await dialog.showOpenDialog(win!, { properties: ['openDirectory'], defaultPath: start, title: 'Abrir proyecto' })
+    const res = await dialog.showOpenDialog(win!, { properties: ['openDirectory'], defaultPath: start, title: tm('m.dlg.openProject') })
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
@@ -75,7 +84,7 @@ function registerIpc(): void {
   ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
   ipcMain.handle('fs:rename', (_e, path: string, name: string) => renameEntry(path, name))
   ipcMain.handle('fs:trash', async (_e, path: string) => {         // a la papelera: se puede recuperar
-    try { await shell.trashItem(path); return { ok: true, message: 'Movido a la papelera' } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
+    try { await shell.trashItem(path); return { ok: true, message: tm('m.trash') } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
   })
   ipcMain.handle('fs:mtime', (_e, path: string) => mtime(path))
 
@@ -99,6 +108,9 @@ function registerIpc(): void {
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
 
   ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))
+  ipcMain.handle('mcp:app', () => appMcpInfo())
+  ipcMain.handle('mcp:featured', () => featuredServers())
+  ipcMain.handle('mcp:registry', (_e, query: string, cursor: string) => searchRegistry(query, cursor))
   ipcMain.handle('mcp:add', (_e, agent, spec, scope, project) => mcp.addServer(agent, spec, scope, project))
   ipcMain.handle('mcp:remove', (_e, server, project) => mcp.removeServer(server, project))
   ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.TUTTI_NO_LIMITS_FETCH))   // TUTTI_NO_LIMITS_FETCH: pruebas sin red

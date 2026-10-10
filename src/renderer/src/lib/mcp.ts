@@ -1,6 +1,7 @@
-import type { McpScope, McpServer } from '@shared/types'
+import type { MsgKey } from '@shared/i18n'
+import type { McpScope, McpServer, RegistryField, RegistryOption, RegistryServer } from '@shared/types'
 
-export const SCOPE_LABELS: Record<McpScope, string> = { global: 'Todos los proyectos', project: 'Este proyecto', shared: 'Compartido (.mcp.json)' }
+export const SCOPE_KEYS: Record<McpScope, MsgKey> = { global: 'mcp.scope.global', project: 'mcp.scope.project', shared: 'mcp.scope.shared' }
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity' }
 /** Agentes que solo guardan sus MCP de forma global (no tienen archivo por proyecto). */
 export const GLOBAL_ONLY: string[] = ['codex', 'agy']
@@ -56,4 +57,32 @@ export function specFromServer(server: McpServer): import('@shared/types').McpSp
   const command = cfg.command
   const parts = Array.isArray(command) ? command.map(String) : [String(command ?? ''), ...((cfg.args as unknown[]) ?? []).map(String)]
   return { name: server.name, kind: 'local', command: parts[0], args: parts.slice(1), headers, env }
+}
+
+/** Nombre corto con el que se instala un servidor del registro: «io.github.acme/filesystem-mcp» -> «filesystem-mcp». */
+export function shortName(registryName: string): string {
+  const last = registryName.split('/').pop() ?? registryName
+  const clean = last.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
+  return /^[A-Za-z0-9]/.test(clean) ? clean : `mcp-${clean}`.slice(0, 64)
+}
+
+/** Quien lo publica: «io.github.acme/filesystem-mcp» -> «io.github.acme». */
+export const publisherOf = (registryName: string): string => (registryName.includes('/') ? registryName.slice(0, registryName.lastIndexOf('/')) : '')
+
+/** Un argumento listo para ponerlo en una línea de comando (con comillas si lleva espacios). */
+export const quoteArg = (a: string): string => (/[\s"']/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)
+
+/** Lo que se le entrega al diálogo de «Añadir servidor» para instalar una entrada del registro. */
+export interface Prefill {
+  name: string; kind: 'remote' | 'local'; url: string; headers: string; command: string; args: string; env: string
+  fields: RegistryField[]       // lo que el servidor pide (para explicarlo en el diálogo)
+}
+
+const lines = (fields: RegistryField[], sep: string): string => fields.filter((f) => f.required || f.default).map((f) => `${f.name}${sep}${f.default}`).join('\n')
+
+export function prefillFrom(server: RegistryServer, option: RegistryOption): Prefill {
+  return {
+    name: shortName(server.name), kind: option.kind, url: option.url ?? '', headers: lines(option.headers, ': '),
+    command: option.command ?? '', args: (option.args ?? []).map(quoteArg).join(' '), env: lines(option.env, '='), fields: [...option.env, ...option.headers]
+  }
 }

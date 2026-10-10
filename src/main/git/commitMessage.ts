@@ -4,6 +4,7 @@ import type { AgentInfo, McpResult } from '../../shared/types'
 import { detectAgents } from '../agents/agents'
 import * as git from './git'
 import { extendedPath } from '../shellpath'
+import { tm } from '../i18n'
 
 const MAX_DIFF = 24_000          // el agente no necesita ver todo: con esto basta para resumir el cambio
 const TYPES = 'feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
@@ -89,16 +90,16 @@ export function heuristicMessage(files: FileChange[]): string | null {
     : kinds.size === 1 ? [...kinds][0] : files.some((f) => kindOf(f.path) === 'build') ? 'build' : 'chore'
   const scope = scopeOf(main.map((f) => f.path))
   const statuses = new Set(main.map((f) => f.status))
-  const verb = statuses.size === 1 ? ({ A: 'añade', D: 'elimina', R: 'renombra', M: 'actualiza' } as Record<string, string>)[[...statuses][0]] ?? 'actualiza' : 'actualiza'
+  const verb = statuses.size === 1 ? ({ A: tm('m.cm.add'), D: tm('m.cm.remove'), R: tm('m.cm.rename'), M: tm('m.cm.update') } as Record<string, string>)[[...statuses][0]] ?? tm('m.cm.update') : tm('m.cm.update')
   const names = main.map((f) => (f.path.split('/').pop() ?? f.path))
-  const what = names.length <= 3 ? list(names) : `${names.length} archivos`
+  const what = names.length <= 3 ? list(names) : tm('m.cm.files', { n: names.length })
   return `${type}${scope ? `(${scope})` : ''}: ${verb} ${what}`
 }
 
 /** Pide el mensaje al primer agente instalado que lo consiga. */
 export async function suggestCommit(root: string, onAgent: (name: string) => void = () => undefined, signal?: AbortSignal): Promise<McpResult & { agent?: string }> {
   const { diff, recent } = await git.changesForMessage(root)
-  if (!diff.trim()) return { ok: false, message: 'No hay cambios preparados: prepara los archivos que quieras incluir' }
+  if (!diff.trim()) return { ok: false, message: tm('m.cm.noStaged') }
   const installed = detectAgents()
   const prompt = buildPrompt(diff, recent)
   let tried = 0
@@ -114,6 +115,6 @@ export async function suggestCommit(root: string, onAgent: (name: string) => voi
   }
   // ningún agente sirvió: se arma con reglas, para que siempre haya un punto de partida
   const fallback = heuristicMessage(await git.stagedSummary(root))
-  if (fallback) return { ok: true, message: fallback, agent: 'Reglas automáticas' }
-  return { ok: false, message: 'No se pudo generar el mensaje' }
+  if (fallback) return { ok: true, message: fallback, agent: tm('m.autoRules') }
+  return { ok: false, message: tm('m.cm.failed') }
 }

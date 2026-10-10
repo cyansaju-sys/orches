@@ -36,7 +36,14 @@ describe('arranque de cada agente', () => {
   })
 
   it('otros agentes no reciben configuración MCP', () => {
-    expect(buildLaunch('codex', entry, 'x', ['--a'], 2)).toEqual({ args: ['--a'], env: {} })
+    expect(buildLaunch('aider', entry, 'x', ['--a'], 2)).toEqual({ args: ['--a'], env: {} })
+  })
+
+  it('Codex: la URL va por -c y la clave por entorno, sin tocar su config.toml', () => {
+    const l = buildLaunch('codex', entry, undefined, ['--a'], 2)
+    expect(l.args).toEqual(['-c', 'mcp_servers.tutti.url="http://127.0.0.1:5000/mcp/a2"', '-c', 'mcp_servers.tutti.bearer_token_env_var="TUTTI_MCP_TOKEN"',
+      '-c', 'mcp_servers.tutti.default_tools_approval_mode="approve"', '--a'])
+    expect(l.env).toEqual({ TUTTI_MCP_TOKEN: 't' })
   })
 
   it('lee la versión principal', () => {

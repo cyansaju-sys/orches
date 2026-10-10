@@ -2,7 +2,7 @@
  * Modo captura: TUTTI_CAPTURE=<carpeta> abre la app con una configuración temporal, recorre las pantallas,
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
-import { app, screen, type BrowserWindow } from 'electron'
+import { app, type BrowserWindow } from 'electron'
 import * as pty from '../src/main/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
@@ -22,13 +22,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   }
   const store = 'window.__tutti.getState()'
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
-  // en la pantalla integrada (si hay varias) y ocupando su área útil: las capturas salen siempre del mismo tamaño
-  const internal = screen.getAllDisplays().find((d) => d.internal)
-  if (internal) win.setBounds(internal.workArea)
-  else win.setContentSize(1360, 860)
+  win.setContentSize(1360, 860)          // tamaño fijo: las capturas salen siempre iguales
   await sleep(1500)
   await run(`${store}.setProject(${JSON.stringify(project)})`)
   await run(`${store}.set({ tab: 'files' })`)
+  if (process.env.TUTTI_CAPTURE_LANG) await run(`${store}.setLang(${JSON.stringify(process.env.TUTTI_CAPTURE_LANG)})`)         // idioma de las capturas (es | en)
   if (process.env.TUTTI_CAPTURE_LIGHT) await run(`${store}.setTheme('light')`)         // todas las capturas en tema claro
   if (process.env.TUTTI_CAPTURE_TERMINAL) {          // solo para verificar la terminal sola, ocupando todo el espacio
     await run(`${store}.toggleShell()`)
@@ -43,9 +41,12 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await run(`${store}.setTheme('light')`)
   await snap('02b-tema-claro', 900)
   await run(`${store}.set({ tab: 'agents' })`)
-  await run(`document.querySelector('[title="Ajustes"]')?.click()`)
+  await run(`document.querySelector('[title="${process.env.TUTTI_CAPTURE_LANG === 'en' ? 'Settings' : 'Ajustes'}"]')?.click()`)
   await snap('02c-ajustes', 500)
-  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+  await run(`[...document.querySelectorAll('[role="menuitem"]')].find((b) => /Idioma|Language/.test(b.textContent))?.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))`)      // el submenú de idioma se abre al pasar el ratón
+  await snap('02d-idioma', 500)
+  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)          // cierra el submenú
+  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)          // y el menú
   await run(`${store}.set({ tab: 'files' })`)
   await run(`${store}.setTheme('${process.env.TUTTI_CAPTURE_LIGHT ? 'light' : 'dark'}')`)
   await open('docs/demo/ejemplo.sql')
@@ -58,7 +59,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     setTimeout(() => { type(document.querySelector('.tutti-find-input'), 'root'); type(document.querySelectorAll('.tutti-find-input')[1], 'raiz') }, 150)
   })()`)
   await snap('03b-buscar-en-archivo', 900)
-  await run(`document.querySelector('.cm-content')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`)
+  await run(`[...document.querySelectorAll('.tutti-find-btn')].find((b) => b.textContent === '×')?.click()`)         // cierra el cuadro de buscar del editor
   // buscar y reemplazar en el proyecto
   await run(`${store}.set({ tab: 'search', searchReplace: true, searchToken: ${store}.searchToken + 1 })`)
   await sleep(300)
@@ -177,7 +178,17 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   }
   if (process.env.TUTTI_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
     await run(`${store}.set({ modal: null, tab: 'mcp' })`)
-    await snap('09-mcp', 1500)
+    await snap('09-mcp', 5000)
+    // la tienda: buscar en el registro y abrir la ficha de un servidor
+    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'filesystem'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await snap('09b-mcp-tienda', 7000)
+    await run(`document.querySelector('[title*="/"]')?.click()`)
+    await snap('09c-mcp-ficha', 700)
+    await run(`[...document.querySelectorAll('button')].find((b) => /Continuar|Continue/.test(b.textContent))?.click()`)
+    await snap('09d-mcp-instalar', 700)
+    await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await sleep(800)
     await run(`document.querySelector('[title="Ver detalles"]')?.click()`)
     await snap('10-mcp-detalles', 600)
     await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
