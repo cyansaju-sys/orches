@@ -9,6 +9,7 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { McpAgent, McpResult, McpScope, McpServer, McpSpec } from '../shared/types'
+import { tm } from './i18n'
 import { extendedPath } from './shellpath'
 
 export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity' }
@@ -126,9 +127,9 @@ export function listServers(project: string | null): McpServer[] {
 
 /** Mensaje de error si `spec` no es válido; null si está bien. */
 export function validate(spec: McpSpec): string | null {
-  if (!NAME_RE.test(spec.name ?? '')) return 'El nombre solo puede tener letras, números, - y _'
-  if (spec.kind === 'remote') return /^https?:\/\/\S+$/.test(spec.url ?? '') ? null : 'La URL debe empezar por http:// o https://'
-  return (spec.command ?? '').trim() ? null : 'Escribe el comando que arranca el servidor'
+  if (!NAME_RE.test(spec.name ?? '')) return tm('m.mcp.nameRule')
+  if (spec.kind === 'remote') return /^https?:\/\/\S+$/.test(spec.url ?? '') ? null : tm('m.mcp.urlRule')
+  return (spec.command ?? '').trim() ? null : tm('m.mcp.needCommand')
 }
 
 /** Comando (argv) que añade el servidor con la CLI del agente. */
@@ -200,10 +201,10 @@ function run(argv: string[], cwd: string | null): Promise<McpResult> {
 export async function addServer(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult> {
   const error = validate(spec)
   if (error) return { ok: false, message: error }
-  if (!(agent in SUPPORTED)) return { ok: false, message: `No sé añadir MCP a ${agent}` }
-  if ((agent === 'codex' || agent === 'agy') && scope !== 'global') return { ok: false, message: `${SUPPORTED[agent]} solo guarda sus MCP de forma global` }
-  if (agent === 'codex' && spec.kind === 'remote' && Object.keys(spec.headers ?? {}).length) return { ok: false, message: 'Codex no permite cabeceras al añadir un MCP remoto desde su CLI' }
-  if (scope !== 'global' && !project) return { ok: false, message: 'Abre un proyecto para añadirlo solo a él' }
+  if (!(agent in SUPPORTED)) return { ok: false, message: tm('m.mcp.unknownAgent', { agent }) }
+  if ((agent === 'codex' || agent === 'agy') && scope !== 'global') return { ok: false, message: tm('m.mcp.globalOnly', { agent: SUPPORTED[agent] }) }
+  if (agent === 'codex' && spec.kind === 'remote' && Object.keys(spec.headers ?? {}).length) return { ok: false, message: tm('m.mcp.codexHeaders') }
+  if (scope !== 'global' && !project) return { ok: false, message: tm('m.mcp.needProject') }
   return run(buildAddArgv(agent, spec, scope), project)
 }
 

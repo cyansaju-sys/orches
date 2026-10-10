@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import { basename } from '@/lib/paths'
+import { cacheLangPref, cachedLangPref, resolveLangPref } from '@/lib/langPref'
+import { translate, type Lang, type LangPref, type MsgKey, type Vars } from '@shared/i18n'
 import { cacheTheme, cachedTheme, paintTheme, resolveTheme, type ThemeMode, type ThemePref } from '@/lib/theme'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'mcp' | 'ai' | 'context'
@@ -31,6 +33,8 @@ interface State {
   editEnabled: boolean
   theme: ThemePref                       // lo elegido: oscuro, claro o el del sistema
   themeMode: ThemeMode                   // el que se está usando
+  langPref: LangPref                     // lo elegido: español, inglés o el del sistema
+  lang: Lang                             // el que se está usando
   docs: Doc[]
   activeDoc: string | null
   /** Dónde colocar el cursor al abrir un resultado de búsqueda; `token` distingue dos clics en el mismo sitio. */
@@ -73,22 +77,24 @@ interface State {
   closeShells: () => void
   closePane: (id: string) => void
   setTheme: (pref: ThemePref) => void
+  setLang: (pref: LangPref) => void
   setEdit: (enabled: boolean) => void
 }
 
+const t = (key: MsgKey, vars?: Vars): string => translate(useStore.getState().lang, key, vars)      // sin importar lib/i18n: usa el store
 let toastId = 1
 let paneId = 1   // solo para la terminal (los agentes piden su id a la app)
 
 /** Deduce el tipo de aviso a partir del texto cuando no se indica. */
 const guessKind = (m: string): ToastKind => {
   const low = m.toLowerCase()
-  if (['no se pudo', 'falló', 'error', 'no se encontr', 'no existe'].some((w) => low.includes(w))) return 'error'
-  if (['copiad', 'guardad', 'creada', 'creado', 'hecho', 'subido'].some((w) => low.includes(w))) return 'ok'
+  if (['no se pudo', 'falló', 'error', 'no se encontr', 'no existe', 'could not', 'failed', 'not found', 'does not exist'].some((w) => low.includes(w))) return 'error'
+  if (['copiad', 'guardad', 'creada', 'creado', 'hecho', 'subido', 'copied', 'saved', 'created', 'done', 'pushed'].some((w) => low.includes(w))) return 'ok'
   return 'info'
 }
 
 export const useStore = create<State>((set, get) => ({
-  project: null, reveal: null, searchToken: 0, searchReplace: false, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()),
+  project: null, reveal: null, searchToken: 0, searchReplace: false, recentProjects: [], newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   docs: [], activeDoc: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, focus: 'tree', git: null, modal: null, toasts: [],
   maximized: false, agents: [], update: { status: 'idle' },
 
@@ -98,7 +104,7 @@ export const useStore = create<State>((set, get) => ({
     const prev = get().project
     if (path === prev) return
     const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
-    if (dirty.length && !window.confirm(`Hay ${dirty.length} archivo(s) con cambios sin guardar. ¿Cambiar de proyecto y descartarlos?`)) return
+    if (dirty.length && !window.confirm(t('store.discard', { n: dirty.length }))) return
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
     const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined).map((d) => d.path), activeDoc: state.activeDoc }
@@ -144,7 +150,7 @@ export const useStore = create<State>((set, get) => ({
       const doc: Doc = { ...data, path, title: basename(path), savedText: data.text }
       set((s) => ({ docs: [...s.docs, doc], activeDoc: path, focus: 'editor' }))
     } catch (e) {
-      get().toast(`No se pudo abrir ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+      get().toast(t('store.openFailed', { name: basename(path), error: e instanceof Error ? e.message : String(e) }), 'error')
     }
   },
   openAt: async (path, line, col, length) => {
@@ -167,7 +173,7 @@ export const useStore = create<State>((set, get) => ({
         path: key, title: `${basename(path)} (${hash.slice(0, 7)})`, diffOf: `${root}/${path}`, diffLabel: label }
       set((s) => ({ docs: s.docs.some((d) => d.path === key) ? s.docs : [...s.docs, doc], activeDoc: key, focus: 'editor' }))
     } catch (e) {
-      get().toast(`No se pudo comparar ${basename(path)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+      get().toast(t('store.compareFailed', { name: basename(path), error: e instanceof Error ? e.message : String(e) }), 'error')
     }
   },
   openDiff: async (file, staged) => {
@@ -185,7 +191,7 @@ export const useStore = create<State>((set, get) => ({
         path, title: `${basename(file)} (cambios)`, diffOf: file, diffLabel: staged ? 'Preparado ↔ HEAD' : index !== null ? 'Archivo ↔ preparado' : 'Archivo ↔ HEAD' }
       set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs.map((d) => (d.path === path ? doc : d)) : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
     } catch (e) {
-      get().toast(`No se pudo comparar ${basename(file)}: ${e instanceof Error ? e.message : String(e)}`, 'error')
+      get().toast(t('store.compareFailed', { name: basename(file), error: e instanceof Error ? e.message : String(e) }), 'error')
     }
   },
   closeDoc: (path) => set((s) => {
@@ -209,7 +215,7 @@ export const useStore = create<State>((set, get) => ({
 
   openAgent: async (agent, args = [], opts = {}) => {
     const cwd = opts.cwd || get().project
-    if (!cwd) { get().toast('Abre un proyecto primero (pestaña Archivos)', 'error'); return }
+    if (!cwd) { get().toast(t('store.openProjectFirst'), 'error'); return }
     const id = await window.api.orchestra.newId()          // los ids los reparte la app: así no chocan con los de los sub-agentes
     const title = opts.title ?? `${agent.name} · ${basename(cwd)}`
     set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args: [...(agent.args ?? []), ...args], cwd }], activePane: id, focus: 'pane', modal: null }))
@@ -245,6 +251,11 @@ export const useStore = create<State>((set, get) => ({
     cacheTheme(pref); paintTheme(mode)
     set({ theme: pref, themeMode: mode })
     void window.api.settings.set('theme', pref)
+  },
+  setLang: (pref) => {
+    cacheLangPref(pref)
+    set({ langPref: pref, lang: resolveLangPref(pref) })
+    void window.api.settings.set('language', pref)
   },
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
 }))

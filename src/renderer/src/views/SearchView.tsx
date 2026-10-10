@@ -2,9 +2,10 @@ import { clsx } from 'clsx'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { MdChevronRight, MdExpandMore, MdFindReplace, MdMoreHoriz, MdUnfoldLess } from 'react-icons/md'
 import type { SearchFile, SearchResult } from '@shared/types'
+import { useT } from '@/lib/i18n'
 import { iconFor } from '@/lib/icons'
 import { basename } from '@/lib/paths'
-import { FIELD } from '@/components/ui'
+import { FIELD_SLIM } from '@/components/ui'
 import { useStore } from '@/store'
 
 const dirOf = (rel: string): string => rel.split('/').slice(0, -1).join('/')
@@ -33,6 +34,7 @@ function Line({ m }: { m: SearchFile['matches'][number] }) {
 }
 
 export function SearchView() {
+  const t = useT()
   const project = useStore((s) => s.project)
   const token = useStore((s) => s.searchToken)
   const openAt = useStore((s) => s.openAt)
@@ -64,13 +66,13 @@ export function SearchView() {
     const timer = setTimeout(() => {
       void window.api.search.run(project, { query, caseSensitive, wholeWord, regex, include, exclude })
         .then((r) => { if (id === run.current) { setResult(r); setClosed(new Set()) } })
-        .catch(() => { if (id === run.current) setResult({ files: [], total: 0, truncated: false, error: 'La búsqueda falló' }) })
+        .catch(() => { if (id === run.current) setResult({ files: [], total: 0, truncated: false, error: t('sr.failed') }) })
         .finally(() => { if (id === run.current) setBusy(false) })
     }, 250)
     return () => clearTimeout(timer)
   }, [project, query, caseSensitive, wholeWord, regex, include, exclude, rerun])
 
-  if (!project) return <div className="p-4 text-[12px] text-muted">Abre un proyecto para buscar en sus archivos.</div>
+  if (!project) return <div className="p-4 text-[12px] text-muted">{t('sr.openProject')}</div>
 
   /** Reemplaza en los archivos dados. Los abiertos con cambios sin guardar se saltan: pisarían lo que escribiste. */
   const replace = async (files: SearchFile[]): Promise<void> => {
@@ -79,12 +81,12 @@ export function SearchView() {
     const dirty = new Set(docs.filter((d) => d.text !== d.savedText).map((d) => d.path))
     const targets = files.filter((f) => !dirty.has(f.path))
     const count = targets.reduce((n, f) => n + f.matches.length, 0)
-    if (!targets.length) { toast('Los archivos tienen cambios sin guardar: guárdalos antes de reemplazar', 'error'); return }
-    if (!window.confirm(`¿Reemplazar ${count} coincidencias en ${targets.length} archivo${targets.length === 1 ? '' : 's'} por «${replacement}»?`)) return
+    if (!targets.length) { toast(t('sr.dirty'), 'error'); return }
+    if (!window.confirm(t('sr.confirm', { count, files: targets.length, fileWord: t(targets.length === 1 ? 'sr.file' : 'sr.files'), text: replacement }))) return
     const r = await window.api.search.replace(project, { query, caseSensitive, wholeWord, regex }, replacement, targets.map((f) => f.path))
     if (r.error) { toast(r.error, 'error'); return }
     for (const f of targets) if (docs.some((d) => d.path === f.path)) void window.api.fs.read(f.path).then((data) => replaceDoc(f.path, data)).catch(() => undefined)
-    toast(`${r.count} reemplazos en ${r.files} archivo${r.files === 1 ? '' : 's'}${dirty.size && targets.length < files.length ? ' (se saltaron los que tienen cambios sin guardar)' : ''}`, 'ok')
+    toast(t('sr.done', { count: r.count, files: r.files, fileWord: t(r.files === 1 ? 'sr.file' : 'sr.files'), skipped: dirty.size && targets.length < files.length ? t('sr.skipped') : '' }), 'ok')
     setRerun((n) => n + 1)
   }
 
@@ -94,24 +96,24 @@ export function SearchView() {
     <div className="flex h-full flex-col">
       <div className="space-y-1.5 px-2 pb-2">
         <div className="flex items-start gap-1">
-        <button title={replaceOpen ? 'Ocultar reemplazo' : 'Mostrar reemplazo (Ctrl+Shift+H)'} onClick={() => setReplaceOpen(!replaceOpen)} className="mt-1.5 text-muted hover:text-text">
+        <button title={replaceOpen ? t('sr.hideReplace') : t('sr.showReplace')} onClick={() => setReplaceOpen(!replaceOpen)} className="mt-1.5 text-muted hover:text-text">
           {replaceOpen ? <MdExpandMore size={16} /> : <MdChevronRight size={16} />}
         </button>
         <div className="min-w-0 flex-1 space-y-1.5">
         <div className="relative">
-          <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar" spellCheck={false}
-            onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }} className={clsx(FIELD, 'pr-[84px]')} />
+          <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('sr.search')} spellCheck={false}
+            onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }} className={clsx(FIELD_SLIM, 'pr-[84px]')} />
           <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-0.5">
-            <Toggle on={caseSensitive} label="Aa" title="Distinguir mayúsculas" onClick={() => setCase(!caseSensitive)} />
-            <Toggle on={wholeWord} label="ab" title="Palabra completa" onClick={() => setWord(!wholeWord)} />
-            <Toggle on={regex} label=".*" title="Expresión regular" onClick={() => setRegex(!regex)} />
+            <Toggle on={caseSensitive} label="Aa" title={t('find.matchCase')} onClick={() => setCase(!caseSensitive)} />
+            <Toggle on={wholeWord} label="ab" title={t('find.wholeWord')} onClick={() => setWord(!wholeWord)} />
+            <Toggle on={regex} label=".*" title={t('find.regex')} onClick={() => setRegex(!regex)} />
           </div>
         </div>
         {replaceOpen && (
           <div className="relative">
-            <input value={replacement} onChange={(e) => setReplacement(e.target.value)} placeholder="Reemplazar" spellCheck={false}
-              onKeyDown={(e) => { if (e.key === 'Enter' && result) void replace(result.files) }} className={clsx(FIELD, 'pr-8')} />
-            <button title="Reemplazar todo" disabled={!result?.files.length} onClick={() => result && void replace(result.files)}
+            <input value={replacement} onChange={(e) => setReplacement(e.target.value)} placeholder={t('sr.replace')} spellCheck={false}
+              onKeyDown={(e) => { if (e.key === 'Enter' && result) void replace(result.files) }} className={clsx(FIELD_SLIM, 'pr-8')} />
+            <button title={t('sr.replaceAll')} disabled={!result?.files.length} onClick={() => result && void replace(result.files)}
               className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded text-muted transition-colors hover:text-accent disabled:opacity-30 disabled:hover:text-muted">
               <MdFindReplace size={16} />
             </button>
@@ -119,24 +121,24 @@ export function SearchView() {
         )}
         </div>
         </div>
-        <button onClick={() => setFilters(!filters)} title="Archivos a incluir y excluir" className="flex items-center gap-1 text-[10.5px] text-muted hover:text-text">
-          <MdMoreHoriz size={14} />Filtros{(include || exclude) && <span className="size-1.5 rounded-full bg-accent" />}
+        <button onClick={() => setFilters(!filters)} title={t('sr.filtersTip')} className="flex items-center gap-1 text-[10.5px] text-muted hover:text-text">
+          <MdMoreHoriz size={14} />{t('sr.filters')}{(include || exclude) && <span className="size-1.5 rounded-full bg-accent" />}
         </button>
         {filters && (
           <>
-            <input value={include} onChange={(e) => setInclude(e.target.value)} placeholder="Incluir: *.ts, src/**" spellCheck={false} className={FIELD} />
-            <input value={exclude} onChange={(e) => setExclude(e.target.value)} placeholder="Excluir: *.test.ts, docs/" spellCheck={false} className={FIELD} />
+            <input value={include} onChange={(e) => setInclude(e.target.value)} placeholder={t('sr.include')} spellCheck={false} className={FIELD_SLIM} />
+            <input value={exclude} onChange={(e) => setExclude(e.target.value)} placeholder={t('sr.exclude')} spellCheck={false} className={FIELD_SLIM} />
           </>
         )}
       </div>
       <div className="flex items-center justify-between px-3 pb-1 text-[10.5px] text-muted">
         <span>
           {result?.error ? <span className="text-danger">{result.error}</span>
-            : busy && !result ? 'Buscando…'
-            : result ? (result.total ? `${result.total}${result.truncated ? '+' : ''} resultados en ${result.files.length} archivos` : 'Sin resultados')
+            : busy && !result ? t('sr.searching')
+            : result ? (result.total ? t('sr.results', { total: result.total, more: result.truncated ? '+' : '', files: result.files.length }) : t('sr.noResults'))
             : ''}
         </span>
-        {result && result.files.length > 0 && <button title="Contraer todo" onClick={() => setClosed(new Set(result.files.map((f) => f.path)))} className="hover:text-text"><MdUnfoldLess size={14} /></button>}
+        {result && result.files.length > 0 && <button title={t('fs.collapse')} onClick={() => setClosed(new Set(result.files.map((f) => f.path)))} className="hover:text-text"><MdUnfoldLess size={14} /></button>}
       </div>
       <div className={clsx('min-h-0 flex-1 overflow-y-auto pb-2 transition-opacity', busy && result && 'opacity-60')}>
         {result?.files.map((f) => {
@@ -148,7 +150,7 @@ export function SearchView() {
                 <img src={iconFor(basename(f.path))} alt="" className="size-4 shrink-0" draggable={false} />
                 <span className="truncate">{basename(f.path)}</span>
                 <span className="truncate text-[10.5px] text-muted">{dirOf(f.rel)}</span>
-                {replaceOpen && <span title="Reemplazar en este archivo" onClick={(e) => { e.stopPropagation(); void replace([f]) }} className="ml-auto grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdFindReplace size={14} /></span>}
+                {replaceOpen && <span title={t('sr.replaceInFile')} onClick={(e) => { e.stopPropagation(); void replace([f]) }} className="ml-auto grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdFindReplace size={14} /></span>}
                 <span className={clsx('shrink-0 rounded-full bg-white/[0.07] px-1.5 text-[10px] text-muted', !replaceOpen && 'ml-auto')}>{f.matches.length}</span>
               </button>
               {open && f.matches.map((m, i) => {

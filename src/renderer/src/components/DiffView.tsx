@@ -1,3 +1,4 @@
+import { useT } from '@/lib/i18n'
 import { clsx } from 'clsx'
 import { useMemo } from 'react'
 import { diffRows, hasChanges, type Row, type Side } from '@/lib/lineDiff'
@@ -16,12 +17,13 @@ function Cell({ side, tint, sign }: { side: Side | null; tint?: string; sign: st
 
 /** Comparación en dos columnas: a la izquierda lo anterior y a la derecha lo nuevo. */
 export function DiffView({ before, after, label }: { before: string; after: string; label?: string }) {
+  const t = useT()
   const rows = useMemo(() => diffRows(before, after), [before, after])
   const stats = useMemo(() => ({
     add: rows.filter((r) => r.kind === 'add' || r.kind === 'chg').length, del: rows.filter((r) => r.kind === 'del' || r.kind === 'chg').length
   }), [rows])
 
-  if (!hasChanges(rows)) return <div className="grid flex-1 place-items-center text-[12px] text-muted">Sin diferencias{label ? ` (${label})` : ''}</div>
+  if (!hasChanges(rows)) return <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('diff.none')}{label ? ` (${label})` : ''}</div>
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-3 border-b border-line px-3 py-1 text-[10px] text-muted">
@@ -31,7 +33,7 @@ export function DiffView({ before, after, label }: { before: string; after: stri
       <div className="selectable min-h-0 flex-1 overflow-x-hidden overflow-y-auto font-mono text-[12px] leading-[1.5]">
         <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] divide-x divide-line">
           {rows.map((r: Row, i) => r.kind === 'fold' ? (
-            <div key={i} className="col-span-2 select-none bg-ov/[0.03] px-3 py-0.5 text-center text-[11px] text-muted">⋯ {r.count} líneas sin cambios</div>
+            <div key={i} className="col-span-2 select-none bg-ov/[0.03] px-3 py-0.5 text-center text-[11px] text-muted">{t('diff.unchanged', { n: r.count })}</div>
           ) : (
             <Pair key={i} row={r} />
           ))}

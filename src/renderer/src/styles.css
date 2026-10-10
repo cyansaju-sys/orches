@@ -63,12 +63,13 @@
 /* tema claro: se activa con <html data-theme="light"> */
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-bg: #e9ebf1; --color-bar: #e1e4ec; --color-surface: #ffffff; --color-panel: #f6f7fa; --color-raised: #ffffff;
-  --color-line: #d5d9e3; --color-accent: #3f628f; --color-accent-bg: #dbe5f3; --color-accent-dim: #aebdd4;
-  --color-muted: #646a80; --color-text: #1c2030;
+  /* tonos suaves, sin blanco puro: el fondo grande y brillante cansa la vista */
+  --color-bg: #dfe3ea; --color-bar: #d7dce5; --color-surface: #f1f2f6; --color-panel: #e9ebf1; --color-raised: #f6f7fa;
+  --color-line: #c8cdd9; --color-accent: #3f628f; --color-accent-bg: #d0dbec; --color-accent-dim: #a9b8d0;
+  --color-muted: #5b6277; --color-text: #272c3b;
   --color-ok: #17803f; --color-warn: #8f5f00; --color-danger: #c92c47;
   --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47;
-  --color-ov: #000000; --color-pop: #ffffff;
+  --color-ov: #000000; --color-pop: #f6f7fa;
   --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #8aa3c944; --ed-match: #8aa3c96e; --ed-shadow: #0000002e;
   --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00;
 }

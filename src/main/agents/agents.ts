@@ -2,6 +2,7 @@ import { accessSync, constants, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, delimiter, isAbsolute, join } from 'node:path'
 import type { AgentCandidate, AgentInfo, McpResult } from '../../shared/types'
+import { tm } from '../i18n'
 import { getSetting, setSetting } from '../settings'
 import { extendedPath, which } from '../shellpath'
 
@@ -76,15 +77,15 @@ export function detectAgents(): AgentInfo[] {
 export function addCustomAgent(name: string, commandLine: string): McpResult {
   const title = name.trim()
   const [command, ...args] = splitCommand(commandLine.trim())
-  if (!command) return { ok: false, message: 'Escribe el comando que inicia el agente' }
-  if (!title) return { ok: false, message: 'Escribe un nombre para el agente' }
-  if (title.length > 40) return { ok: false, message: 'El nombre es demasiado largo (máximo 40 caracteres)' }
-  if (!resolveExecutable(command)) return { ok: false, message: `No se encontró «${command}»: revisa el nombre o escribe la ruta completa` }
+  if (!command) return { ok: false, message: tm('m.ag.needCommand') }
+  if (!title) return { ok: false, message: tm('m.ag.needName') }
+  if (title.length > 40) return { ok: false, message: tm('m.ag.nameLong') }
+  if (!resolveExecutable(command)) return { ok: false, message: tm('m.ag.notFound', { command }) }
   if (KNOWN.some(([, c]) => c === command) || customAgents().some((a) => a.command === command)) {
-    return { ok: false, message: `«${command}» ya está en la lista de agentes` }
+    return { ok: false, message: tm('m.ag.exists', { command }) }
   }
   setSetting(CUSTOM_KEY, [...customAgents(), { name: title, command, args }])
-  return { ok: true, message: `Agente «${title}» añadido` }
+  return { ok: true, message: tm('m.ag.added', { title }) }
 }
 
 export function removeCustomAgent(command: string): void {

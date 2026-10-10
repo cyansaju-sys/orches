@@ -42,11 +42,22 @@ export function claudeLaunch(entry: McpEntry | null, first: string[], given: str
   return { args: [...first, ...given, ...system, '--mcp-config', JSON.stringify({ mcpServers: { tutti: entry } }), '--allowedTools', ...TUTTI_TOOLS], env: {} }
 }
 
+/**
+ * Codex acepta `-c clave=valor` para sobrescribir su config.toml solo en ese proceso: la URL va en el argumento y la clave
+ * por variable de entorno (`bearer_token_env_var`), así no se escribe nada en ~/.codex ni queda para otros Codex.
+ */
+export function codexLaunch(entry: McpEntry, given: string[]): Launch {
+  const conf = (key: string, value: string): string[] => ['-c', `mcp_servers.tutti.${key}=${JSON.stringify(value)}`]
+  const token = (entry.headers.Authorization ?? '').replace(/^Bearer\s+/i, '')
+  return { args: [...conf('url', entry.url), ...conf('bearer_token_env_var', 'TUTTI_MCP_TOKEN'), ...conf('default_tools_approval_mode', 'approve'), ...given], env: { TUTTI_MCP_TOKEN: token } }
+}
+
 export function buildLaunch(command: string, entry: McpEntry | null, prompt: string | undefined, given: string[], opencodeMajor: number, context?: ProjectContext): Launch {
   const task = prompt?.trim()
   const first = task && PROMPT_ARGS[command] ? PROMPT_ARGS[command](task) : []
   if (command === 'claude') return claudeLaunch(entry, first, given, context)
   if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context)
+  if (command === 'codex' && entry) return codexLaunch(entry, given)
   if (command === 'agy' && entry) return { args: given, env: agyEnv(entry) }
   return { args: given, env: {} }
 }

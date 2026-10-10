@@ -44,7 +44,7 @@ const api: Api = {
     remove: (s) => ipcRenderer.invoke('usage:remove', s), names: () => ipcRenderer.invoke('usage:names')
   },
   mcp: {
-    list: (p) => ipcRenderer.invoke('mcp:list', p), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
+    list: (p) => ipcRenderer.invoke('mcp:list', p), app: () => ipcRenderer.invoke('mcp:app'), registry: (q, c) => ipcRenderer.invoke('mcp:registry', q, c), featured: () => ipcRenderer.invoke('mcp:featured'), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
     remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p)
   },
   orchestra: {

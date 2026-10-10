@@ -30,10 +30,11 @@ jobs:
             echo "El tag es $GITHUB_REF_NAME pero package.json dice $expected: el actualizador compararía mal."; exit 1
           fi
 
-      - name: CHANGELOG.md debe tener las novedades de esta versión
+      - name: CHANGELOG.md y CHANGELOG.en.md deben tener las novedades de esta versión
         run: |
           v="$(node -p "require('./package.json').version")"
           grep -qE "^## v?${v//./\\.}( |$)" CHANGELOG.md || { echo "Falta la sección '## $v' en CHANGELOG.md: es lo que verán los usuarios al actualizar."; exit 1; }
+          grep -qE "^## v?${v//./\\.}( |$)" CHANGELOG.en.md || { echo "Falta la sección '## $v' en CHANGELOG.en.md (la versión en inglés de las novedades)."; exit 1; }
 
       - run: yarn install --frozen-lockfile
       - run: npm run typecheck

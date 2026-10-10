@@ -1,20 +1,26 @@
 <div align="center">
 
-<img src="resources/icon.png" width="96" alt="Tutti" />
+<img src="resources/icon.png" width="120" alt="Tutti" />
 
 # Tutti
 
-**Un orquestador para trabajar con varios agentes de programación a la vez.**
+### Todos tus agentes de programación, en una sola ventana.
 
-Claude Code, OpenCode, Gemini CLI, Codex, Antigravity y cualquier otro, cada uno en su terminal,<br />
-con editor, git, servidores MCP y consumo de tokens en la misma ventana.
+Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otro,<br />
+cada uno en su terminal, repartiéndose el trabajo entre ellos.
 
 [![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=flat-square&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
 ![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=flat-square)
 ![Electron](https://img.shields.io/badge/Electron-33-8fa6c4?style=flat-square)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-8fa6c4?style=flat-square)
+<br />
 
-[Instalar](#instalar) · [Qué incluye](#qué-incluye) · [Atajos](#atajos) · [Desarrollo](#desarrollo) · [Privacidad](#privacidad)
+[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=for-the-badge&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
+![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=for-the-badge)
+![Idiomas](https://img.shields.io/badge/ES%20·%20EN-8fa6c4?style=for-the-badge)
+![Licencia](https://img.shields.io/badge/MIT-8fa6c4?style=for-the-badge)
+
+**[⬇ Instalar](#instalar)** &nbsp;·&nbsp; [Qué incluye](#qué-incluye) &nbsp;·&nbsp; [Atajos](#atajos) &nbsp;·&nbsp; [Desarrollo](#desarrollo) &nbsp;·&nbsp; [Privacidad](#privacidad)
 
 <br />
 
@@ -23,6 +29,33 @@ con editor, git, servidores MCP y consumo de tokens en la misma ventana.
 <sub>Ejemplo real: un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio editor, marcado «sub de …», y el apartado de tareas delegadas muestra su estado, modelo y duración.</sub>
 
 </div>
+
+<br />
+
+## Por qué Tutti
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🎼 Que se coordinen
+Un agente le **manda tareas a otro** y Tutti elige el más adecuado según la dificultad, su modelo y su límite de uso.
+
+</td>
+<td width="33%" valign="top">
+
+### 🧰 Todo en la misma ventana
+Terminales, **editor**, **git** con grafo de commits, **servidores MCP** y **consumo de tokens**. Sin saltar de herramienta.
+
+</td>
+<td width="33%" valign="top">
+
+### 🔌 Sin atarte a nadie
+Detecta más de 20 agentes y **añade el tuyo**. Tienda de **MCP** integrada, tema claro y oscuro, **español e inglés**.
+
+</td>
+</tr>
+</table>
 
 <br />
 
@@ -136,6 +169,7 @@ así que funciona aunque lances la app desde el menú. `Ctrl+Shift+T` abre una s
   argumentos si hace falta) o eliges uno de los ejecutables que la app encuentra en tus carpetas `bin`. Los propios que no tienen
   logo llevan una insignia generada con su inicial.
 - Si un proceso no arranca o termina, un aviso lo explica.
+- **Copiar y pegar** como en cualquier terminal moderna: `Ctrl+C` copia si hay texto seleccionado (si no, sigue siendo «interrumpir»), `Ctrl+V`, `Ctrl+Shift+V` y `Shift+Insert` pegan, y el **clic derecho** abre un menú con *Copiar*, *Pegar* y *Seleccionar todo*. Si el portapapeles no tiene texto (una captura, por ejemplo), `Ctrl+V` se lo deja al agente, que la lee él mismo.
 
 ![Elegir agente](docs/img/elegir-agente.png)
 
@@ -146,7 +180,20 @@ doble clic en un icono.
 
 ![Pantalla de inicio](docs/img/inicio.png)
 
-**Tema claro y oscuro.** La tuerca de abajo en la barra lateral abre los ajustes: *Tema oscuro*, *Tema claro* o *Automático*, que sigue al del sistema. El tema elegido se recuerda y cambia también el editor, los colores del código y las terminales.
+#### Tema claro y oscuro · Español e inglés
+
+La tuerca de abajo en la barra lateral abre los ajustes, con dos submenús que se abren al pasar el ratón:
+
+- **Tema:** oscuro, claro (de tonos suaves, sin blanco puro, para no cansar la vista) o *Automático*, que sigue al del sistema. Cambia también el editor, los colores del código y las terminales.
+- **Idioma:** *Español*, *Inglés* o *Automático*. Cambia toda la interfaz al instante y se recuerda al reabrir. El contexto del proyecto y el mensaje de commit con IA también se piden en tu idioma.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/img/ajustes.png" alt="Ajustes: tema e idioma" /></td>
+<td width="50%"><img src="docs/img/tema-claro.png" alt="Tema claro" /></td>
+</tr>
+</table>
+
 
 **Varias ventanas.** El botón de la barra de título (o *Nueva ventana vacía* en el menú del lanzador, con clic derecho sobre el
 icono en Linux) abre otra ventana de Tutti **sin proyecto**: es otro proceso, con sus propios agentes, su servidor de tareas y su
@@ -166,6 +213,8 @@ tiene capacidad suficiente, se rechaza y se propone otro (`force` lo mantiene).
 Se desactiva con `"orchestration": false` en `~/.config/tutti/settings.json`. OpenCode 2.x atiende a todos sus clientes desde un
 servicio compartido, así que a cada editor se le lanza con `--standalone`: su configuración no se mezcla con la de otros OpenCode.
 
+**Codex** recibe la dirección y la clave de su sesión con `-c` y una variable de entorno, así que no se toca su `config.toml`.
+
 **Antigravity** no admite configuración por proceso, así que Tutti registra en `~/.gemini/config/mcp_config.json` un servidor «tutti» (un pequeño puente que genera en `<config>/tutti/mcp-bridge.mjs`) y a cada panel le pasa por entorno la dirección y la clave de su sesión. Fuera de Tutti ese servidor no ofrece herramientas. Si Antigravity pide permiso la primera vez que usa una herramienta, apruébalo.
 
 ### Contexto del proyecto
@@ -184,10 +233,37 @@ responde arma un borrador con reglas. Al cambiar de apartado se cancela.
 ### Servidores MCP
 
 Lee, añade y quita los servidores de **Claude Code, OpenCode, Gemini CLI, Codex y Antigravity** (globales, del proyecto y
-`.mcp.json`) usando la CLI de cada agente. Los detalles ocultan los secretos hasta que lo pides y un servidor se puede copiar de un
-agente a otro. Codex y Antigravity solo guardan servidores globales, y la app lo tiene en cuenta al ofrecer destinos.
+`.mcp.json`) usando la CLI de cada agente. En la lista, **cada servidor es una sola tarjeta**: al abrirla ves en qué agentes está
+aplicado, con sus datos (los secretos ocultos hasta que lo pides), y puedes quitarlo de uno o copiarlo a otro. Codex y Antigravity
+solo guardan servidores globales, y la app lo tiene en cuenta al ofrecer destinos. La tarjeta **tutti** es el servidor de la propia
+app (el reparto de tareas) y muestra a qué agentes llega. Las secciones se pliegan.
 
-![Servidores MCP](docs/img/mcp.png)
+<table>
+<tr>
+<td width="50%"><img src="docs/img/mcp.png" alt="Servidores MCP" /></td>
+<td width="50%"><img src="docs/img/mcp-detalles.png" alt="Detalle de un servidor" /></td>
+</tr>
+</table>
+
+#### Tienda de servidores
+
+Busca en el **registro oficial de MCP** sin salir de la app, con el aspecto de las extensiones de VS Code: una lista con icono, nombre,
+descripción, quién lo publica y el botón **Instalar**. Los más conocidos (Context7, Playwright, GitHub, Notion, Figma…) salen primero,
+en **Recomendados**.
+
+1. Al pulsar un servidor se abre su **ficha**: qué es, quién lo publica, el comando exacto que se va a ejecutar y lo que pide rellenar.
+2. *Continuar* abre el diálogo de **Añadir servidor** ya relleno; completas lo que falte y eliges a qué agentes va.
+
+Solo se ofrece lo que Tutti sabe instalar: paquetes npm (con `npx`), pypi (con `uvx`) y servidores remotos por URL. Instalar un MCP
+ejecuta código de terceros que el registro no revisa, y la ficha lo recuerda.
+
+<table>
+<tr>
+<td width="33%"><img src="docs/img/mcp-tienda.png" alt="Buscar en el registro" /></td>
+<td width="33%"><img src="docs/img/mcp-ficha.png" alt="Ficha de un servidor" /></td>
+<td width="33%"><img src="docs/img/mcp-instalar.png" alt="Instalar con los datos rellenos" /></td>
+</tr>
+</table>
 
 ### Consumo e historial
 
@@ -248,6 +324,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | `Ctrl+Shift+W` | Cerrar el editor activo |
 | `Ctrl+AvPág` / `Ctrl+RePág` | Editor siguiente / anterior |
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
+| `Ctrl+C` / `Ctrl+V` | En terminales y agentes: copiar (con texto seleccionado) / pegar. También `Ctrl+Shift+C`, `Ctrl+Shift+V` y `Shift+Insert` |
 | `Ctrl+Shift+E` · `F` · `A` · `G` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Contexto · MCP · Consumo |
 
 
@@ -256,15 +333,15 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 ## Desarrollo
 
 ```bash
-npm install          # instala y recompila node-pty y better-sqlite3 para Electron
-npm run dev          # con recarga en caliente (la interfaz se actualiza al guardar; main y preload reinician la app)
-npm test             # pruebas unitarias (vitest)
-npm run typecheck
-npm run dist         # empaqueta el AppImage en release/
-npm run dist:win     # empaqueta el instalador de Windows (hay que ejecutarlo en Windows)
+yarn install         # instala y recompila node-pty y better-sqlite3 para Electron
+yarn dev              # con recarga en caliente (la interfaz se actualiza al guardar; main y preload reinician la app)
+yarn test            # pruebas unitarias (vitest)
+yarn typecheck
+yarn dist             # empaqueta el AppImage en release/
+yarn dist:win         # empaqueta el instalador de Windows (hay que ejecutarlo en Windows)
 ```
 
-Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `npm run dev` ya la quita por ti.
+Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `yarn dev` ya la quita por ti.
 
 ```
 src/
@@ -295,6 +372,8 @@ Todas por variable de entorno:
 | `TUTTI_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
 | `TUTTI_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
 | `TUTTI_CAPTURE_GRAPH=1` · `TUTTI_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
+| `TUTTI_CAPTURE_LANG=en` · `TUTTI_CAPTURE_LIGHT=1` | Con la captura, saca las imágenes en inglés (`es` / `en`) o con el tema claro |
+| `TUTTI_CAPTURE_MCP=1` · `TUTTI_CAPTURE_UPDATE=1` | Con la captura, añade los servidores MCP (incluida la tienda, que consulta el registro) y el botón de actualización |
 | `TUTTI_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
 | `TUTTI_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
 

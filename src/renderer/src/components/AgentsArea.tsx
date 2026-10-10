@@ -5,9 +5,11 @@ import { MdAdd, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz
 import { AgentIcon } from './AgentIcon'
 import { useStore, type Pane } from '@/store'
 import { Kbd } from './ui'
+import { useT } from '@/lib/i18n'
 import { TerminalPane } from './TerminalPane'
 
 export function PaneBox({ pane }: { pane: Pane }) {
+  const t = useT()
   const active = useStore((s) => s.activePane === s.panes.find((p) => p.id === pane.id)?.id || s.activePane === pane.id)
   const set = useStore((s) => s.set)
   const closePane = useStore((s) => s.closePane)
@@ -17,9 +19,9 @@ export function PaneBox({ pane }: { pane: Pane }) {
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => set({ activePane: pane.id, focus: 'pane' })}>
       <div className={clsx('flex shrink-0 items-center gap-2 border-b-2 px-2.5 py-1 transition-colors', active ? 'border-accent bg-panel' : 'border-line')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
-        <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ' · líder'}</span>
-        {pane.parentId && <span title={`Lo abrió ${parent?.title ?? pane.parentId}`} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">sub de {parent?.name ?? pane.parentId}</span>}
-        <button title="Cerrar" onClick={(e) => { e.stopPropagation(); closePane(pane.id) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
+        <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+        {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}
+        <button title={t('pane.close')} onClick={(e) => { e.stopPropagation(); closePane(pane.id) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
           <MdClose size={13} />
         </button>
       </div>
@@ -29,6 +31,7 @@ export function PaneBox({ pane }: { pane: Pane }) {
 }
 
 export function AgentsArea() {
+  const t = useT()
   const panes = useStore((s) => s.panes)
   const set = useStore((s) => s.set)
   const mode = useStore((s) => s.themeMode)
@@ -51,15 +54,15 @@ export function AgentsArea() {
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-start justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
               <img src={`${import.meta.env.BASE_URL}icons/empty-agents${mode === 'light' ? '-light' : ''}.svg`} alt="" width={72} height={72} draggable={false} />
-              <p className="mt-3 text-[12px] text-muted">Elige un agente para abrirlo aquí</p>
+              <p className="mt-3 text-[12px] text-muted">{t('pane.pickAgent')}</p>
               <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
-                <MdSearch size={16} /> Elegir agente
+                <MdSearch size={16} /> {t('pane.chooseAgent')}
               </button>
 
               <div className="mt-8 flex w-full flex-col gap-1.5 border-t border-line pt-4">
-                {([['Ctrl + Shift + N', 'Abrir un agente'], ['Ctrl + Shift + T', 'Abrir la terminal'], ['Ctrl + Shift + B', 'Ocultar la barra lateral']] as const).map(([keys, what]) => (
+                {([['Ctrl + Shift + N', 'pane.hintOpenAgent'], ['Ctrl + Shift + T', 'pane.hintOpenTerminal'], ['Ctrl + Shift + B', 'pane.hintHideSidebar']] as const).map(([keys, what]) => (
                   <div key={keys} className="flex items-center justify-between gap-6 text-[11px] text-muted">
-                    <span>{what}</span><Kbd>{keys}</Kbd>
+                    <span>{t(what)}</span><Kbd>{keys}</Kbd>
                   </div>
                 ))}
               </div>
@@ -67,13 +70,13 @@ export function AgentsArea() {
 
             <div className="w-[380px] max-w-full">
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Proyectos</span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted">{t('pane.projects')}</span>
                 <button onClick={() => void openOther()} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-accent transition-colors hover:bg-accent-bg">
-                  <MdCreateNewFolder size={14} /> Abrir otro
+                  <MdCreateNewFolder size={14} /> {t('pane.openOther')}
                 </button>
               </div>
               {recent.length === 0 ? (
-                <p className="px-1 py-2 text-[11px] text-muted">Aquí aparecerán los proyectos que abras.</p>
+                <p className="px-1 py-2 text-[11px] text-muted">{t('pane.projectsEmpty')}</p>
               ) : (
                 <div className="flex flex-col gap-0.5">
                   {recent.map((path) => (
@@ -84,7 +87,7 @@ export function AgentsArea() {
                         <div className="truncate text-[12px] text-text">{path.split(/[\\/]/).filter(Boolean).pop() ?? path}</div>
                         <div className="truncate text-[10px] text-muted">{path}</div>
                       </div>
-                      <button title="Quitar del historial" onClick={(e) => { e.stopPropagation(); removeRecent(path) }}
+                      <button title={t('pane.removeRecent')} onClick={(e) => { e.stopPropagation(); removeRecent(path) }}
                         className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-colors hover:bg-line hover:text-text group-hover:opacity-100">
                         <MdClose size={13} />
                       </button>
@@ -106,6 +109,7 @@ export function AgentsArea() {
 
 /** El panel de terminales (como el de VS Code): barra de acciones arriba a la derecha y, con varias, la lista de terminales al costado. */
 export function TerminalSection() {
+  const t = useT()
   const shells = useStore((s) => s.shells)
   const active = useStore((s) => s.shellActive)
   const max = useStore((s) => s.shellMax)
@@ -124,15 +128,15 @@ export function TerminalSection() {
     <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between px-2.5 py-1">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Terminal</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted">{t('term.title')}</span>
           <div className="flex items-center gap-0.5">
-            <button title="Nuevo terminal" onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
-            <button title="Más opciones de nuevo terminal" onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
-            <button title="Más acciones" onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button>
-            <button title={max ? 'Restaurar tamaño' : 'Maximizar panel'} onClick={() => set({ shellMax: !max })} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
+            <button title={t('term.new')} onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
+            <button title={t('term.newOptions')} onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
+            <button title={t('term.moreActions')} onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button>
+            <button title={max ? t('term.restore') : t('term.maximize')} onClick={() => set({ shellMax: !max })} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
               {max ? <MdFullscreenExit size={15} /> : <MdFullscreen size={15} />}
             </button>
-            <button title="Cerrar el panel (cierra todos los terminales)" onClick={closeShells} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
+            <button title={t('term.closePanel')} onClick={closeShells} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
           </div>
         </div>
         <div className="relative min-h-0 flex-1">
@@ -151,7 +155,7 @@ export function TerminalSection() {
               className={clsx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors', p.id === active ? 'bg-accent-bg text-text' : 'text-muted hover:bg-accent-bg')}>
               <MdTerminal size={14} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate">{p.title}</span>
-              <button title="Cerrar este terminal" onClick={(e) => { e.stopPropagation(); closePane(p.id) }}
+              <button title={t('term.closeThis')} onClick={(e) => { e.stopPropagation(); closePane(p.id) }}
                 className="grid size-4 shrink-0 place-items-center rounded opacity-0 transition-colors hover:bg-line group-hover:opacity-100"><MdClose size={12} /></button>
             </div>
           ))}
@@ -159,8 +163,8 @@ export function TerminalSection() {
       )}
       {menu && (
         <Menu width={200} anchor={menu.anchor} onClose={() => setMenu(null)} items={menu.kind === 'new'
-          ? [{ label: 'Nuevo terminal', icon: <MdAdd size={15} />, onClick: () => void addShell() }]
-          : [{ label: 'Cerrar todos los terminales', icon: <MdClose size={15} />, onClick: closeShells, danger: true }]} />
+          ? [{ label: t('term.new'), icon: <MdAdd size={15} />, onClick: () => void addShell() }]
+          : [{ label: t('term.closeAll'), icon: <MdClose size={15} />, onClick: closeShells, danger: true }]} />
       )}
     </div>
   )

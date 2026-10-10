@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 import type { ReplaceResult, SearchFile, SearchOptions, SearchResult } from '../shared/types'
+import { tm } from './i18n'
 
 const MAX_FILES = 500
 const MAX_MATCHES = 5000
@@ -26,7 +27,7 @@ export function globsToRegex(list: string): RegExp[] {
 export function buildMatcher(opts: Pick<SearchOptions, 'query' | 'caseSensitive' | 'wholeWord' | 'regex'>): RegExp | string {
   let src = opts.regex ? opts.query : opts.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   if (opts.wholeWord) src = `\\b(?:${src})\\b`
-  try { return new RegExp(src, opts.caseSensitive ? 'gu' : 'giu') } catch (e) { return e instanceof Error ? e.message : 'Expresión no válida' }
+  try { return new RegExp(src, opts.caseSensitive ? 'gu' : 'giu') } catch (e) { return e instanceof Error ? e.message : tm('m.search.invalid') }
 }
 
 const git = (root: string): Promise<string[] | null> => new Promise((resolve) => {

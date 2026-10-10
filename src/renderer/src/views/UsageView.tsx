@@ -6,6 +6,7 @@ import { AgentIcon } from '@/components/AgentIcon'
 import { Menu } from '@/components/Menu'
 import { FIELD, Modal } from '@/components/ui'
 import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { basename } from '@/lib/paths'
 import { useStore } from '@/store'
 
@@ -26,41 +27,44 @@ const Row = ({ label, value }: { label: string; value: string }) => (
 )
 
 function Limit({ limit, extra, now }: { limit: LimitInfo; extra?: string; now: number }) {
+  const t = useT()
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-[12px]"><span>{limit.label}</span><span className="tabular-nums">{limit.percent.toFixed(0)}%</span></div>
       <Bar value={limit.percent / 100} tone={severity(limit.percent)} />
-      <div className="text-[10px] text-muted">Se reinicia en {fmtDelta(limit.resetsAt - now)}{extra ? ` · ${extra}` : ''}</div>
+      <div className="text-[10px] text-muted">{t('us.resets', { delta: fmtDelta(limit.resetsAt - now) })}{extra ? ` · ${extra}` : ''}</div>
     </div>
   )
 }
 
 function Card({ u, now }: { u: AgentUsage; now: number }) {
+  const t = useT()
+  const lang = useStore((s) => s.lang)
   const w = u.window
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3">
       <div className="flex items-center gap-2"><AgentIcon name={u.name} command={u.command} size={18} /><span className="text-[13px] font-semibold">{u.name}</span></div>
       {u.limits.length > 0 ? (
         <>
-          {u.limits.map((l, i) => <Limit key={l.label} limit={l} now={now} extra={i === 0 && w ? `${fmtTokens(w.tokens)} tokens` : undefined} />)}
-          {u.limitsAge > 600 && <div className="text-[10px] text-muted">Actualizado hace {fmtDelta(u.limitsAge * 1000)}</div>}
+          {u.limits.map((l, i) => <Limit key={l.label} limit={l} now={now} extra={i === 0 && w ? t('us.tokens', { n: fmtTokens(w.tokens) }) : undefined} />)}
+          {u.limitsAge > 600 && <div className="text-[10px] text-muted">{t('us.updatedAgo', { delta: fmtDelta(u.limitsAge * 1000) })}</div>}
         </>
       ) : w ? (
         <>
-          <div className="text-[20px] font-semibold text-accent">{fmtTokens(w.tokens)} tokens</div>
-          <div className="-mt-1.5 text-[11px] text-muted">en la sesión actual</div>
+          <div className="text-[20px] font-semibold text-accent">{t('us.tokens', { n: fmtTokens(w.tokens) })}</div>
+          <div className="-mt-1.5 text-[11px] text-muted">{t('us.currentSession')}</div>
           <Bar value={(now - w.start) / WINDOW_MS} />
-          <div className="text-[11px]">Se reinicia en {fmtDelta(w.end - now)} · {new Date(w.end).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })} (estimado)</div>
+          <div className="text-[11px]">{t('us.resetsAt', { delta: fmtDelta(w.end - now), time: new Date(w.end).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }) })}</div>
         </>
       ) : u.note ? (
         <div className="text-[11px] text-muted">{u.note}</div>
       ) : (
-        <div className="text-[11px] text-muted">Sin sesión activa. La ventana de 5 h empieza con tu próximo mensaje.</div>
+        <div className="text-[11px] text-muted">{t('us.noSession')}</div>
       )}
       {u.limitsError && u.limits.length === 0 && <div className="text-[10px] text-muted">{u.limitsError}</div>}
       {(u.total > 0) && (
         <div className="flex flex-col gap-1 border-t border-line pt-2">
-          <Row label="Hoy" value={fmtTokens(u.today)} /><Row label="7 días" value={fmtTokens(u.week)} /><Row label="Total" value={fmtTokens(u.total)} />
+          <Row label={t('us.today')} value={fmtTokens(u.today)} /><Row label={t('us.week')} value={fmtTokens(u.week)} /><Row label={t('us.total')} value={fmtTokens(u.total)} />
           {u.note && (w || u.limits.length > 0) && <div className="pt-1 text-[10px] text-muted">{u.note}</div>}
         </div>
       )}
@@ -83,6 +87,7 @@ function Section({ title, id, detail, folded, onToggle, children }: { title: str
 
 /** Consumo de tokens, reinicio e historial de cada agente instalado. */
 export function UsageView() {
+  const t = useT()
   const project = useStore((s) => s.project)
   const agents = useStore((s) => s.agents)
   const set = useStore((s) => s.set)
@@ -104,7 +109,7 @@ export function UsageView() {
 
   useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })); void window.api.settings.get('collapsed').then((c) => setFolded((c as Record<string, boolean>) ?? {})) }, [set])
   // al abrir la pestaña se consulta a Anthropic una vez (los límites reales); después solo se relee lo local
-  useEffect(() => { void load(true); const t = setInterval(() => void load(false), REFRESH_MS); return () => clearInterval(t) }, [load])
+  useEffect(() => { void load(true); const timer = setInterval(() => void load(false), REFRESH_MS); return () => clearInterval(timer) }, [load])
 
   const toggle = (id: string): void => { const next = { ...folded, [id]: !folded[id] }; setFolded(next); void window.api.settings.set('collapsed', next) }
   const title = (s: SessionInfo): string => names[`${s.command}:${s.id}`] || s.title
@@ -112,25 +117,25 @@ export function UsageView() {
   const resume = (s: SessionInfo): void => {
     const args = resumeArgs(s.command, s.id)
     const agent = agents.find((a) => a.command === s.command)
-    if (!args || !agent) { toast('No se puede retomar esta sesión desde aquí', 'error'); return }
+    if (!args || !agent) { toast(t('us.cannotResume'), 'error'); return }
     void openAgent(agent, args, { cwd: s.cwd || undefined, title: `${s.agent} · ${title(s)}` })
   }
 
-  if (!data) return <p className="px-3 text-[11px] text-muted">Leyendo consumo…</p>
-  if (!data.agents.length) return <p className="px-3 text-[12px] text-muted">No hay agentes instalados</p>
+  if (!data) return <p className="px-3 text-[11px] text-muted">{t('us.reading')}</p>
+  if (!data.agents.length) return <p className="px-3 text-[12px] text-muted">{t('us.noAgents')}</p>
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto px-2 pb-3">
-      <Section title="Uso" id="usage" folded={!!folded.usage} onToggle={toggle}>
+      <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle}>
         {data.agents.map((u) => <Card key={u.command} u={u} now={now} />)}
       </Section>
-      <Section title="Historial" id="history" detail={project ? basename(project) : ''} folded={!!folded.history} onToggle={toggle}>
-        {!project && <p className="px-1 text-[11px] text-muted">Abre un proyecto para ver su historial</p>}
-        {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">Sin sesiones en este proyecto</p>}
+      <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} folded={!!folded.history} onToggle={toggle}>
+        {!project && <p className="px-1 text-[11px] text-muted">{t('us.openProject')}</p>}
+        {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">{t('us.noSessions')}</p>}
         {project && data.history.length > 0 && (
-          <button onClick={() => setClearing(true)} title="Borrar todas las sesiones de este proyecto"
+          <button onClick={() => setClearing(true)} title={t('us.clearTip')}
             className="flex items-center gap-1.5 self-end rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:bg-danger/10 hover:text-danger">
-            <MdDeleteSweep size={14} /> Borrar historial
+            <MdDeleteSweep size={14} /> {t('us.clear')}
           </button>
         )}
         <ul className="flex flex-col gap-0.5">
@@ -138,11 +143,11 @@ export function UsageView() {
             const can = resumeArgs(s.command, s.id) !== null
             return (
               <li key={`${s.command}:${s.id}`} className="group flex items-center rounded-lg transition-colors hover:bg-accent-bg">
-                <button disabled={!can} onClick={() => resume(s)} title={can ? 'Retomar esta sesión' : undefined} className="min-w-0 flex-1 px-2 py-1.5 text-left">
+                <button disabled={!can} onClick={() => resume(s)} title={can ? t('us.resumeTip') : undefined} className="min-w-0 flex-1 px-2 py-1.5 text-left">
                   <span className="block truncate text-[12px]">{title(s)}</span>
                   <span className="block truncate text-[10px] text-muted">{s.agent} · {s.project} · {ago(s.end, now)} · {fmtTokens(s.tokens)}</span>
                 </button>
-                <button title="Más acciones" onClick={(e) => setMenu({ session: s, anchor: e.currentTarget.getBoundingClientRect() })}
+                <button title={t('us.moreActions')} onClick={(e) => setMenu({ session: s, anchor: e.currentTarget.getBoundingClientRect() })}
                   className={clsx('mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted transition-opacity hover:bg-ov/10 hover:text-text group-hover:opacity-100',
                     menu?.session === s ? 'bg-ov/10 text-text opacity-100' : 'opacity-0')}>
                   <MdMoreHoriz size={16} />
@@ -155,39 +160,39 @@ export function UsageView() {
 
       {menu && (
         <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
-          { label: 'Retomar', icon: <MdPlayArrow size={16} />, hidden: !resumeArgs(menu.session.command, menu.session.id), onClick: () => resume(menu.session) },
-          { label: 'Renombrar…', icon: <MdEdit size={15} />, onClick: () => setRenaming(menu.session) },
-          { label: 'Borrar…', icon: <MdDeleteOutline size={16} />, danger: true, onClick: () => setDeleting(menu.session) }
+          { label: t('us.resume'), icon: <MdPlayArrow size={16} />, hidden: !resumeArgs(menu.session.command, menu.session.id), onClick: () => resume(menu.session) },
+          { label: t('us.renameItem'), icon: <MdEdit size={15} />, onClick: () => setRenaming(menu.session) },
+          { label: t('us.deleteItem'), separator: true, icon: <MdDeleteOutline size={16} />, danger: true, onClick: () => setDeleting(menu.session) }
         ]} />
       )}
       {renaming && <RenameDialog session={renaming} current={title(renaming)} onClose={() => setRenaming(null)} onSaved={() => void load(false)} />}
       {clearing && (
-        <Modal onClose={() => setClearing(false)} width={420} title="¿Borrar el historial?">
+        <Modal onClose={() => setClearing(false)} width={420} title={t('us.clearTitle')}>
           <div className="px-4 pb-4">
-            <p className="text-[12px] leading-relaxed text-muted">Se borrarán las {data.history.length} sesiones de IA de este proyecto (de todos los agentes que lo permiten). No se puede deshacer.</p>
+            <p className="text-[12px] leading-relaxed text-muted">{t('us.clearBody', { n: data.history.length })}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setClearing(false)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
+              <button onClick={() => setClearing(false)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
               <button onClick={() => {
                 setClearing(false)
                 void (async () => {
                   let failed = 0
                   for (const s of data.history) { const r = await window.api.usage.remove(s); if (!r.ok) failed++ }
-                  toast(failed ? `Historial borrado; ${failed} sesiones no se pudieron borrar` : 'Historial borrado', failed ? 'error' : 'ok')
+                  toast(failed ? t('us.clearFailed', { n: failed }) : t('us.cleared'), failed ? 'error' : 'ok')
                   void load(false)
                 })()
-              }} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">Borrar todo</button>
+              }} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('us.deleteAll')}</button>
             </div>
           </div>
         </Modal>
       )}
       {deleting && (
-        <Modal onClose={() => setDeleting(null)} width={400} title="¿Borrar esta sesión?">
+        <Modal onClose={() => setDeleting(null)} width={400} title={t('us.deleteTitle')}>
           <div className="px-4 pb-4">
-            <p className="text-[12px] leading-relaxed text-muted">«{title(deleting)}» se borrará del historial de {deleting.agent}. No se puede deshacer.</p>
+            <p className="text-[12px] leading-relaxed text-muted">{t('us.deleteBody', { title: title(deleting), agent: deleting.agent })}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setDeleting(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
-              <button onClick={() => { const s = deleting; setDeleting(null); void window.api.usage.remove(s).then((r) => { toast(r.ok ? 'Sesión borrada' : `No se pudo borrar: ${r.message}`, r.ok ? 'ok' : 'error'); void load(false) }) }}
-                className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">Borrar</button>
+              <button onClick={() => setDeleting(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
+              <button onClick={() => { const s = deleting; setDeleting(null); void window.api.usage.remove(s).then((r) => { toast(r.ok ? t('us.sessionDeleted') : t('us.deleteFailed', { message: r.message }), r.ok ? 'ok' : 'error'); void load(false) }) }}
+                className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('us.delete')}</button>
             </div>
           </div>
         </Modal>
@@ -197,17 +202,18 @@ export function UsageView() {
 }
 
 function RenameDialog({ session, current, onClose, onSaved }: { session: SessionInfo; current: string; onClose: () => void; onSaved: () => void }) {
+  const t = useT()
   const [value, setValue] = useState(current)
   const save = (): void => { void window.api.usage.rename(session, value).then(() => { onSaved(); onClose() }) }
   return (
-    <Modal onClose={onClose} width={420} title="Renombrar sesión">
+    <Modal onClose={onClose} width={420} title={t('us.renameTitle')}>
       <div className="px-4 pb-4">
         <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save() }} spellCheck={false}
           className={FIELD} />
-        <p className="mt-2 text-[10px] text-muted">Solo cambia el nombre que ves aquí; no toca los archivos del agente. Vacío vuelve al original.</p>
+        <p className="mt-2 text-[10px] text-muted">{t('us.renameNote')}</p>
         <div className="mt-3 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">Cancelar</button>
-          <button onClick={save} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110">Guardar</button>
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
+          <button onClick={save} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110">{t('us.save')}</button>
         </div>
       </div>
     </Modal>

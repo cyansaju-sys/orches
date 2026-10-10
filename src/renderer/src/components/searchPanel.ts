@@ -1,5 +1,6 @@
 /** Buscar y reemplazar dentro del archivo: un cuadro flotante arriba a la derecha, como el de VS Code, sobre el motor de CodeMirror. */
 import { closeSearchPanel, findNext, findPrevious, getSearchQuery, openSearchPanel, replaceAll, replaceNext, search, SearchQuery, setSearchQuery } from '@codemirror/search'
+import { t } from '@/lib/i18n'
 import { EditorState, StateEffect, type Extension } from '@codemirror/state'
 import { EditorView, runScopeHandlers, type Panel, type ViewUpdate } from '@codemirror/view'
 
@@ -37,31 +38,31 @@ function count(state: EditorState, q: SearchQuery): { index: number; total: numb
 
 function createPanel(view: EditorView): Panel {
   const dom = el('div', 'tutti-find')
-  const toggle = el('button', 'tutti-find-chevron', '›', 'Mostrar reemplazo (Ctrl+H)')
+  const toggle = el('button', 'tutti-find-chevron', '›', t('find.showReplace'))
   const rows = el('div', 'tutti-find-rows')
 
   const findRow = el('div', 'tutti-find-row')
   const findBox = el('div', 'tutti-find-box')
   const find = el('input', 'tutti-find-input')
-  find.placeholder = 'Buscar'; find.spellcheck = false; find.setAttribute('main-field', 'true')
+  find.placeholder = t('find.find'); find.spellcheck = false; find.setAttribute('main-field', 'true')
   const mkOpt = (label: string, title: string): HTMLButtonElement => el('button', 'tutti-find-opt', label, title)
-  const optCase = mkOpt('Aa', 'Distinguir mayúsculas')
-  const optWord = mkOpt('ab', 'Palabra completa')
-  const optRegex = mkOpt('.*', 'Expresión regular')
+  const optCase = mkOpt('Aa', t('find.matchCase'))
+  const optWord = mkOpt('ab', t('find.wholeWord'))
+  const optRegex = mkOpt('.*', t('find.regex'))
   findBox.append(find, optCase, optWord, optRegex)
   const status = el('span', 'tutti-find-status')
-  const prev = el('button', 'tutti-find-btn', '↑', 'Anterior (Shift+Enter)')
-  const next = el('button', 'tutti-find-btn', '↓', 'Siguiente (Enter)')
-  const close = el('button', 'tutti-find-btn', '×', 'Cerrar (Esc)')
+  const prev = el('button', 'tutti-find-btn', '↑', t('find.prev'))
+  const next = el('button', 'tutti-find-btn', '↓', t('find.next'))
+  const close = el('button', 'tutti-find-btn', '×', t('find.close'))
   findRow.append(findBox, status, prev, next, close)
 
   const replRow = el('div', 'tutti-find-row')
   const replBox = el('div', 'tutti-find-box')
   const repl = el('input', 'tutti-find-input')
-  repl.placeholder = 'Reemplazar'; repl.spellcheck = false
+  repl.placeholder = t('find.replaceWith'); repl.spellcheck = false
   replBox.append(repl)
-  const one = el('button', 'tutti-find-btn tutti-find-text', 'Reemplazar', 'Reemplazar (Enter)')
-  const all = el('button', 'tutti-find-btn tutti-find-text', 'Todo', 'Reemplazar todo (Ctrl+Alt+Enter)')
+  const one = el('button', 'tutti-find-btn tutti-find-text', t('find.replaceWith'), t('find.replaceOne'))
+  const all = el('button', 'tutti-find-btn tutti-find-text', t('find.all'), t('find.replaceAll'))
   replRow.append(replBox, one, all)
 
   rows.append(findRow, replRow)
@@ -77,17 +78,17 @@ function createPanel(view: EditorView): Panel {
     optRegex.classList.toggle('on', q.regexp)
     replRow.style.display = replaceVisible ? '' : 'none'
     toggle.textContent = replaceVisible ? '⌄' : '›'
-    toggle.title = replaceVisible ? 'Ocultar reemplazo' : 'Mostrar reemplazo (Ctrl+H)'
+    toggle.title = replaceVisible ? t('find.hideReplace') : t('find.showReplace')
     const readOnly = state.readOnly
     one.disabled = all.disabled = readOnly
     find.classList.toggle('invalid', !!q.search && !q.valid)
     if (!q.search) status.textContent = ''
-    else if (!q.valid) status.textContent = 'Expresión no válida'
+    else if (!q.valid) status.textContent = t('find.invalid')
     else {
       const { index, total } = count(state, q)
-      status.textContent = !total ? 'Sin resultados' : `${index || '?'} de ${total >= MAX_COUNT ? `${MAX_COUNT}+` : total}`
+      status.textContent = !total ? t('find.noResults') : t('find.count', { i: index || '?', total: total >= MAX_COUNT ? `${MAX_COUNT}+` : total })
     }
-    status.classList.toggle('none', !!q.search && (!q.valid || status.textContent === 'Sin resultados'))
+    status.classList.toggle('none', !!q.search && (!q.valid || status.textContent === t('find.noResults')))
   }
 
   const commit = (patch: Partial<{ search: string; replace: string; caseSensitive: boolean; wholeWord: boolean; regexp: boolean }>): void => {

@@ -1,5 +1,6 @@
 /** Reparto de tareas según la capacidad: qué agente conviene a una dificultad dada. Funciones puras, sin tocar la app. */
 import type { Tier } from './models'
+import { tm } from '../i18n'
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -39,8 +40,8 @@ export interface Assignment { chosen: Candidate | null; reason: string; ranking:
 export function pickAgent(candidates: Candidate[], d: Difficulty): Assignment {
   const usable = candidates.filter((c) => !exhausted(c))
   const enough = usable.filter((c) => capable(c, d)).sort((a, b) => cost(a, d) - cost(b, d))
-  if (enough.length) return { chosen: enough[0], ranking: enough, reason: `nivel ${enough[0].tier} suficiente para una tarea ${d}` }
+  if (enough.length) return { chosen: enough[0], ranking: enough, reason: tm('m.assign.enough', { tier: enough[0].tier, d }) }
   const best = [...usable].sort((a, b) => LEVEL[b.tier] - LEVEL[a.tier] || cost(a, d) - cost(b, d))
-  if (best.length) return { chosen: best[0], ranking: best, reason: `ninguno llega al nivel ${REQUIRED[d]}; se eligió el más capaz (${best[0].tier})` }
-  return { chosen: null, ranking: [], reason: candidates.length ? 'todos los agentes agotaron su límite de uso' : 'no hay agentes disponibles' }
+  if (best.length) return { chosen: best[0], ranking: best, reason: tm('m.assign.none', { required: REQUIRED[d], tier: best[0].tier }) }
+  return { chosen: null, ranking: [], reason: candidates.length ? tm('m.assign.exhausted') : tm('m.assign.unavailable') }
 }

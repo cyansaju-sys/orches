@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import { dirname, basename } from 'node:path'
 import type { GitBranch, GitCommit, GitMarks, GitOp, GitStatus } from '../../shared/types'
 import { extendedPath } from '../shellpath'
+import { tm } from '../i18n'
 
 interface Result { ok: boolean; out: string }
 
@@ -53,7 +54,7 @@ export async function ignored(root: string, paths: string[]): Promise<string[]> 
   return res.out.split('\0').filter(Boolean)
 }
 
-const flat = (r: Result): string => (r.ok ? '' : r.out.trim() || 'git falló')
+const flat = (r: Result): string => (r.ok ? '' : r.out.trim() || tm('m.git.failed'))
 
 export const stage = async (root: string, paths: string[]): Promise<string> => flat(await run(root, ['add', '--', ...paths]))
 export const unstage = async (root: string, paths: string[]): Promise<string> =>
@@ -144,13 +145,13 @@ export function opArgs(op: GitOp, hash: string, arg = '', isMerge = false): stri
 /** Ejecuta una operación sobre un commit. Devuelve el error de git, o '' si salió bien. */
 export async function commitOp(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string> {
   const args = opArgs(op, hash, arg, isMerge)
-  if (!args) return 'Nombre o commit no válido'
+  if (!args) return tm('m.git.badName')
   const res = await run(root, args, undefined, 60000)
   if (res.ok) return ''
   if (['cherry-pick', 'revert', 'merge', 'rebase'].includes(op) && /conflict/i.test(res.out)) {
     // no se deja el repositorio a medias (un merge --squash no deja estado de merge: se deshace con reset --merge)
     await run(root, op === 'merge' && arg?.includes('squash') ? ['reset', '--merge'] : [op, '--abort'])
-    return `Hay conflictos: se canceló la operación sin tocar nada.\n${flat(res)}`
+    return tm('m.git.conflicts', { detail: flat(res) })
   }
   return flat(res)
 }
@@ -195,7 +196,7 @@ export async function branches(root: string): Promise<GitBranch[]> {
 
 /** Se coloca en un commit o rama sin crear ninguna (HEAD suelto): para mirar o probar algo sin tocar ramas. */
 export async function checkoutDetached(root: string, ref: string): Promise<string> {
-  if (!REF_NAME.test(ref) || ref.includes('..')) return 'Referencia no válida'
+  if (!REF_NAME.test(ref) || ref.includes('..')) return tm('m.git.badRef')
   return flat(await run(root, ['checkout', '--detach', ref]))
 }
 
@@ -207,8 +208,8 @@ export const validBranchName = (name: string): boolean =>
 
 /** Crea una rama (desde `base`, o desde donde estás) y, por defecto, se cambia a ella. */
 export async function createBranch(root: string, name: string, base?: string, switchTo = true): Promise<string> {
-  if (!validBranchName(name)) return 'Nombre de rama no válido'
-  if (base && !REF_NAME.test(base)) return 'Rama de origen no válida'
+  if (!validBranchName(name)) return tm('m.git.badBranch')
+  if (base && !REF_NAME.test(base)) return tm('m.git.badBase')
   const from = base ? [base] : []
   return flat(await run(root, switchTo ? ['checkout', '-b', name, ...from] : ['branch', name, ...from]))
 }

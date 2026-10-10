@@ -2,6 +2,18 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.0.8
+
+- **Codex ya se conecta al reparto de tareas:** al abrirlo desde Tutti ve `list_agents`, `delegate_task`, `wait_agent` y `read_agent_output`, sin tocar su `config.toml`.
+- **El MCP de Tutti, a la vista:** en la pestaña MCP hay una tarjeta «tutti» (global) que muestra a qué agentes se aplica y avisa si el de Antigravity apunta a una ruta que ya no existe (se repara al abrir Tutti).
+- **Español e inglés:** el menú de la tuerca tiene un submenú *Idioma* (Automático, Español, Inglés). Cambia toda la interfaz al instante y se recuerda al reabrir.
+- **Tienda de servidores MCP:** en la pestaña MCP puedes buscar en el registro oficial, ver la ficha de un servidor (qué es, quién lo publica y el comando exacto) e instalarlo en tus agentes. Los más conocidos salen primero, en *Recomendados*.
+- **Un servidor, una tarjeta:** los MCP instalados ya no se separan por agente; al abrir una tarjeta ves en cuáles está aplicado y puedes quitarlo de uno o de todos. Las secciones se pliegan.
+- **Copiar y pegar en terminales y agentes:** `Ctrl+C` (con texto seleccionado), `Ctrl+V`, `Ctrl+Shift+V` y `Shift+Insert`, y un menú con clic derecho. Las imágenes del portapapeles siguen llegando a Claude Code.
+- **Tema claro más suave:** sin blanco puro, para no cansar la vista.
+- **Menús mejorados:** los submenús se abren al pasar el ratón, con el valor actual, separadores y sin huecos; el resaltado del árbol de archivos sigue al ratón y la tecla de menú abre el de la fila marcada.
+- **Se abre donde miras:** la ventana aparece en el monitor donde está el cursor.
+
 ## 1.0.7
 
 - **Orches ahora se llama Tutti.** Tus ajustes y el contexto de tus proyectos se conservan. Si lo instalaste con el script, vuelve a ejecutarlo para que el comando pase a ser `tutti`; si no, la app se actualiza sola.
