@@ -633,3 +633,57 @@ scripts/       dev.mjs</code></pre>
 <h3>Credits</h3>
 <p>Tutti was built with the help of <a href="https://claude.com/claude-code">Claude</a> (Anthropic), which collaborated on the code, the tests, the screenshots and this documentation. Product decisions and the review of every change belong to the project's maintainer.</p>
 ''')
+
+sec('contribuir', 'Contribuir', 'Contributing', '''
+<p>Tutti es de código abierto (MIT) y cualquier ayuda suma: un error bien descrito, una traducción, una mejora de esta documentación o código. Si te gusta, <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">una estrella en GitHub</a> ayuda a que más gente lo encuentre.</p>
+<h3>Cómo participar</h3>
+<ol>
+<li><strong>Busca primero</strong> en los <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener">issues</a>; puede que ya exista. Al abrir uno, elige la plantilla de <em>error</em> o de <em>idea</em>.</li>
+<li><strong>Cambios grandes</strong> (una pantalla nueva, cambiar cómo funciona algo, añadir dependencias): abre un issue y cuéntalo antes de escribir código.</li>
+<li><strong>Cambios pequeños</strong> (un arreglo, un texto, una prueba): directo a un pull request.</li>
+<li><strong>Vulnerabilidades:</strong> no las publiques; escribe en privado a quien mantiene el proyecto.</li>
+</ol>
+<h3>Las reglas del código</h3>
+<ul>
+<li>Haz un <em>fork</em> y una rama desde <code>master</code> con un nombre claro (<code>fix/…</code>, <code>feat/…</code>, <code>docs/…</code>). Un pull request, un propósito.</li>
+<li>Antes de abrirlo deben pasar <code>yarn typecheck</code> y <code>yarn test</code>.</li>
+<li><strong>Imita lo que ya hay:</strong> mismo estilo y comentarios (en español, explican el porqué).</li>
+<li><strong>Textos de la interfaz</strong> siempre en <code>src/shared/locales/es.json</code> <em>y</em> <code>en.json</code>, con las mismas claves y variables; se usan con <code>t('clave')</code>.</li>
+<li>Una prueba por cada arreglo o lógica nueva, que no dependa del idioma ni de la máquina.</li>
+<li>Sin dependencias nuevas sin una razón clara, y sin datos personales en capturas.</li>
+<li>Commits en <a href="https://www.conventionalcommits.org" target="_blank" rel="noopener">Conventional Commits</a>; si el cambio lo nota el usuario, una línea en <code>CHANGELOG.md</code> y <code>CHANGELOG.en.md</code>.</li>
+<li>Esta documentación se edita en <code>scripts/docs-site/content.py</code> y se regenera con <code>python3 scripts/docs-site/build.py</code>.</li>
+</ul>
+<div class="note">Puedes usar IA para colaborar, como se hizo en este proyecto. Lo importante es que entiendas y revises lo que envías; si una parte importante la escribió una IA, dilo en el pull request.</div>
+<h3>Documentos</h3>
+<ul>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>: la guía completa, en español y en inglés.</li>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>: respeto y buen trato; críticas al código, no a la persona.</li>
+</ul>
+''', '''
+<p>Tutti is open source (MIT) and every contribution counts: a well-described bug, a translation, a fix to this documentation or code. If you like it, <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">a star on GitHub</a> helps more people find it.</p>
+<h3>How to take part</h3>
+<ol>
+<li><strong>Search first</strong> in the <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener">issues</a>; it may already exist. When opening one, pick the <em>bug</em> or <em>idea</em> template.</li>
+<li><strong>Big changes</strong> (a new screen, changing how something works, adding dependencies): open an issue and discuss it before writing code.</li>
+<li><strong>Small changes</strong> (a fix, a text, a test): straight to a pull request.</li>
+<li><strong>Vulnerabilities:</strong> do not publish them; write privately to the maintainer.</li>
+</ol>
+<h3>Code rules</h3>
+<ul>
+<li>Fork and branch from <code>master</code> with a clear name (<code>fix/…</code>, <code>feat/…</code>, <code>docs/…</code>). One pull request, one purpose.</li>
+<li>Before opening it, <code>yarn typecheck</code> and <code>yarn test</code> must pass.</li>
+<li><strong>Match what is there:</strong> same style and comments (in Spanish, explaining the why).</li>
+<li><strong>Interface texts</strong> always in <code>src/shared/locales/es.json</code> <em>and</em> <code>en.json</code>, with the same keys and variables; use them with <code>t('key')</code>.</li>
+<li>A test for every fix or new logic, independent of the language and the machine.</li>
+<li>No new dependencies without a clear reason, and no personal data in screenshots.</li>
+<li>Commits in <a href="https://www.conventionalcommits.org" target="_blank" rel="noopener">Conventional Commits</a>; if the user notices the change, a line in <code>CHANGELOG.md</code> and <code>CHANGELOG.en.md</code>.</li>
+<li>This documentation is edited in <code>scripts/docs-site/content.py</code> and regenerated with <code>python3 scripts/docs-site/build.py</code>.</li>
+</ul>
+<div class="note">You can use AI to contribute, as was done in this project. What matters is that you understand and review what you submit; if a significant part was written by an AI, say so in the pull request.</div>
+<h3>Documents</h3>
+<ul>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>: the full guide, in Spanish and English.</li>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>: respect and kindness; criticize the code, not the person.</li>
+</ul>
+''')

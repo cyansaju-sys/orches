@@ -19,6 +19,7 @@ Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otr
 ![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=for-the-badge)
 ![Idiomas](https://img.shields.io/badge/ES%20·%20EN-8fa6c4?style=for-the-badge)
 ![Licencia](https://img.shields.io/badge/MIT-8fa6c4?style=for-the-badge)
+[![Estrellas](https://img.shields.io/github/stars/cyansaju-sys/tutti?style=for-the-badge&color=8fa6c4&label=estrellas)](https://github.com/cyansaju-sys/tutti/stargazers)
 
 **[⬇ Instalar](#instalar)** &nbsp;·&nbsp; [Qué incluye](#qué-incluye) &nbsp;·&nbsp; [Atajos](#atajos) &nbsp;·&nbsp; [Desarrollo](#desarrollo) &nbsp;·&nbsp; [Privacidad](#privacidad)
 
@@ -394,6 +395,12 @@ GitHub Actions comprueba que el tag coincide con la versión y que el changelog 
 botón **Actualizar** al cabo de unos minutos.
 
 </details>
+
+<br />
+
+## Contribuir
+
+Tutti es de código abierto y cualquier ayuda suma: errores bien descritos, traducciones, documentación o código. Lee la [guía para colaborar](CONTRIBUTING.md) (reglas del código, textos en español e inglés, commits y pull requests) y el [código de conducta](CODE_OF_CONDUCT.md). Si te gusta, **una ⭐ en GitHub** ayuda a que más gente lo encuentre.
 
 <br />
 

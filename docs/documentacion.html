@@ -45,6 +45,11 @@
   .brand small { color: var(--muted); font-weight: 500; font-size: 14px; }
   nav { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--muted); }
   nav a { color: var(--muted); } nav a:hover { color: var(--text); text-decoration: none; }
+  .star { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 10px; color: var(--text); font-size: 13px; font-weight: 600; background: var(--raised); }
+  .star:hover { border-color: var(--accent); text-decoration: none; color: var(--text); }
+  .star svg { width: 14px; height: 14px; color: #e2b93b; }
+  [data-stars]:empty { display: none; }
+  [data-stars]:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--muted); }
   .seg, .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
   .seg button { background: none; border: 0; color: var(--muted); width: 28px; height: 24px; display: grid; place-items: center; border-radius: 999px; cursor: pointer; }
   .seg button svg { width: 15px; height: 15px; }
@@ -106,7 +111,7 @@
     <nav>
       <a class="hide-sm" href="index.html"><span class="es">Inicio</span><span class="en">Home</span></a>
       <a class="hide-sm" href="index.html#instalar"><span class="es">Descargar</span><span class="en">Download</span></a>
-      <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">GitHub</a>
+      <a class="star" href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener" title="Star on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z"/></svg><span class="es">Estrella</span><span class="en">Star</span><span data-stars></span></a>
       <span class="seg" role="group" aria-label="Tema / Theme">
         <button data-theme-pref="system" title="Auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
         <button data-theme-pref="dark" title="Dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></button>
@@ -120,7 +125,7 @@
 <div class="wrap layout">
   <aside id="aside">
     <button class="toc-toggle" id="toc-toggle"><span class="es">Contenido ▾</span><span class="en">Contents ▾</span></button>
-    <div class="toc"><div class="toc-group"><span class="es">Empezar</span><span class="en">Getting started</span></div><a href="#instalar" data-id="instalar"><span class="es">Instalar</span><span class="en">Install</span></a><a href="#primeros-pasos" data-id="primeros-pasos"><span class="es">Primeros pasos</span><span class="en">First steps</span></a><div class="toc-group"><span class="es">Editor</span><span class="en">Editor</span></div><a href="#archivos" data-id="archivos"><span class="es">Archivos y editor</span><span class="en">Files and editor</span></a><a href="#buscar" data-id="buscar"><span class="es">Buscar y reemplazar</span><span class="en">Find and replace</span></a><div class="toc-group"><span class="es">Agentes</span><span class="en">Agents</span></div><a href="#agentes" data-id="agentes"><span class="es">Agentes y terminales</span><span class="en">Agents and terminals</span></a><a href="#reparto" data-id="reparto"><span class="es">Reparto de tareas</span><span class="en">Task delegation</span></a><a href="#contexto" data-id="contexto"><span class="es">Contexto del proyecto</span><span class="en">Project context</span></a><a href="#mcp" data-id="mcp"><span class="es">Servidores MCP y tienda</span><span class="en">MCP servers and store</span></a><a href="#consumo" data-id="consumo"><span class="es">Consumo e historial</span><span class="en">Usage and history</span></a><a href="#git" data-id="git"><span class="es">Git</span><span class="en">Git</span></a><div class="toc-group"><span class="es">Referencia</span><span class="en">Reference</span></div><a href="#apariencia" data-id="apariencia"><span class="es">Apariencia e idioma</span><span class="en">Appearance and language</span></a><a href="#atajos" data-id="atajos"><span class="es">Atajos de teclado</span><span class="en">Keyboard shortcuts</span></a><a href="#ajustes" data-id="ajustes"><span class="es">Ajustes y archivos</span><span class="en">Settings and files</span></a><a href="#privacidad" data-id="privacidad"><span class="es">Privacidad y seguridad</span><span class="en">Privacy and security</span></a><a href="#problemas" data-id="problemas"><span class="es">Solución de problemas</span><span class="en">Troubleshooting</span></a><a href="#desarrollo" data-id="desarrollo"><span class="es">Desarrollo</span><span class="en">Development</span></a></div>
+    <div class="toc"><div class="toc-group"><span class="es">Empezar</span><span class="en">Getting started</span></div><a href="#instalar" data-id="instalar"><span class="es">Instalar</span><span class="en">Install</span></a><a href="#primeros-pasos" data-id="primeros-pasos"><span class="es">Primeros pasos</span><span class="en">First steps</span></a><div class="toc-group"><span class="es">Editor</span><span class="en">Editor</span></div><a href="#archivos" data-id="archivos"><span class="es">Archivos y editor</span><span class="en">Files and editor</span></a><a href="#buscar" data-id="buscar"><span class="es">Buscar y reemplazar</span><span class="en">Find and replace</span></a><div class="toc-group"><span class="es">Agentes</span><span class="en">Agents</span></div><a href="#agentes" data-id="agentes"><span class="es">Agentes y terminales</span><span class="en">Agents and terminals</span></a><a href="#reparto" data-id="reparto"><span class="es">Reparto de tareas</span><span class="en">Task delegation</span></a><a href="#contexto" data-id="contexto"><span class="es">Contexto del proyecto</span><span class="en">Project context</span></a><a href="#mcp" data-id="mcp"><span class="es">Servidores MCP y tienda</span><span class="en">MCP servers and store</span></a><a href="#consumo" data-id="consumo"><span class="es">Consumo e historial</span><span class="en">Usage and history</span></a><a href="#git" data-id="git"><span class="es">Git</span><span class="en">Git</span></a><div class="toc-group"><span class="es">Referencia</span><span class="en">Reference</span></div><a href="#apariencia" data-id="apariencia"><span class="es">Apariencia e idioma</span><span class="en">Appearance and language</span></a><a href="#atajos" data-id="atajos"><span class="es">Atajos de teclado</span><span class="en">Keyboard shortcuts</span></a><a href="#ajustes" data-id="ajustes"><span class="es">Ajustes y archivos</span><span class="en">Settings and files</span></a><a href="#privacidad" data-id="privacidad"><span class="es">Privacidad y seguridad</span><span class="en">Privacy and security</span></a><a href="#problemas" data-id="problemas"><span class="es">Solución de problemas</span><span class="en">Troubleshooting</span></a><a href="#desarrollo" data-id="desarrollo"><span class="es">Desarrollo</span><span class="en">Development</span></a><a href="#contribuir" data-id="contribuir"><span class="es">Contribuir</span><span class="en">Contributing</span></a></div>
   </aside>
   <main>
     <div class="hero">
@@ -802,13 +807,70 @@ scripts/       dev.mjs</code></pre>
 <p>Tutti was built with the help of <a href="https://claude.com/claude-code">Claude</a> (Anthropic), which collaborated on the code, the tests, the screenshots and this documentation. Product decisions and the review of every change belong to the project's maintainer.</p>
 </div>
 </section>
+<section id="contribuir">
+  <h2><span class="es">Contribuir</span><span class="en">Contributing</span></h2>
+  <div class="es">
+<p>Tutti es de código abierto (MIT) y cualquier ayuda suma: un error bien descrito, una traducción, una mejora de esta documentación o código. Si te gusta, <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">una estrella en GitHub</a> ayuda a que más gente lo encuentre.</p>
+<h3>Cómo participar</h3>
+<ol>
+<li><strong>Busca primero</strong> en los <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener">issues</a>; puede que ya exista. Al abrir uno, elige la plantilla de <em>error</em> o de <em>idea</em>.</li>
+<li><strong>Cambios grandes</strong> (una pantalla nueva, cambiar cómo funciona algo, añadir dependencias): abre un issue y cuéntalo antes de escribir código.</li>
+<li><strong>Cambios pequeños</strong> (un arreglo, un texto, una prueba): directo a un pull request.</li>
+<li><strong>Vulnerabilidades:</strong> no las publiques; escribe en privado a quien mantiene el proyecto.</li>
+</ol>
+<h3>Las reglas del código</h3>
+<ul>
+<li>Haz un <em>fork</em> y una rama desde <code>master</code> con un nombre claro (<code>fix/…</code>, <code>feat/…</code>, <code>docs/…</code>). Un pull request, un propósito.</li>
+<li>Antes de abrirlo deben pasar <code>yarn typecheck</code> y <code>yarn test</code>.</li>
+<li><strong>Imita lo que ya hay:</strong> mismo estilo y comentarios (en español, explican el porqué).</li>
+<li><strong>Textos de la interfaz</strong> siempre en <code>src/shared/locales/es.json</code> <em>y</em> <code>en.json</code>, con las mismas claves y variables; se usan con <code>t('clave')</code>.</li>
+<li>Una prueba por cada arreglo o lógica nueva, que no dependa del idioma ni de la máquina.</li>
+<li>Sin dependencias nuevas sin una razón clara, y sin datos personales en capturas.</li>
+<li>Commits en <a href="https://www.conventionalcommits.org" target="_blank" rel="noopener">Conventional Commits</a>; si el cambio lo nota el usuario, una línea en <code>CHANGELOG.md</code> y <code>CHANGELOG.en.md</code>.</li>
+<li>Esta documentación se edita en <code>scripts/docs-site/content.py</code> y se regenera con <code>python3 scripts/docs-site/build.py</code>.</li>
+</ul>
+<div class="note">Puedes usar IA para colaborar, como se hizo en este proyecto. Lo importante es que entiendas y revises lo que envías; si una parte importante la escribió una IA, dilo en el pull request.</div>
+<h3>Documentos</h3>
+<ul>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>: la guía completa, en español y en inglés.</li>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>: respeto y buen trato; críticas al código, no a la persona.</li>
+</ul>
+</div>
+  <div class="en">
+<p>Tutti is open source (MIT) and every contribution counts: a well-described bug, a translation, a fix to this documentation or code. If you like it, <a href="https://github.com/cyansaju-sys/tutti" target="_blank" rel="noopener">a star on GitHub</a> helps more people find it.</p>
+<h3>How to take part</h3>
+<ol>
+<li><strong>Search first</strong> in the <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener">issues</a>; it may already exist. When opening one, pick the <em>bug</em> or <em>idea</em> template.</li>
+<li><strong>Big changes</strong> (a new screen, changing how something works, adding dependencies): open an issue and discuss it before writing code.</li>
+<li><strong>Small changes</strong> (a fix, a text, a test): straight to a pull request.</li>
+<li><strong>Vulnerabilities:</strong> do not publish them; write privately to the maintainer.</li>
+</ol>
+<h3>Code rules</h3>
+<ul>
+<li>Fork and branch from <code>master</code> with a clear name (<code>fix/…</code>, <code>feat/…</code>, <code>docs/…</code>). One pull request, one purpose.</li>
+<li>Before opening it, <code>yarn typecheck</code> and <code>yarn test</code> must pass.</li>
+<li><strong>Match what is there:</strong> same style and comments (in Spanish, explaining the why).</li>
+<li><strong>Interface texts</strong> always in <code>src/shared/locales/es.json</code> <em>and</em> <code>en.json</code>, with the same keys and variables; use them with <code>t('key')</code>.</li>
+<li>A test for every fix or new logic, independent of the language and the machine.</li>
+<li>No new dependencies without a clear reason, and no personal data in screenshots.</li>
+<li>Commits in <a href="https://www.conventionalcommits.org" target="_blank" rel="noopener">Conventional Commits</a>; if the user notices the change, a line in <code>CHANGELOG.md</code> and <code>CHANGELOG.en.md</code>.</li>
+<li>This documentation is edited in <code>scripts/docs-site/content.py</code> and regenerated with <code>python3 scripts/docs-site/build.py</code>.</li>
+</ul>
+<div class="note">You can use AI to contribute, as was done in this project. What matters is that you understand and review what you submit; if a significant part was written by an AI, say so in the pull request.</div>
+<h3>Documents</h3>
+<ul>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>: the full guide, in Spanish and English.</li>
+<li><a href="https://github.com/cyansaju-sys/tutti/blob/master/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a>: respect and kindness; criticize the code, not the person.</li>
+</ul>
+</div>
+</section>
   </main>
 </div>
 
 <footer>
   <div class="wrap in">
     <span>Tutti · MIT · <span class="es">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a> (Anthropic)</span><span class="en">Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a> (Anthropic)</span></span>
-    <span><a href="index.html"><span class="es">Volver al inicio</span><span class="en">Back to home</span></a> · <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener"><span class="es">Novedades</span><span class="en">Changelog</span></a> · <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener"><span class="es">Reportar un problema</span><span class="en">Report an issue</span></a></span>
+    <span><a href="index.html"><span class="es">Volver al inicio</span><span class="en">Back to home</span></a> · <a href="https://github.com/cyansaju-sys/tutti/blob/master/CHANGELOG.md" target="_blank" rel="noopener"><span class="es">Novedades</span><span class="en">Changelog</span></a> · <a href="#contribuir"><span class="es">Contribuir</span><span class="en">Contribute</span></a> · <a href="https://github.com/cyansaju-sys/tutti/issues" target="_blank" rel="noopener"><span class="es">Reportar un problema</span><span class="en">Report an issue</span></a></span>
   </div>
 </footer>
 <button class="top" id="top" title="↑" aria-label="Top">↑</button>
@@ -854,6 +916,24 @@ const spy = new IntersectionObserver((entries) => {
   entries.forEach((e) => { if (e.isIntersecting) { links.forEach((a) => a.classList.toggle('on', a.dataset.id === e.target.id)) } })
 }, { rootMargin: '-90px 0px -70% 0px' })
 document.querySelectorAll('main section[id]').forEach((s) => spy.observe(s))
+
+
+// estrellas de GitHub (se piden una vez por sesión; si falla, el botón queda sin número)
+;(async () => {
+  let n = null
+  try {
+    const cached = sessionStorage.getItem('tutti-stars')
+    if (cached) n = Number(cached)
+    else {
+      const r = await fetch('https://api.github.com/repos/cyansaju-sys/tutti')
+      if (r.ok) { n = (await r.json()).stargazers_count; sessionStorage.setItem('tutti-stars', String(n)) }
+    }
+  } catch {}
+  if (typeof n === 'number' && n > 0) {      // con 0 estrellas no se muestra el número
+    const text = n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
+    document.querySelectorAll('[data-stars]').forEach((el) => { el.textContent = text })
+  }
+})()
 
 document.getElementById('toc-toggle').addEventListener('click', () => document.getElementById('aside').classList.toggle('open'))
 links.forEach((a) => a.addEventListener('click', () => document.getElementById('aside').classList.remove('open')))

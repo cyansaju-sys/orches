@@ -1,0 +1,39 @@
+name: Error / Bug
+description: Algo no funciona como debería / Something does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: Qué pasa / What happens
+      description: Y qué esperabas que pasara / And what you expected to happen
+    validations: { required: true }
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo / Steps to reproduce
+      placeholder: "1. Abro un proyecto\n2. Pulso ...\n3. ..."
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Tutti / Tutti version
+      description: Está junto al nombre de la app, arriba a la izquierda / Next to the app name, top left
+      placeholder: "1.0.8"
+    validations: { required: true }
+  - type: dropdown
+    id: so
+    attributes:
+      label: Sistema / System
+      options: [Linux (X11), Linux (Wayland), Windows, Otro / Other]
+    validations: { required: true }
+  - type: input
+    id: agente
+    attributes:
+      label: Agente implicado, si lo hay / Agent involved, if any
+      placeholder: Claude Code, Codex, OpenCode...
+  - type: textarea
+    id: extra
+    attributes:
+      label: Capturas o texto del error / Screenshots or error text
+      description: Quita rutas y datos personales antes de pegarlo / Remove paths and personal data before pasting
